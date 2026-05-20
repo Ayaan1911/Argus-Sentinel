@@ -1,0 +1,165 @@
+import subprocess
+import json
+import logging
+import tempfile
+import os
+import requests
+from bs4 import BeautifulSoup
+from app.models import Subdomain
+
+logger = logging.getLogger(__name__)
+
+REQUEST_TIMEOUT = 8
+HTTPX_TIMEOUT = 300
+
+
+def _parse_httpx_line(line: str) -> tuple[str, dict] | None:
+    """Parse a single JSON line from httpx output."""
+    try:
+        data = json.loads(line)
+        # httpx can return host under 'input' or 'url'
+        raw_host = data.get('input', data.get('url', ''))
+        host = (
+            raw_host
+            .replace('https://', '')
+            .replace('http://', '')
+            .split('/')[0]
+            .split(':')[0]
+            .lower()
+            .strip()
+        )
+        if not host:
+            return None
+
+        technologies = data.get('tech', data.get('technologies', [])) or []
+        if isinstance(technologies, list):
+            # Normalize: extract names if they are dicts
+            tech_names = []
+            for t in technologies:
+                if isinstance(t, str):
+                    tech_names.append(t)
+                elif isinstance(t, dict):
+                    tech_names.append(t.get('name', str(t)))
+            technologies = tech_names
+
+        return host, {
+            'is_alive': True,
+            'status_code': data.get('status-code') or data.get('status_code'),
+            'title': (data.get('title') or '').strip(),
+            'technologies': technologies,
+        }
+    except (json.JSONDecodeError, AttributeError):
+        return None
+
+
+def _httpx_scan(subdomains: list) -> dict:
+    """Run httpx against a list of subdomains, return dict keyed by hostname."""
+    results = {}
+
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+        for s in subdomains:
+            f.write(s.subdomain + '\n')
+        tmp_path = f.name
+
+    try:
+        proc = subprocess.run(
+            [
+                'httpx',
+                '-l', tmp_path,
+                '-silent',
+                '-status-code',
+                '-title',
+                '-tech-detect',
+                '-json',
+                '-timeout', '10',
+                '-retries', '1',
+            ],
+            capture_output=True,
+            text=True,
+            timeout=HTTPX_TIMEOUT,
+        )
+        for line in proc.stdout.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            parsed = _parse_httpx_line(line)
+            if parsed:
+                host, info = parsed
+                results[host] = info
+    except subprocess.TimeoutExpired:
+        logger.warning('httpx global timeout reached')
+    except FileNotFoundError:
+        logger.warning('httpx binary not found')
+        raise
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+
+    return results
+
+
+def _requests_fallback(subdomains: list) -> dict:
+    """Fallback HTTP probe using the requests library when httpx is unavailable."""
+    results = {}
+    for sub in subdomains:
+        for scheme in ('https', 'http'):
+            url = f'{scheme}://{sub.subdomain}'
+            try:
+                resp = requests.get(url, timeout=REQUEST_TIMEOUT, allow_redirects=True)
+                title = ''
+                try:
+                    soup = BeautifulSoup(resp.text, 'html.parser')
+                    if soup.title and soup.title.string:
+                        title = soup.title.string.strip()
+                except Exception:
+                    pass
+                results[sub.subdomain.lower()] = {
+                    'is_alive': True,
+                    'status_code': resp.status_code,
+                    'title': title,
+                    'technologies': [],
+                }
+                break  # Stop at first successful scheme
+            except requests.RequestException:
+                continue
+    return results
+
+
+def run(scan_id: str, db) -> None:
+    """
+    Stage 2: Live Host Detection.
+    Uses httpx for fast concurrent probing with tech detection.
+    Falls back to sequential requests if httpx is unavailable.
+    """
+    subdomains = db.query(Subdomain).filter(Subdomain.scan_id == scan_id).all()
+    if not subdomains:
+        logger.info(f'[{scan_id}] No subdomains to probe')
+        return
+
+    logger.info(f'[{scan_id}] Probing {len(subdomains)} hosts for liveness')
+
+    # Try httpx first, fall back to requests
+    try:
+        results = _httpx_scan(subdomains)
+    except FileNotFoundError:
+        logger.info(f'[{scan_id}] Falling back to requests for live host check')
+        results = _requests_fallback(subdomains)
+
+    # Update subdomain records
+    for sub in subdomains:
+        info = results.get(sub.subdomain.lower())
+        if info:
+            sub.is_alive = info['is_alive']
+            sub.status_code = info.get('status_code')
+            sub.title = info.get('title', '')
+            sub.technologies = info.get('technologies', [])
+        else:
+            sub.is_alive = False
+            sub.status_code = None
+
+    db.commit()
+
+    alive_count = sum(1 for s in subdomains if s.is_alive)
+    logger.info(f'[{scan_id}] Live host detection complete: {alive_count}/{len(subdomains)} alive')

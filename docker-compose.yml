@@ -1,0 +1,89 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: argus
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - argus_net
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - argus_net
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - SERVICE_TYPE=api
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:password@db:5432/argus}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./wordlists:/app/wordlists:ro
+    networks:
+      - argus_net
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - SERVICE_TYPE=worker
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:password@db:5432/argus}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./wordlists:/app/wordlists:ro
+    networks:
+      - argus_net
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+    networks:
+      - argus_net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  argus_net:
+    driver: bridge
