@@ -62,22 +62,37 @@ def _httpx_scan(subdomains: list) -> dict:
         tmp_path = f.name
 
     try:
+        with open(tmp_path, 'r') as tf:
+            print(f"DEBUG: httpx tmp file contents (first 5 lines): {tf.readlines()[:5]}", flush=True)
+            
+        cmd = [
+            '/root/go/bin/httpx',
+            '-l', tmp_path,
+            '-silent',
+            '-status-code',
+            '-title',
+            '-tech-detect',
+            '-follow-redirects',
+            '-json',
+            '-timeout', '10',
+            '-retries', '1',
+        ]
+        print(f"DEBUG: Running httpx with cmd: {' '.join(cmd)}", flush=True)
+        
         proc = subprocess.run(
-            [
-                'httpx',
-                '-l', tmp_path,
-                '-silent',
-                '-status-code',
-                '-title',
-                '-tech-detect',
-                '-json',
-                '-timeout', '10',
-                '-retries', '1',
-            ],
+            cmd,
             capture_output=True,
             text=True,
             timeout=HTTPX_TIMEOUT,
         )
+        if proc.returncode != 0:
+            print(f"ERROR: httpx returned non-zero exit code: {proc.returncode}. stderr: {proc.stderr}", flush=True)
+
+        if proc.stderr:
+            print(f"WARNING: httpx stderr: {proc.stderr}", flush=True)
+
+        print(f"DEBUG: httpx stdout length: {len(proc.stdout)}", flush=True)
+
         for line in proc.stdout.splitlines():
             line = line.strip()
             if not line:
@@ -86,10 +101,13 @@ def _httpx_scan(subdomains: list) -> dict:
             if parsed:
                 host, info = parsed
                 results[host] = info
+        
+        print(f"DEBUG: httpx total results collected: {len(results)}", flush=True)
+        print(f"DEBUG: httpx result keys: {list(results.keys())[:5]}", flush=True)
     except subprocess.TimeoutExpired:
-        logger.warning('httpx global timeout reached')
+        print('ERROR: httpx global timeout reached', flush=True)
     except FileNotFoundError:
-        logger.warning('httpx binary not found')
+        logger.error('httpx binary not found')
         raise
     finally:
         try:

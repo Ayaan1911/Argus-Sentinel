@@ -1,19 +1,21 @@
 /**
- * PipelineProgress — Horizontal 8-stage scan pipeline progress indicator.
+ * PipelineProgress — Horizontal 10-stage scan pipeline progress indicator.
  * Props:
  *   currentStage: string (key or partial label of the active stage)
  *   status: 'queued' | 'running' | 'complete' | 'failed'
  */
 
 const STAGES = [
-  { key: 'subdomain_enum',  label: 'Subdomain Enum', icon: '🔍' },
-  { key: 'live_host_check', label: 'Live Hosts',      icon: '💓' },
-  { key: 'port_scan',       label: 'Port Scan',       icon: '🔌' },
-  { key: 'js_extractor',    label: 'JS Extract',      icon: '📜' },
-  { key: 'secret_detector', label: 'Secrets',         icon: '🔑' },
-  { key: 'endpoint_miner',  label: 'Endpoints',       icon: '🗺️' },
-  { key: 'takeover_check',  label: 'Takeover',        icon: '⚠️' },
-  { key: 'ai_summary',      label: 'AI Summary',      icon: '🤖' },
+  { key: 'subdomain_enum',     label: 'Subdomains',   icon: '🔍' },
+  { key: 'live_host_check',    label: 'Live Hosts',   icon: '💓' },
+  { key: 'screenshot_capture', label: 'Screenshots',  icon: '📸' },
+  { key: 'port_scan',          label: 'Port Scan',    icon: '🔌' },
+  { key: 'js_extractor',       label: 'JS Extract',   icon: '📜' },
+  { key: 'secret_detector',    label: 'Secrets',      icon: '🔑' },
+  { key: 'endpoint_miner',     label: 'Endpoints',    icon: '🗺️' },
+  { key: 'takeover_check',     label: 'Takeover',     icon: '⚠️' },
+  { key: 'nuclei_scan',        label: 'Nuclei Scan',  icon: '🎯' },
+  { key: 'ai_summary',         label: 'AI Summary',   icon: '🤖' },
 ]
 
 function getActiveIndex(currentStage, status) {
@@ -42,8 +44,8 @@ function getActiveIndex(currentStage, status) {
 }
 
 export default function PipelineProgress({ currentStage, status }) {
-  const activeIdx = getActiveIndex(currentStage, status)
-  const isFailed  = status === 'failed'
+  const activeIdx  = getActiveIndex(currentStage, status)
+  const isFailed   = status === 'failed'
   const isComplete = status === 'complete' || status === 'completed'
 
   return (
@@ -108,7 +110,7 @@ export default function PipelineProgress({ currentStage, status }) {
               {/* Label */}
               <div
                 className={`
-                  mt-1.5 text-center text-[0.6rem] font-medium tracking-wide leading-tight
+                  mt-1.5 text-center text-[0.55rem] font-medium tracking-wide leading-tight
                   ${isCompleted
                     ? 'text-[#00ff88]'
                     : isActive

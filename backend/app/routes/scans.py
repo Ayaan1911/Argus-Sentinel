@@ -1,5 +1,6 @@
 import os
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List
@@ -10,6 +11,8 @@ from tasks.celery_app import celery_app
 from tasks import pipeline
 
 router = APIRouter()
+
+SCREENSHOTS_BASE = '/app/screenshots'
 
 
 @router.post('/scan')
@@ -139,3 +142,51 @@ def get_scan_status(scan_id: str, db: Session = Depends(get_db)):
         'completed_at': scan.completed_at.isoformat() if scan.completed_at else None,
         'error_message': scan.error_message,
     })
+
+
+@router.get('/scan/{scan_id}/screenshot/{subdomain_id}')
+def get_screenshot(scan_id: str, subdomain_id: int, db: Session = Depends(get_db)):
+    """
+    Serve a screenshot image for a given subdomain.
+    Returns 404 if no screenshot exists.
+    """
+    subdomain = db.query(Subdomain).filter(
+        Subdomain.id == subdomain_id,
+        Subdomain.scan_id == scan_id,
+    ).first()
+    if not subdomain:
+        raise HTTPException(status_code=404, detail='Subdomain not found')
+    if not subdomain.screenshot_path:
+        raise HTTPException(status_code=404, detail='No screenshot for this subdomain')
+
+    full_path = os.path.join(SCREENSHOTS_BASE, subdomain.screenshot_path)
+    if not os.path.isfile(full_path):
+        raise HTTPException(status_code=404, detail='Screenshot file not found on disk')
+
+    return FileResponse(full_path, media_type='image/png')
+
+
+@router.get('/scan/{scan_id}/report/pdf')
+def download_pdf_report(scan_id: str, db: Session = Depends(get_db)):
+    """
+    Generate and download a professional PDF penetration testing report.
+    """
+    scan = db.query(Scan).filter(Scan.id == scan_id).first()
+    if not scan:
+        raise HTTPException(status_code=404, detail='Scan not found')
+
+    try:
+        from app.reports.generator import generate_pdf
+        pdf_bytes = generate_pdf(scan_id, db)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'PDF generation failed: {str(e)}')
+
+    import datetime
+    date_str = datetime.date.today().strftime('%Y-%m-%d')
+    filename = f'argus-sentinel-{scan.domain}-{date_str}.pdf'
+
+    return StreamingResponse(
+        iter([pdf_bytes]),
+        media_type='application/pdf',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'},
+    )

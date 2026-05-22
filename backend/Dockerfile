@@ -8,6 +8,17 @@ RUN apt-get update && apt-get install -y \
     git \
     ca-certificates \
     golang-go \
+    # WeasyPrint dependencies
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libpangocairo-1.0-0 \
+    libcairo2 \
+    libgdk-pixbuf2.0-0 \
+    libffi-dev \
+    shared-mime-info \
+    fonts-liberation \
+    # gowitness (chromium) dependency
+    chromium \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Go-based security tools
@@ -15,7 +26,9 @@ ENV GOPATH=/root/go
 ENV PATH=$PATH:/root/go/bin
 
 RUN go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest && \
-    go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
+    go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest && \
+    go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest && \
+    go install github.com/sensepost/gowitness@latest
 
 # Set working directory
 WORKDIR /app

@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Argus-Sentinel Report — {{ scan.domain }}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg:       #0a0a0a;
+    --bg2:      #111111;
+    --bg3:      #1a1a1a;
+    --border:   #222222;
+    --green:    #00ff88;
+    --green-dim:#00cc66;
+    --text:     #e0e0e0;
+    --muted:    #888888;
+    --dim:      #444444;
+    --red:      #ff4444;
+    --orange:   #ff6600;
+    --yellow:   #ffcc00;
+    --blue:     #00aaff;
+    --gray:     #888888;
+    --crit:     #ff0000;
+    --high:     #ff6600;
+    --med:      #ffcc00;
+    --low:      #00aaff;
+    --info:     #888888;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 10pt;
+    line-height: 1.5;
+  }
+
+  /* ── Page breaks ── */
+  .page-break { page-break-before: always; }
+
+  /* ── Cover page ── */
+  .cover {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 60px;
+    position: relative;
+    background: linear-gradient(135deg, #0a0a0a 0%, #111a11 100%);
+  }
+
+  .cover-logo {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 36pt;
+    font-weight: 700;
+    color: var(--green);
+    letter-spacing: -1px;
+    text-shadow: 0 0 30px rgba(0,255,136,0.4);
+    margin-bottom: 8px;
+  }
+
+  .cover-tagline {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10pt;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 60px;
+  }
+
+  .cover-domain {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 24pt;
+    font-weight: 600;
+    color: white;
+    border-left: 4px solid var(--green);
+    padding-left: 20px;
+    margin-bottom: 12px;
+  }
+
+  .cover-meta {
+    font-size: 9pt;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 6px;
+    padding-left: 24px;
+  }
+
+  .cover-confidential {
+    position: absolute;
+    top: 40px;
+    right: 60px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8pt;
+    letter-spacing: 4px;
+    color: var(--red);
+    border: 1px solid var(--red);
+    padding: 4px 12px;
+    text-transform: uppercase;
+    opacity: 0.8;
+  }
+
+  .cover-divider {
+    width: 80px;
+    height: 2px;
+    background: var(--green);
+    margin: 40px 0;
+    box-shadow: 0 0 10px rgba(0,255,136,0.5);
+  }
+
+  /* ── Sections ── */
+  .section {
+    padding: 40px 50px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-title {
+    font-size: 9pt;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 20px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── Stats grid ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22pt;
+    font-weight: 700;
+    color: var(--green);
+    display: block;
+  }
+
+  .stat-label {
+    font-size: 7pt;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-top: 4px;
+    display: block;
+  }
+
+  /* ── Severity table ── */
+  .severity-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    font-size: 9pt;
+  }
+
+  .severity-table th {
+    background: var(--bg2);
+    color: var(--muted);
+    text-transform: uppercase;
+    font-size: 7pt;
+    letter-spacing: 1.5px;
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+  }
+
+  .severity-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: top;
+  }
+
+  .severity-table tr:nth-child(even) td {
+    background: rgba(255,255,255,0.015);
+  }
+
+  /* ── Severity badges ── */
+  .badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7pt;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  .badge-critical { background: rgba(255,0,0,0.15);    color: #ff4444; border: 1px solid rgba(255,0,0,0.4); }
+  .badge-high     { background: rgba(255,102,0,0.15);  color: #ff6600; border: 1px solid rgba(255,102,0,0.4); }
+  .badge-medium   { background: rgba(255,204,0,0.1);   color: #ffcc00; border: 1px solid rgba(255,204,0,0.35); }
+  .badge-low      { background: rgba(0,170,255,0.1);   color: #00aaff; border: 1px solid rgba(0,170,255,0.35); }
+  .badge-info     { background: rgba(136,136,136,0.1); color: #888888; border: 1px solid rgba(136,136,136,0.3); }
+  .badge-alive    { background: rgba(0,255,136,0.1);   color: #00ff88; border: 1px solid rgba(0,255,136,0.3); }
+  .badge-dead     { background: rgba(255,68,68,0.08);  color: #ff6666; border: 1px solid rgba(255,68,68,0.2); }
+
+  /* ── Mono text ── */
+  .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8.5pt;
+    color: var(--muted);
+  }
+
+  .mono-green {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--green);
+    font-size: 8.5pt;
+  }
+
+  /* ── AI Summary content ── */
+  .ai-text {
+    font-size: 9pt;
+    line-height: 1.7;
+    color: var(--text);
+    white-space: pre-wrap;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px;
+  }
+
+  /* ── Vuln severity count summary ── */
+  .sev-summary {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .sev-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9pt;
+    font-weight: 600;
+    border: 1px solid transparent;
+  }
+
+  .sev-pill-critical { background: rgba(255,0,0,0.1);   color: #ff4444; border-color: rgba(255,0,0,0.3); }
+  .sev-pill-high     { background: rgba(255,102,0,0.1); color: #ff6600; border-color: rgba(255,102,0,0.3); }
+  .sev-pill-medium   { background: rgba(255,204,0,0.08);color: #ffcc00; border-color: rgba(255,204,0,0.3); }
+  .sev-pill-low      { background: rgba(0,170,255,0.08);color: #00aaff; border-color: rgba(0,170,255,0.3); }
+
+  .empty-state {
+    padding: 30px;
+    text-align: center;
+    color: var(--dim);
+    font-size: 9pt;
+  }
+
+  .footer {
+    padding: 20px 50px;
+    font-size: 7.5pt;
+    color: var(--dim);
+    font-family: 'JetBrains Mono', monospace;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════ COVER PAGE ══════════════════════════ -->
+<div class="cover">
+  <div class="cover-confidential">⚠ Confidential</div>
+  <div class="cover-logo">Argus-Sentinel</div>
+  <div class="cover-tagline">A hundred eyes on your attack surface</div>
+  <div class="cover-divider"></div>
+  <div class="cover-domain">{{ scan.domain }}</div>
+  <div class="cover-meta">Scan ID : {{ scan.id }}</div>
+  <div class="cover-meta">Initiated: {{ scan.created_at.strftime('%Y-%m-%d %H:%M UTC') if scan.created_at else '—' }}</div>
+  <div class="cover-meta">Completed: {{ scan.completed_at.strftime('%Y-%m-%d %H:%M UTC') if scan.completed_at else 'In Progress' }}</div>
+  <div class="cover-meta">Status   : {{ scan.status | upper }}</div>
+  <div class="cover-meta">Generated: {{ generated_at }}</div>
+</div>
+
+<!-- ══════════════════════════ EXECUTIVE SUMMARY ══════════════════════════ -->
+<div class="section page-break">
+  <div class="section-title">01 — Executive Summary</div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <span class="stat-value">{{ subdomains | length }}</span>
+      <span class="stat-label">Subdomains</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">{{ live_hosts | length }}</span>
+      <span class="stat-label">Live Hosts</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">{{ all_ports | length }}</span>
+      <span class="stat-label">Open Ports</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value" style="color: {% if vulns | length > 0 %}#ff4444{% else %}#00ff88{% endif %}">{{ vulns | length }}</span>
+      <span class="stat-label">Vulnerabilities</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value" style="color: {% if secrets | length > 0 %}#ff6600{% else %}#00ff88{% endif %}">{{ secrets | length }}</span>
+      <span class="stat-label">Secrets Found</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">{{ endpoints | length }}</span>
+      <span class="stat-label">Endpoints</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value" style="color: {% if takeovers | length > 0 %}#ff4444{% else %}#00ff88{% endif %}">{{ takeovers | length }}</span>
+      <span class="stat-label">Takeover Risks</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">{{ all_techs | length }}</span>
+      <span class="stat-label">Technologies</span>
+    </div>
+  </div>
+
+  <!-- Vulnerability severity breakdown -->
+  {% if vulns %}
+  <div class="sev-summary">
+    {% if vuln_critical %}<div class="sev-pill sev-pill-critical">● {{ vuln_critical|length }} Critical</div>{% endif %}
+    {% if vuln_high %}<div class="sev-pill sev-pill-high">● {{ vuln_high|length }} High</div>{% endif %}
+    {% if vuln_medium %}<div class="sev-pill sev-pill-medium">● {{ vuln_medium|length }} Medium</div>{% endif %}
+    {% if vuln_low %}<div class="sev-pill sev-pill-low">● {{ vuln_low|length }} Low</div>{% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Secret severity breakdown -->
+  {% if secrets %}
+  <div class="sev-summary">
+    {% if secret_critical %}<div class="sev-pill sev-pill-critical">🔑 {{ secret_critical|length }} Critical Secrets</div>{% endif %}
+    {% if secret_high %}<div class="sev-pill sev-pill-high">🔑 {{ secret_high|length }} High Secrets</div>{% endif %}
+    {% if secret_medium %}<div class="sev-pill sev-pill-medium">🔑 {{ secret_medium|length }} Medium Secrets</div>{% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<!-- ══════════════════════════ AI SUMMARY ══════════════════════════ -->
+{% if ai_summary %}
+<div class="section">
+  <div class="section-title">02 — AI Security Assessment</div>
+  <div class="ai-text">{{ ai_summary.summary_text }}</div>
+</div>
+{% endif %}
+
+<!-- ══════════════════════════ VULNERABILITY FINDINGS ══════════════════════════ -->
+<div class="section page-break">
+  <div class="section-title">03 — Vulnerability Findings (Nuclei)</div>
+  {% if vulns %}
+    <table class="severity-table">
+      <thead>
+        <tr>
+          <th>Severity</th>
+          <th>Template</th>
+          <th>Host</th>
+          <th>Matched At</th>
+          <th>Tags</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in vulns %}
+        <tr>
+          <td><span class="badge badge-{{ v.severity }}">{{ v.severity }}</span></td>
+          <td>
+            <div style="font-weight: 600; font-size:9pt;">{{ v.template_name }}</div>
+            <div class="mono" style="margin-top:2px; font-size:7.5pt; color:#555">{{ v.template_id }}</div>
+          </td>
+          <td class="mono-green">{{ v.host }}</td>
+          <td class="mono" style="font-size:7.5pt; word-break:break-all;">{{ v.matched_at }}</td>
+          <td style="font-size:7.5pt; color: var(--muted);">{{ v.tags | join(', ') if v.tags else '—' }}</td>
+        </tr>
+        {% if v.description %}
+        <tr>
+          <td colspan="5" style="padding: 4px 12px 12px 12px; background: rgba(255,255,255,0.02);">
+            <div style="font-size:7.5pt; color: var(--muted);">📝 {{ v.description }}</div>
+            {% if v.remediation %}
+            <div style="font-size:7.5pt; color: #00aa66; margin-top:4px;">💡 {{ v.remediation }}</div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty-state">✅ No vulnerabilities detected by Nuclei scanner.</div>
+  {% endif %}
+</div>
+
+<!-- ══════════════════════════ SECRETS DETECTED ══════════════════════════ -->
+<div class="section">
+  <div class="section-title">04 — Secrets Detected</div>
+  {% if secrets %}
+    <table class="severity-table">
+      <thead>
+        <tr>
+          <th>Severity</th>
+          <th>Confidence</th>
+          <th>Secret Type</th>
+          <th>Source File</th>
+          <th>Line</th>
+          <th>Value Preview</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in secrets %}
+        <tr>
+          <td><span class="badge badge-{{ s.severity or 'medium' }}">{{ s.severity or 'medium' }}</span></td>
+          <td class="mono" style="color: {% if (s.confidence or 60) >= 80 %}#00ff88{% elif (s.confidence or 60) >= 50 %}#ffcc00{% else %}#ff6666{% endif %}">{{ s.confidence or '—' }}%</td>
+          <td style="font-weight: 600; font-size:9pt;">{{ s.secret_type }}</td>
+          <td class="mono" style="font-size:7pt; word-break:break-all; max-width:180px;">{{ s.file_url | replace('https://', '') | truncate(50) }}</td>
+          <td class="mono">{{ s.line_number or '—' }}</td>
+          <td><span class="mono" style="background: #1a1a1a; padding: 2px 6px; border-radius: 3px; font-size:7.5pt;">{{ s.matched_value[:20] if s.matched_value else '—' }}****</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty-state">✅ No secrets detected in JavaScript files.</div>
+  {% endif %}
+</div>
+
+<!-- ══════════════════════════ SUBDOMAINS ══════════════════════════ -->
+<div class="section page-break">
+  <div class="section-title">05 — Subdomains &amp; Live Hosts</div>
+  {% if subdomains %}
+    <table class="severity-table">
+      <thead>
+        <tr>
+          <th>Subdomain</th>
+          <th>Status</th>
+          <th>HTTP Code</th>
+          <th>Title</th>
+          <th>Technologies</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in subdomains | sort(attribute='is_alive', reverse=True) %}
+        <tr>
+          <td class="mono-green">{{ s.subdomain }}</td>
+          <td>
+            {% if s.is_alive %}
+              <span class="badge badge-alive">ALIVE</span>
+            {% else %}
+              <span class="badge badge-dead">DEAD</span>
+            {% endif %}
+          </td>
+          <td class="mono">{{ s.status_code or '—' }}</td>
+          <td style="font-size:8.5pt; max-width:150px;">{{ s.title or '—' }}</td>
+          <td style="font-size:7.5pt; color:var(--muted);">{{ (s.technologies or []) | join(', ') | truncate(60) if s.technologies else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty-state">No subdomains discovered.</div>
+  {% endif %}
+</div>
+
+<!-- ══════════════════════════ OPEN PORTS ══════════════════════════ -->
+<div class="section">
+  <div class="section-title">06 — Open Ports</div>
+  {% set ns = namespace(has_ports=false) %}
+  {% for s in subdomains %}
+    {% if s.ports %}
+      {% set ns.has_ports = true %}
+    {% endif %}
+  {% endfor %}
+
+  {% if ns.has_ports %}
+    {% for s in subdomains %}
+      {% if s.ports %}
+      <div style="margin-bottom: 16px;">
+        <div style="font-family: 'JetBrains Mono', monospace; color: var(--green); font-size:9pt; font-weight:600; margin-bottom: 6px; padding: 4px 8px; background: var(--bg2); border-left: 2px solid var(--green);">{{ s.subdomain }}</div>
+        <table class="severity-table">
+          <thead>
+            <tr><th>Port</th><th>Protocol</th><th>Service</th><th>Version</th></tr>
+          </thead>
+          <tbody>
+            {% for p in s.ports %}
+            <tr>
+              <td class="mono" style="color: #ffcc00; font-weight:700;">{{ p.port }}</td>
+              <td class="mono">{{ p.protocol | upper }}</td>
+              <td style="font-size:9pt;">{{ p.service or '—' }}</td>
+              <td class="mono" style="font-size:8pt; color:var(--dim);">{{ p.version or '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    {% endfor %}
+  {% else %}
+    <div class="empty-state">No open ports discovered.</div>
+  {% endif %}
+</div>
+
+<!-- ══════════════════════════ ENDPOINTS ══════════════════════════ -->
+<div class="section page-break">
+  <div class="section-title">07 — API Endpoints Discovered</div>
+  {% if endpoints %}
+    <table class="severity-table">
+      <thead>
+        <tr><th>URL / Path</th><th>Source JS File</th></tr>
+      </thead>
+      <tbody>
+        {% for e in endpoints[:200] %}
+        <tr>
+          <td class="mono" style="word-break:break-all; font-size:8pt;">{{ e.url }}</td>
+          <td class="mono" style="font-size:7pt; color:var(--dim); word-break:break-all;">{{ e.source_file | replace('https://', '') | truncate(60) if e.source_file else '—' }}</td>
+        </tr>
+        {% endfor %}
+        {% if endpoints | length > 200 %}
+        <tr><td colspan="2" style="color:var(--dim); font-size:8pt; text-align:center;">... and {{ endpoints | length - 200 }} more endpoints (truncated for report)</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty-state">No endpoints extracted.</div>
+  {% endif %}
+</div>
+
+<!-- ══════════════════════════ TAKEOVER RISKS ══════════════════════════ -->
+{% if takeovers %}
+<div class="section">
+  <div class="section-title">08 — Subdomain Takeover Risks</div>
+  <table class="severity-table">
+    <thead>
+      <tr><th>Subdomain</th><th>CNAME</th><th>Provider</th><th>Risk</th></tr>
+    </thead>
+    <tbody>
+      {% for t in takeovers %}
+      <tr>
+        <td class="mono" style="color:#ff8844;">{{ t.subdomain }}</td>
+        <td class="mono" style="font-size:8pt;">{{ t.cname or '—' }}</td>
+        <td>{{ t.provider }}</td>
+        <td><span class="badge badge-high">HIGH RISK</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- ══════════════════════════ APPENDIX ══════════════════════════ -->
+<div class="section">
+  <div class="section-title">Appendix — Scan Metadata</div>
+  <table class="severity-table">
+    <tbody>
+      <tr><td style="width:180px; color:var(--muted); font-size:8.5pt;">Scan ID</td><td class="mono">{{ scan.id }}</td></tr>
+      <tr><td style="color:var(--muted); font-size:8.5pt;">Target Domain</td><td class="mono-green">{{ scan.domain }}</td></tr>
+      <tr><td style="color:var(--muted); font-size:8.5pt;">Scan Status</td><td class="mono">{{ scan.status | upper }}</td></tr>
+      <tr><td style="color:var(--muted); font-size:8.5pt;">Started At</td><td class="mono">{{ scan.created_at.strftime('%Y-%m-%d %H:%M:%S UTC') if scan.created_at else '—' }}</td></tr>
+      <tr><td style="color:var(--muted); font-size:8.5pt;">Completed At</td><td class="mono">{{ scan.completed_at.strftime('%Y-%m-%d %H:%M:%S UTC') if scan.completed_at else 'In Progress' }}</td></tr>
+      <tr><td style="color:var(--muted); font-size:8.5pt;">Report Generated</td><td class="mono">{{ generated_at }}</td></tr>
+      <tr><td style="color:var(--muted); font-size:8.5pt;">Tools Used</td><td class="mono">subfinder, httpx (PD), nmap, gowitness, nuclei, custom JS/secret engine</td></tr>
+      <tr><td style="color:var(--muted); font-size:8.5pt;">Platform</td><td class="mono">Argus-Sentinel v2.0 — https://github.com/Ayaan1911/Argus-Sentinel</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="footer">
+  <span>Argus-Sentinel — Automated Recon Platform</span>
+  <span>⚠ For authorized use only — Confidential</span>
+  <span>Generated {{ generated_at }}</span>
+</div>
+
+</body>
+</html>

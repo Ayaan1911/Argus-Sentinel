@@ -89,4 +89,18 @@ export async function regenerateSummary(id) {
   return unwrap(res)
 }
 
+/**
+ * Download the PDF report for a scan.
+ * GET /api/scan/{id}/report/pdf
+ * @param {string} id
+ * @param {string} domain  — used for the filename
+ */
+export async function downloadPdfReport(id, domain) {
+  const res = await client.get(`/api/scan/${id}/report/pdf`, {
+    responseType: 'blob',
+    timeout: 120000,
+  })
+  return res.data // raw Blob
+}
+
 export default client

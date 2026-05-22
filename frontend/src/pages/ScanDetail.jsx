@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { getScan, exportScan, regenerateSummary } from '../api/client'
+import { getScan, exportScan, regenerateSummary, downloadPdfReport } from '../api/client'
 import StatusBadge from '../components/StatusBadge'
 import PipelineProgress from '../components/PipelineProgress'
 import MetricCard from '../components/MetricCard'
@@ -13,7 +13,34 @@ import TabView from '../components/TabView'
 const DANGEROUS_PORTS = new Set([21, 22, 23, 25, 53, 110, 135, 139, 143, 445, 1433, 1521, 3306, 3389, 5432, 5900, 6379, 8080, 8443, 27017])
 const WEB_PORTS       = new Set([80, 443])
 
-const SECRET_SEVERITY = {
+// ── Severity helpers ─────────────────────────────────────────────────────────
+
+const VULN_SEVERITY_STYLE = {
+  critical: { bg: 'bg-[#200000]', text: 'text-red-400',    border: 'border-red-900',    badge: 'bg-red-950 text-red-400 border-red-900',       dot: 'bg-red-500'    },
+  high:     { bg: 'bg-[#1a0800]', text: 'text-orange-400', border: 'border-orange-900', badge: 'bg-orange-950 text-orange-400 border-orange-900', dot: 'bg-orange-500' },
+  medium:   { bg: 'bg-[#1a1400]', text: 'text-yellow-400', border: 'border-yellow-900', badge: 'bg-yellow-950 text-yellow-400 border-yellow-900', dot: 'bg-yellow-500' },
+  low:      { bg: 'bg-[#001420]', text: 'text-blue-400',   border: 'border-blue-900',   badge: 'bg-blue-950 text-blue-400 border-blue-900',       dot: 'bg-blue-400'   },
+  info:     { bg: 'bg-[#111111]', text: 'text-[#888888]',  border: 'border-[#333333]',  badge: 'bg-[#1a1a1a] text-[#888888] border-[#333333]',    dot: 'bg-[#666666]'  },
+}
+
+const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3, info: 4 }
+
+function getVulnStyle(severity = 'info') {
+  return VULN_SEVERITY_STYLE[severity.toLowerCase()] ?? VULN_SEVERITY_STYLE.info
+}
+
+function SeverityBadge({ severity = 'info', className = '' }) {
+  const style = getVulnStyle(severity)
+  return (
+    <span className={`pill border text-[0.6rem] font-bold uppercase tracking-wide ${style.badge} ${className}`}>
+      {severity}
+    </span>
+  )
+}
+
+// ── Secret classification ─────────────────────────────────────────────────────
+
+const SECRET_STYLE_MAP = {
   aws_access_key:    { label: 'AWS Key',       color: 'bg-red-950 text-red-400 border-red-900' },
   aws_secret_key:    { label: 'AWS Secret',    color: 'bg-red-950 text-red-400 border-red-900' },
   private_key:       { label: 'Private Key',   color: 'bg-red-950 text-red-400 border-red-900' },
@@ -27,12 +54,16 @@ const SECRET_SEVERITY = {
 
 function getSecretStyle(type = '') {
   const lower = type.toLowerCase().replace(/[^a-z_]/g, '_')
-  const exact = SECRET_SEVERITY[lower]
+  const exact = SECRET_STYLE_MAP[lower]
   if (exact) return exact
-  for (const [k, v] of Object.entries(SECRET_SEVERITY)) {
+  for (const [k, v] of Object.entries(SECRET_STYLE_MAP)) {
     if (lower.includes(k) || k.includes(lower)) return v
   }
   return { label: type, color: 'bg-[#1a1a1a] text-[#888888] border-[#333333]' }
+}
+
+function getSecretSeverityBadge(severity = 'medium') {
+  return getVulnStyle(severity).badge
 }
 
 // ── Tech pill colors ──────────────────────────────────────────────────────────
@@ -66,22 +97,10 @@ function getTechColor(tech = '') {
 // ── Provider badges ───────────────────────────────────────────────────────────
 
 const PROVIDER_ICONS = {
-  github:    '🐙',
-  heroku:    '💜',
-  aws:       '☁️',
-  azure:     '🔷',
-  gcp:       '🌐',
-  google:    '🌐',
-  shopify:   '🛍️',
-  fastly:    '⚡',
-  pantheon:  '🐍',
-  bitbucket: '🪣',
-  gitlab:    '🦊',
-  sendgrid:  '📧',
-  zendesk:   '💬',
-  unbounce:  '📢',
-  surge:     '🌊',
-  default:   '⚠️',
+  github: '🐙', heroku: '💜', aws: '☁️', azure: '🔷', gcp: '🌐',
+  google: '🌐', shopify: '🛍️', fastly: '⚡', pantheon: '🐍',
+  bitbucket: '🪣', gitlab: '🦊', sendgrid: '📧', zendesk: '💬',
+  unbounce: '📢', surge: '🌊', default: '⚠️',
 }
 
 function getProviderIcon(cname = '') {
@@ -157,12 +176,7 @@ function DisclaimerBanner() {
 function Spinner({ size = 'md', color = '#00ff88' }) {
   const sizes = { sm: 'w-4 h-4', md: 'w-6 h-6', lg: 'w-10 h-10' }
   return (
-    <svg
-      className={`${sizes[size]} animate-spin`}
-      fill="none"
-      viewBox="0 0 24 24"
-      style={{ color }}
-    >
+    <svg className={`${sizes[size]} animate-spin`} fill="none" viewBox="0 0 24 24" style={{ color }}>
       <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
       <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z" />
     </svg>
@@ -178,19 +192,29 @@ function OverviewTab({ scan }) {
   const secrets     = scan.secrets ?? []
   const endpoints   = scan.endpoints ?? []
   const takeovers   = scan.takeover_risks ?? scan.takeovers ?? []
+  const vulns       = scan.vulnerability_findings ?? []
+  const critHighVulns = vulns.filter(v => ['critical','high'].includes((v.severity || '').toLowerCase()))
+  const critHighSecrets = secrets.filter(s => ['critical','high'].includes((s.severity || '').toLowerCase()))
 
   return (
     <div className="animate-slide-up">
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <MetricCard icon="🌐" label="Total Subdomains" value={subdomains.length} />
         <MetricCard icon="💓" label="Live Hosts"        value={liveHosts.length} />
         <MetricCard icon="🔌" label="Open Ports"        value={totalPorts} />
         <MetricCard
+          icon="🎯"
+          label="Vulnerabilities"
+          value={vulns.length}
+          variant={critHighVulns.length > 0 ? 'danger' : vulns.length > 0 ? 'warning' : 'default'}
+          subtitle={critHighVulns.length > 0 ? `${critHighVulns.length} critical/high` : undefined}
+        />
+        <MetricCard
           icon="🔑"
           label="Secrets Detected"
           value={secrets.length}
-          variant={secrets.length > 0 ? 'danger' : 'default'}
-          subtitle={secrets.length > 0 ? 'Immediate attention required' : undefined}
+          variant={critHighSecrets.length > 0 ? 'danger' : secrets.length > 0 ? 'warning' : 'default'}
+          subtitle={critHighSecrets.length > 0 ? 'Immediate attention required' : undefined}
         />
         <MetricCard icon="🗺️" label="Endpoints Found"  value={endpoints.length} />
         <MetricCard
@@ -200,6 +224,7 @@ function OverviewTab({ scan }) {
           variant={takeovers.length > 0 ? 'danger' : 'default'}
           subtitle={takeovers.length > 0 ? 'Subdomain takeover detected' : undefined}
         />
+        <MetricCard icon="📸" label="Screenshots" value={subdomains.filter(s => s.screenshot_path).length} />
       </div>
 
       {/* Scan metadata */}
@@ -227,8 +252,9 @@ function OverviewTab({ scan }) {
 
 // ── SUBDOMAINS TAB ────────────────────────────────────────────────────────────
 
-function SubdomainsTab({ subdomains = [] }) {
+function SubdomainsTab({ subdomains = [], scanId }) {
   const [query, setQuery] = useState('')
+  const [screenshotModal, setScreenshotModal] = useState(null) // { url, host }
 
   const sorted = [...subdomains].sort((a, b) => {
     const aAlive = a.is_alive || a.alive || a.live || false
@@ -244,6 +270,32 @@ function SubdomainsTab({ subdomains = [] }) {
 
   return (
     <div className="animate-slide-up space-y-4">
+      {/* Screenshot modal */}
+      {screenshotModal && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setScreenshotModal(null)}
+        >
+          <div
+            className="relative max-w-5xl w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="absolute -top-10 right-0 text-[#888888] hover:text-white text-sm"
+              onClick={() => setScreenshotModal(null)}
+            >
+              ✕ Close
+            </button>
+            <div className="text-center mb-2 font-mono text-[#00ff88] text-sm">{screenshotModal.host}</div>
+            <img
+              src={screenshotModal.url}
+              alt={screenshotModal.host}
+              className="w-full rounded border border-[#333333]"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Search */}
       <div className="relative max-w-sm">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#555555] text-sm">🔍</span>
@@ -270,6 +322,7 @@ function SubdomainsTab({ subdomains = [] }) {
             <table className="data-table">
               <thead>
                 <tr>
+                  <th>Screenshot</th>
                   <th>Subdomain</th>
                   <th>Alive</th>
                   <th>Status</th>
@@ -284,9 +337,31 @@ function SubdomainsTab({ subdomains = [] }) {
                   const code   = s.status_code ?? s.http_status ?? ''
                   const title  = s.title ?? s.page_title ?? ''
                   const techs  = s.technologies ?? s.tech ?? []
+                  const ssUrl  = s.screenshot_path && scanId
+                    ? `/api/scan/${scanId}/screenshot/${s.id}`
+                    : null
 
                   return (
                     <tr key={host + i}>
+                      <td>
+                        {ssUrl ? (
+                          <div
+                            className="w-16 h-10 rounded overflow-hidden border border-[#333333] cursor-pointer hover:border-[#00ff88] transition-colors"
+                            onClick={() => setScreenshotModal({ url: ssUrl, host })}
+                          >
+                            <img
+                              src={ssUrl}
+                              alt={host}
+                              className="w-full h-full object-cover"
+                              onError={(e) => { e.target.style.display = 'none'; e.target.parentElement.style.background = '#1a1a1a' }}
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-16 h-10 rounded border border-[#222222] bg-[#0f0f0f] flex items-center justify-center text-[#333333] text-xs">
+                            —
+                          </div>
+                        )}
+                      </td>
                       <td>
                         <a
                           href={`https://${host}`}
@@ -347,6 +422,108 @@ function SubdomainsTab({ subdomains = [] }) {
   )
 }
 
+// ── GALLERY TAB ───────────────────────────────────────────────────────────────
+
+function GalleryTab({ subdomains = [], scanId }) {
+  const [modal, setModal] = useState(null)
+  const withScreenshots = subdomains.filter(s => s.screenshot_path && s.is_alive)
+
+  if (withScreenshots.length === 0) {
+    return (
+      <div className="animate-slide-up card py-16 text-center">
+        <div className="text-4xl mb-3 opacity-30">📸</div>
+        <p className="text-[#555555] text-sm">No screenshots captured yet.</p>
+        <p className="text-[#444444] text-xs mt-1">Screenshots are taken of live hosts during the scan.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="animate-slide-up space-y-4">
+      {/* Modal */}
+      {modal && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setModal(null)}
+        >
+          <div className="relative max-w-5xl w-full" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="absolute -top-10 right-0 text-[#888888] hover:text-white text-sm"
+              onClick={() => setModal(null)}
+            >
+              ✕ Close
+            </button>
+            <div className="text-center mb-2 font-mono text-[#00ff88] text-sm">{modal.host}</div>
+            {modal.code && (
+              <div className="text-center mb-3">
+                <span className={`font-mono text-xs ${statusCodeColor(modal.code)}`}>{modal.code}</span>
+              </div>
+            )}
+            <img
+              src={modal.url}
+              alt={modal.host}
+              className="w-full rounded border border-[#333333]"
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="text-xs text-[#555555] font-mono">{withScreenshots.length} screenshot{withScreenshots.length !== 1 ? 's' : ''}</div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {withScreenshots.map((s, i) => {
+          const host  = s.subdomain ?? `host-${i}`
+          const techs = s.technologies ?? []
+          const code  = s.status_code
+          const ssUrl = `/api/scan/${scanId}/screenshot/${s.id}`
+
+          return (
+            <div
+              key={host}
+              className="card overflow-hidden cursor-pointer hover:border-[#00ff88]/30 transition-colors group"
+              onClick={() => setModal({ url: ssUrl, host, code })}
+            >
+              {/* Screenshot thumbnail */}
+              <div className="relative h-40 bg-[#0f0f0f] overflow-hidden">
+                <img
+                  src={ssUrl}
+                  alt={host}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  onError={(e) => {
+                    e.target.style.display = 'none'
+                    e.target.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-[#333333] text-4xl">📷</div>'
+                  }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+
+              {/* Card info */}
+              <div className="p-3 space-y-2">
+                <div className="font-mono text-[#cccccc] text-xs truncate" title={host}>
+                  {host}
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {code && (
+                    <span className={`font-mono text-xs font-bold ${statusCodeColor(code)}`}>{code}</span>
+                  )}
+                  {techs.slice(0, 3).map((t, ti) => (
+                    <span key={ti} className={`pill border text-[0.55rem] ${getTechColor(t)}`}>
+                      {t}
+                    </span>
+                  ))}
+                  {techs.length > 3 && (
+                    <span className="text-[0.55rem] text-[#555555]">+{techs.length - 3}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── PORTS TAB ─────────────────────────────────────────────────────────────────
 
 function PortsTab({ subdomains = [] }) {
@@ -367,7 +544,6 @@ function PortsTab({ subdomains = [] }) {
         const host = s.subdomain ?? s.host ?? s.domain ?? `host-${si}`
         return (
           <div key={host + si} className="card overflow-hidden">
-            {/* Host header */}
             <div className="px-5 py-3 border-b border-[#1e1e1e] flex items-center gap-3">
               <span className="w-2 h-2 rounded-full bg-[#00ff88] flex-shrink-0" />
               <span className="font-mono text-[#00ff88] text-sm font-semibold">{host}</span>
@@ -429,7 +605,25 @@ function PortsTab({ subdomains = [] }) {
 
 // ── SECRETS TAB ───────────────────────────────────────────────────────────────
 
+const SECRET_SEVERITY_FILTERS = ['All', 'Critical', 'High', 'Medium', 'Low', 'Info']
+
 function SecretsTab({ secrets = [] }) {
+  const [filter, setFilter] = useState('All')
+
+  const sorted = [...secrets].sort((a, b) => {
+    const aOrder = SEVERITY_ORDER[(a.severity || 'medium').toLowerCase()] ?? 2
+    const bOrder = SEVERITY_ORDER[(b.severity || 'medium').toLowerCase()] ?? 2
+    return aOrder - bOrder
+  })
+
+  const filtered = sorted.filter(s => {
+    if (filter === 'All') return true
+    return (s.severity || 'medium').toLowerCase() === filter.toLowerCase()
+  })
+
+  const critCount   = secrets.filter(s => (s.severity || '').toLowerCase() === 'critical').length
+  const highCount   = secrets.filter(s => (s.severity || '').toLowerCase() === 'high').length
+
   if (secrets.length === 0) {
     return (
       <div className="animate-slide-up card py-16 text-center">
@@ -448,6 +642,11 @@ function SecretsTab({ secrets = [] }) {
         <div>
           <p className="text-[#ff4444] font-semibold text-sm">
             {secrets.length} secret{secrets.length !== 1 ? 's' : ''} detected
+            {(critCount > 0 || highCount > 0) && (
+              <span className="ml-2 text-xs">
+                — {critCount > 0 && `${critCount} critical`}{critCount > 0 && highCount > 0 && ', '}{highCount > 0 && `${highCount} high`}
+              </span>
+            )}
           </p>
           <p className="text-[#884444] text-xs mt-0.5">
             Exposed credentials found in JavaScript files. Rotate these immediately.
@@ -455,11 +654,33 @@ function SecretsTab({ secrets = [] }) {
         </div>
       </div>
 
+      {/* Filter bar */}
+      <div className="flex gap-2 flex-wrap">
+        {SECRET_SEVERITY_FILTERS.map(f => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-3 py-1.5 rounded text-xs font-semibold transition-all border ${
+              filter === f
+                ? 'bg-[#00ff88] text-black border-[#00ff88]'
+                : 'bg-[#0f0f0f] text-[#666666] border-[#222222] hover:border-[#444444] hover:text-[#aaaaaa]'
+            }`}
+          >
+            {f}
+          </button>
+        ))}
+        <span className="ml-auto text-xs text-[#555555] font-mono self-center">
+          {filtered.length} / {secrets.length}
+        </span>
+      </div>
+
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="data-table">
             <thead>
               <tr>
+                <th>Severity</th>
+                <th>Confidence</th>
                 <th>Type</th>
                 <th>Source File</th>
                 <th>Value Preview</th>
@@ -467,22 +688,34 @@ function SecretsTab({ secrets = [] }) {
               </tr>
             </thead>
             <tbody>
-              {secrets.map((s, i) => {
+              {filtered.map((s, i) => {
                 const type    = s.secret_type ?? s.type ?? s.kind ?? 'unknown'
                 const fileUrl = s.file_url ?? s.url ?? s.source ?? s.js_file ?? ''
                 const value   = s.matched_value ?? s.value ?? s.secret ?? s.match ?? ''
                 const lineNum = s.line_number ?? s.line ?? s.line_num ?? '—'
-                const style   = getSecretStyle(type)
-                const isHighRisk = style.color.includes('red')
+                const sev     = (s.severity || 'medium').toLowerCase()
+                const conf    = s.confidence ?? 60
+                const confColor = conf >= 80 ? '#00ff88' : conf >= 50 ? '#ffcc00' : '#ff6666'
 
                 return (
-                  <tr
-                    key={i}
-                    className={isHighRisk ? 'bg-[rgba(255,68,68,0.04)] hover:bg-[rgba(255,68,68,0.07)]' : ''}
-                  >
+                  <tr key={i}>
                     <td>
-                      <span className={`pill border text-[0.6rem] ${style.color}`}>
-                        {style.label}
+                      <SeverityBadge severity={sev} />
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <div className="w-16 h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full"
+                            style={{ width: `${conf}%`, background: confColor }}
+                          />
+                        </div>
+                        <span className="font-mono text-xs" style={{ color: confColor }}>{conf}%</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span className={`pill border text-[0.6rem] ${getSecretStyle(type).color}`}>
+                        {type}
                       </span>
                     </td>
                     <td className="max-w-[220px]">
@@ -581,9 +814,7 @@ function EndpointsTab({ endpoints = [] }) {
                           {isHL && (
                             <span className="text-[#00ff88] text-xs opacity-70 flex-shrink-0">★</span>
                           )}
-                          <span
-                            className={`font-mono text-sm ${isHL ? 'text-[#00ff88]' : 'text-[#cccccc]'}`}
-                          >
+                          <span className={`font-mono text-sm ${isHL ? 'text-[#00ff88]' : 'text-[#cccccc]'}`}>
                             {url}
                           </span>
                         </div>
@@ -612,7 +843,6 @@ function EndpointsTab({ endpoints = [] }) {
         )}
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between text-sm">
           <span className="text-[#555555] text-xs font-mono">
@@ -655,7 +885,6 @@ function TakeoverTab({ takeovers = [] }) {
 
   return (
     <div className="animate-slide-up space-y-4">
-      {/* Danger banner */}
       <div className="rounded-lg border border-[rgba(255,68,68,0.4)] bg-[#150a0a] p-4 flex items-start gap-3">
         <span className="text-2xl flex-shrink-0">⚠️</span>
         <div>
@@ -718,6 +947,161 @@ function TakeoverTab({ takeovers = [] }) {
   )
 }
 
+// ── VULNERABILITIES TAB ───────────────────────────────────────────────────────
+
+const VULN_FILTERS = ['All', 'Critical', 'High', 'Medium', 'Low', 'Info']
+
+function VulnerabilitiesTab({ vulns = [] }) {
+  const [filter, setFilter] = useState('All')
+  const [expandedId, setExpandedId] = useState(null)
+
+  const sorted = [...vulns].sort((a, b) => {
+    const aO = SEVERITY_ORDER[(a.severity || 'info').toLowerCase()] ?? 4
+    const bO = SEVERITY_ORDER[(b.severity || 'info').toLowerCase()] ?? 4
+    return aO - bO
+  })
+
+  const filtered = sorted.filter(v => {
+    if (filter === 'All') return true
+    return (v.severity || 'info').toLowerCase() === filter.toLowerCase()
+  })
+
+  if (vulns.length === 0) {
+    return (
+      <div className="animate-slide-up card py-16 text-center">
+        <div className="text-4xl mb-3">🛡️</div>
+        <p className="text-[#00ff88] font-semibold">No vulnerabilities detected.</p>
+        <p className="text-[#555555] text-xs mt-1">Nuclei scanner found no critical/high/medium issues.</p>
+      </div>
+    )
+  }
+
+  const counts = {
+    critical: vulns.filter(v => v.severity === 'critical').length,
+    high:     vulns.filter(v => v.severity === 'high').length,
+    medium:   vulns.filter(v => v.severity === 'medium').length,
+    low:      vulns.filter(v => v.severity === 'low').length,
+    info:     vulns.filter(v => v.severity === 'info').length,
+  }
+
+  return (
+    <div className="animate-slide-up space-y-4">
+      {/* Alert banner */}
+      <div className="rounded-lg border border-[rgba(255,68,68,0.35)] bg-[#150a0a] p-4 flex items-start gap-3">
+        <span className="text-xl flex-shrink-0">🎯</span>
+        <div>
+          <p className="text-[#ff4444] font-semibold text-sm">
+            {vulns.length} vulnerability finding{vulns.length !== 1 ? 's' : ''} —{' '}
+            {counts.critical > 0 && <span className="text-red-400">{counts.critical} critical </span>}
+            {counts.high > 0 && <span className="text-orange-400">{counts.high} high </span>}
+            {counts.medium > 0 && <span className="text-yellow-400">{counts.medium} medium</span>}
+          </p>
+          <p className="text-[#884444] text-xs mt-0.5">
+            Discovered by Nuclei template-based vulnerability scanner.
+          </p>
+        </div>
+      </div>
+
+      {/* Filter bar */}
+      <div className="flex gap-2 flex-wrap">
+        {VULN_FILTERS.map(f => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-3 py-1.5 rounded text-xs font-semibold transition-all border ${
+              filter === f
+                ? 'bg-[#00ff88] text-black border-[#00ff88]'
+                : 'bg-[#0f0f0f] text-[#666666] border-[#222222] hover:border-[#444444] hover:text-[#aaaaaa]'
+            }`}
+          >
+            {f}
+            {f !== 'All' && counts[f.toLowerCase()] > 0 && (
+              <span className="ml-1.5 text-[0.6rem] opacity-70">({counts[f.toLowerCase()]})</span>
+            )}
+          </button>
+        ))}
+        <span className="ml-auto text-xs text-[#555555] font-mono self-center">
+          {filtered.length} / {vulns.length}
+        </span>
+      </div>
+
+      {/* Table */}
+      <div className="card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Severity</th>
+                <th>Template ID</th>
+                <th>Name</th>
+                <th>Host</th>
+                <th>Matched At</th>
+                <th>Tags</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((v, i) => {
+                const sev    = (v.severity || 'info').toLowerCase()
+                const style  = getVulnStyle(sev)
+                const isExp  = expandedId === (v.id || i)
+                const tags   = v.tags ?? []
+
+                return (
+                  <>
+                    <tr
+                      key={v.id || i}
+                      className={`cursor-pointer ${style.bg} hover:brightness-125 transition-all`}
+                      onClick={() => setExpandedId(isExp ? null : (v.id || i))}
+                    >
+                      <td>
+                        <SeverityBadge severity={sev} />
+                      </td>
+                      <td className="font-mono text-xs text-[#888888]">{v.template_id}</td>
+                      <td className="text-sm font-medium text-[#cccccc]">{v.template_name}</td>
+                      <td className="font-mono text-xs text-[#00ff88]">{v.host}</td>
+                      <td className="font-mono text-xs text-[#888888] max-w-[200px] truncate" title={v.matched_at}>
+                        {v.matched_at}
+                      </td>
+                      <td>
+                        <div className="flex flex-wrap gap-1">
+                          {tags.slice(0, 3).map((t, ti) => (
+                            <span key={ti} className="pill bg-[#1a1a1a] text-[#555555] border border-[#2a2a2a] text-[0.55rem]">
+                              {t}
+                            </span>
+                          ))}
+                          {tags.length > 3 && <span className="text-[0.55rem] text-[#444444]">+{tags.length - 3}</span>}
+                        </div>
+                      </td>
+                    </tr>
+                    {isExp && (v.description || v.remediation) && (
+                      <tr key={`${v.id || i}-expanded`} className={style.bg}>
+                        <td colSpan={6} className="px-4 pb-4 pt-0">
+                          {v.description && (
+                            <div className="mb-2">
+                              <span className="text-[0.65rem] font-bold uppercase tracking-widest text-[#555555]">Description</span>
+                              <p className="text-xs text-[#aaaaaa] mt-1 leading-relaxed">{v.description}</p>
+                            </div>
+                          )}
+                          {v.remediation && (
+                            <div>
+                              <span className="text-[0.65rem] font-bold uppercase tracking-widest text-[#00aa66]">Remediation</span>
+                              <p className="text-xs text-[#aaaaaa] mt-1 leading-relaxed">{v.remediation}</p>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── AI SUMMARY TAB ────────────────────────────────────────────────────────────
 
 function AISummaryTab({ scan, onRegenerate, isRegenerating }) {
@@ -727,7 +1111,6 @@ function AISummaryTab({ scan, onRegenerate, isRegenerating }) {
 
   return (
     <div className="animate-slide-up space-y-5">
-      {/* Header row */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-2">
           <span className="text-xl">🤖</span>
@@ -751,7 +1134,6 @@ function AISummaryTab({ scan, onRegenerate, isRegenerating }) {
         </button>
       </div>
 
-      {/* Content */}
       {isRegenerating ? (
         <div className="card p-12 flex flex-col items-center gap-4 text-center">
           <Spinner size="lg" />
@@ -770,13 +1152,11 @@ function AISummaryTab({ scan, onRegenerate, isRegenerating }) {
         </div>
       ) : (
         <div className="card p-6">
-          {/* Timestamp */}
           {createdAt && (
             <p className="text-[#444444] text-xs font-mono mb-5">
               Generated {formatRelativeTime(createdAt)}
             </p>
           )}
-          {/* Rendered Markdown */}
           <div className="markdown-body">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {summary}
@@ -798,6 +1178,7 @@ export default function ScanDetail() {
   const [activeTab, setActiveTab]               = useState('overview')
   const [isRegeneratingAI, setIsRegeneratingAI] = useState(false)
   const [exportLoading, setExportLoading]       = useState(false)
+  const [pdfLoading, setPdfLoading]             = useState(false)
   const intervalRef = useRef(null)
 
   // ── Fetch ────────────────────────────────────────────────────────────────
@@ -839,7 +1220,7 @@ export default function ScanDetail() {
     }
   }, [scan?.status, fetchScan])
 
-  // ── Export ────────────────────────────────────────────────────────────────
+  // ── Export JSON ───────────────────────────────────────────────────────────
 
   async function handleExport() {
     setExportLoading(true)
@@ -857,6 +1238,28 @@ export default function ScanDetail() {
       // silently fail
     } finally {
       setExportLoading(false)
+    }
+  }
+
+  // ── Download PDF ──────────────────────────────────────────────────────────
+
+  async function handlePdfDownload() {
+    setPdfLoading(true)
+    try {
+      const blob = await downloadPdfReport(id, scan?.domain)
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      const date = new Date().toISOString().slice(0, 10)
+      a.href     = url
+      a.download = `argus-sentinel-${scan?.domain ?? id}-${date}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('PDF download failed:', err)
+    } finally {
+      setPdfLoading(false)
     }
   }
 
@@ -880,19 +1283,29 @@ export default function ScanDetail() {
 
   // ── Derived data ─────────────────────────────────────────────────────────
 
-  const subdomains = scan?.subdomains ?? []
-  const secrets    = scan?.secrets ?? []
-  const endpoints  = scan?.endpoints ?? []
-  const takeovers  = scan?.takeover_risks ?? scan?.takeovers ?? []
-  const totalPorts = subdomains.reduce((acc, s) => acc + (s.ports?.length ?? 0), 0)
+  const subdomains  = scan?.subdomains ?? []
+  const secrets     = scan?.secrets ?? []
+  const endpoints   = scan?.endpoints ?? []
+  const takeovers   = scan?.takeover_risks ?? scan?.takeovers ?? []
+  const vulns       = scan?.vulnerability_findings ?? []
+  const totalPorts  = subdomains.reduce((acc, s) => acc + (s.ports?.length ?? 0), 0)
+
+  const critHighVulns = vulns.filter(v => ['critical','high'].includes((v.severity || '').toLowerCase()))
 
   const tabs = [
     { id: 'overview',   label: 'Overview' },
     { id: 'subdomains', label: 'Subdomains', count: subdomains.length },
+    { id: 'gallery',    label: 'Gallery',    count: subdomains.filter(s => s.screenshot_path).length },
     { id: 'ports',      label: 'Ports',      count: totalPorts },
     { id: 'secrets',    label: 'Secrets',    count: secrets.length },
     { id: 'endpoints',  label: 'Endpoints',  count: endpoints.length },
     { id: 'takeover',   label: 'Takeover',   count: takeovers.length },
+    {
+      id: 'vulns',
+      label: 'Vulns',
+      count: vulns.length,
+      danger: critHighVulns.length > 0,
+    },
     { id: 'ai',         label: 'AI Summary' },
   ]
 
@@ -940,7 +1353,6 @@ export default function ScanDetail() {
 
         {/* ── Top Bar ──────────────────────────────────────────── */}
         <header className="pt-8 pb-4 animate-fade-in">
-          {/* Back + meta row */}
           <div className="flex items-start justify-between gap-4 flex-wrap mb-2">
             {/* Left: back, domain, status */}
             <div className="flex items-center gap-4 flex-wrap min-w-0">
@@ -964,26 +1376,56 @@ export default function ScanDetail() {
               <StatusBadge status={status} dot />
             </div>
 
-            {/* Right: export button */}
-            <button
-              onClick={handleExport}
-              disabled={exportLoading}
-              className="btn-ghost flex-shrink-0"
-            >
-              {exportLoading ? (
-                <span className="flex items-center gap-2">
-                  <Spinner size="sm" color="#888888" />
-                  Exporting...
-                </span>
-              ) : (
-                <>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  EXPORT JSON
-                </>
-              )}
-            </button>
+            {/* Right: export buttons */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* PDF Report button */}
+              <button
+                onClick={handlePdfDownload}
+                disabled={pdfLoading || status !== 'complete'}
+                className="flex items-center gap-2 px-3 py-2 rounded text-xs font-semibold transition-all border disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{
+                  background: pdfLoading ? 'transparent' : 'rgba(255,80,0,0.1)',
+                  borderColor: 'rgba(255,80,0,0.4)',
+                  color: '#ff6622',
+                }}
+                title={status !== 'complete' ? 'Available when scan is complete' : 'Download PDF Report'}
+              >
+                {pdfLoading ? (
+                  <span className="flex items-center gap-2">
+                    <Spinner size="sm" color="#ff6622" />
+                    Generating...
+                  </span>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    PDF REPORT
+                  </>
+                )}
+              </button>
+
+              {/* JSON Export button */}
+              <button
+                onClick={handleExport}
+                disabled={exportLoading}
+                className="btn-ghost flex-shrink-0"
+              >
+                {exportLoading ? (
+                  <span className="flex items-center gap-2">
+                    <Spinner size="sm" color="#888888" />
+                    Exporting...
+                  </span>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    EXPORT JSON
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Timestamps */}
@@ -1008,11 +1450,13 @@ export default function ScanDetail() {
         <div className="card p-6 animate-slide-up" style={{ animationDelay: '0.1s' }}>
           <TabView tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab}>
             {activeTab === 'overview'   && <OverviewTab   scan={scan} />}
-            {activeTab === 'subdomains' && <SubdomainsTab subdomains={subdomains} />}
+            {activeTab === 'subdomains' && <SubdomainsTab subdomains={subdomains} scanId={id} />}
+            {activeTab === 'gallery'    && <GalleryTab    subdomains={subdomains} scanId={id} />}
             {activeTab === 'ports'      && <PortsTab      subdomains={subdomains} />}
             {activeTab === 'secrets'    && <SecretsTab    secrets={secrets} />}
             {activeTab === 'endpoints'  && <EndpointsTab  endpoints={endpoints} />}
             {activeTab === 'takeover'   && <TakeoverTab   takeovers={takeovers} />}
+            {activeTab === 'vulns'      && <VulnerabilitiesTab vulns={vulns} />}
             {activeTab === 'ai'         && (
               <AISummaryTab
                 scan={scan}

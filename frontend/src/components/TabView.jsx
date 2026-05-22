@@ -36,7 +36,11 @@ export default function TabView({ tabs = [], activeTab, onTabChange, children })
                     inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5
                     rounded-full text-[0.6rem] font-bold
                     ${isActive
-                      ? 'bg-[rgba(0,255,136,0.15)] text-[#00ff88]'
+                      ? tab.danger
+                        ? 'bg-[rgba(255,68,68,0.2)] text-[#ff4444]'
+                        : 'bg-[rgba(0,255,136,0.15)] text-[#00ff88]'
+                      : tab.danger && tab.count > 0
+                      ? 'bg-[rgba(255,68,68,0.15)] text-[#ff6666]'
                       : 'bg-[#1e1e1e] text-[#555555]'
                     }
                   `}

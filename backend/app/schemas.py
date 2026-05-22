@@ -22,6 +22,7 @@ class SubdomainSchema(BaseModel):
     title: Optional[str] = None
     technologies: Optional[List[str]] = []
     ports: List[PortSchema] = []
+    screenshot_path: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -33,6 +34,8 @@ class SecretSchema(BaseModel):
     secret_type: str
     matched_value: str
     line_number: Optional[int] = None
+    severity: Optional[str] = 'medium'
+    confidence: Optional[int] = 60
 
     class Config:
         from_attributes = True
@@ -67,6 +70,22 @@ class AISummarySchema(BaseModel):
         from_attributes = True
 
 
+class VulnerabilityFindingSchema(BaseModel):
+    id: str
+    template_id: str
+    template_name: str
+    severity: str
+    host: str
+    matched_at: str
+    description: Optional[str] = None
+    remediation: Optional[str] = None
+    tags: Optional[List[str]] = []
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class ScanSchema(BaseModel):
     id: str
     domain: str
@@ -80,6 +99,7 @@ class ScanSchema(BaseModel):
     endpoints: List[EndpointSchema] = []
     takeover_risks: List[TakeoverRiskSchema] = []
     ai_summary: Optional[AISummarySchema] = None
+    vulnerability_findings: List[VulnerabilityFindingSchema] = []
 
     class Config:
         from_attributes = True

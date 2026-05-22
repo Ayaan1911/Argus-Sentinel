@@ -21,6 +21,7 @@ class Scan(Base):
     endpoints = relationship('Endpoint', back_populates='scan', cascade='all, delete-orphan')
     takeover_risks = relationship('TakeoverRisk', back_populates='scan', cascade='all, delete-orphan')
     ai_summary = relationship('AISummary', back_populates='scan', uselist=False, cascade='all, delete-orphan')
+    vulnerability_findings = relationship('VulnerabilityFinding', back_populates='scan', cascade='all, delete-orphan')
 
 
 class Subdomain(Base):
@@ -33,6 +34,7 @@ class Subdomain(Base):
     status_code = Column(Integer, nullable=True)
     title = Column(String, nullable=True)
     technologies = Column(JSON, default=list)
+    screenshot_path = Column(String, nullable=True)
 
     scan = relationship('Scan', back_populates='subdomains')
     ports = relationship('Port', back_populates='subdomain', cascade='all, delete-orphan')
@@ -60,6 +62,8 @@ class Secret(Base):
     secret_type = Column(String, nullable=False)
     matched_value = Column(String, nullable=False)
     line_number = Column(Integer, nullable=True)
+    severity = Column(String, nullable=True, default='medium')
+    confidence = Column(Integer, nullable=True, default=60)
 
     scan = relationship('Scan', back_populates='secrets')
 
@@ -97,3 +101,21 @@ class AISummary(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     scan = relationship('Scan', back_populates='ai_summary')
+
+
+class VulnerabilityFinding(Base):
+    __tablename__ = 'vulnerability_findings'
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    scan_id = Column(String, ForeignKey('scans.id'), nullable=False)
+    template_id = Column(String, nullable=False)
+    template_name = Column(String, nullable=False)
+    severity = Column(String, nullable=False)  # critical, high, medium, low, info
+    host = Column(String, nullable=False)
+    matched_at = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    remediation = Column(Text, nullable=True)
+    tags = Column(JSON, nullable=True, default=list)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    scan = relationship('Scan', back_populates='vulnerability_findings')

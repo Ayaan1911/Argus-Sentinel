@@ -3,7 +3,7 @@ import logging
 import requests
 from datetime import datetime
 from app.database import SessionLocal
-from app.models import Scan, Subdomain, Secret, Endpoint, TakeoverRisk, AISummary
+from app.models import Scan, Subdomain, Secret, Endpoint, TakeoverRisk, AISummary, VulnerabilityFinding
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +19,7 @@ def build_prompt(
     secrets: list,
     endpoints: list,
     takeover_risks: list,
+    vuln_findings: list = None,
 ) -> str:
     """Build a detailed recon summary prompt for the AI model."""
     alive_count = sum(1 for s in subdomains if s.is_alive)
@@ -51,17 +52,28 @@ def build_prompt(
     endpoints_sample = '\n'.join([e.url for e in endpoints[:25]]) if endpoints else 'None detected'
     techs_sample = ', '.join(sorted(all_techs)[:30]) if all_techs else 'Unknown'
 
+    # Vulnerability findings summary
+    vuln_findings = vuln_findings or []
+    vuln_critical = [v for v in vuln_findings if v.severity == 'critical']
+    vuln_high     = [v for v in vuln_findings if v.severity == 'high']
+    vuln_medium   = [v for v in vuln_findings if v.severity == 'medium']
+    vulns_sample  = '\n'.join([
+        f'  [{v.severity.upper()}] {v.template_name} @ {v.matched_at}'
+        for v in vuln_findings[:20]
+    ]) if vuln_findings else 'None detected'
+
     return f"""You are a senior bug bounty hunter and penetration tester analyzing automated reconnaissance results.
 
 TARGET DOMAIN: {scan.domain}
 
 ═══ RECON STATISTICS ═══
-• Total Subdomains Found : {len(subdomains)}
-• Live Hosts             : {alive_count}
-• Open Ports Detected    : {len(all_ports)}
-• Secrets/Credentials    : {len(secrets)}
-• API Endpoints Found    : {len(endpoints)}
-• Subdomain Takeover Risks: {len(takeover_risks)}
+• Total Subdomains Found   : {len(subdomains)}
+• Live Hosts               : {alive_count}
+• Open Ports Detected      : {len(all_ports)}
+• Secrets/Credentials      : {len(secrets)}
+• API Endpoints Found      : {len(endpoints)}
+• Subdomain Takeover Risks : {len(takeover_risks)}
+• Vulnerabilities (Nuclei) : {len(vuln_findings)} total — {len(vuln_critical)} critical, {len(vuln_high)} high, {len(vuln_medium)} medium
 
 ═══ TECHNOLOGIES DETECTED ═══
 {techs_sample}
@@ -74,6 +86,9 @@ TARGET DOMAIN: {scan.domain}
 
 ═══ TAKEOVER RISKS ═══
 {takeovers_sample}
+
+═══ NUCLEI VULNERABILITY FINDINGS (sample of up to 20) ═══
+{vulns_sample}
 
 ═══ API ENDPOINTS (sample of up to 25) ═══
 {endpoints_sample}
@@ -136,8 +151,9 @@ def run(scan_id: str, db=None) -> None:
         secrets = db.query(Secret).filter(Secret.scan_id == scan_id).all()
         endpoints = db.query(Endpoint).filter(Endpoint.scan_id == scan_id).all()
         takeover_risks = db.query(TakeoverRisk).filter(TakeoverRisk.scan_id == scan_id).all()
+        vuln_findings = db.query(VulnerabilityFinding).filter(VulnerabilityFinding.scan_id == scan_id).all()
 
-        prompt = build_prompt(scan, subdomains, secrets, endpoints, takeover_risks)
+        prompt = build_prompt(scan, subdomains, secrets, endpoints, takeover_risks, vuln_findings)
 
         logger.info(f'[{scan_id}] Sending prompt to OpenRouter ({DEFAULT_MODEL})')
 

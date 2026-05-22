@@ -7,14 +7,16 @@ from app.models import Scan
 logger = logging.getLogger(__name__)
 
 STAGES = [
-    ('subdomain_enum', 'Subdomain Enumeration'),
-    ('live_host_check', 'Live Host Detection'),
-    ('port_scan', 'Port Scanning'),
-    ('js_extractor', 'JS File Extraction'),
-    ('secret_detector', 'Secret Detection'),
-    ('endpoint_miner', 'Endpoint Mining'),
-    ('takeover_check', 'Takeover Check'),
-    ('ai_summary', 'AI Summary'),
+    ('subdomain_enum',    'Subdomain Enumeration'),
+    ('live_host_check',   'Live Host Detection'),
+    ('screenshot_capture','Screenshots'),
+    ('port_scan',         'Port Scanning'),
+    ('js_extractor',      'JS File Extraction'),
+    ('secret_detector',   'Secret Detection'),
+    ('endpoint_miner',    'Endpoint Mining'),
+    ('takeover_check',    'Takeover Check'),
+    ('nuclei_scan',       'Nuclei Scan'),
+    ('ai_summary',        'AI Summary'),
 ]
 
 
@@ -38,23 +40,27 @@ def run_scan(self, scan_id: str):
         from tasks.modules import (
             subdomain_enum,
             live_host_check,
+            screenshot_capture,
             port_scan,
             js_extractor,
             secret_detector,
             endpoint_miner,
             takeover_check,
+            nuclei_scan,
             ai_summary,
         )
 
         module_map = {
-            'subdomain_enum': subdomain_enum.run,
-            'live_host_check': live_host_check.run,
-            'port_scan': port_scan.run,
-            'js_extractor': js_extractor.run,
-            'secret_detector': secret_detector.run,
-            'endpoint_miner': endpoint_miner.run,
-            'takeover_check': takeover_check.run,
-            'ai_summary': ai_summary.run,
+            'subdomain_enum':     subdomain_enum.run,
+            'live_host_check':    live_host_check.run,
+            'screenshot_capture': screenshot_capture.run,
+            'port_scan':          port_scan.run,
+            'js_extractor':       js_extractor.run,
+            'secret_detector':    secret_detector.run,
+            'endpoint_miner':     endpoint_miner.run,
+            'takeover_check':     takeover_check.run,
+            'nuclei_scan':        nuclei_scan.run,
+            'ai_summary':         ai_summary.run,
         }
 
         for stage_key, stage_name in STAGES:

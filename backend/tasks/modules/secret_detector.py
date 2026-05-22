@@ -8,6 +8,97 @@ logger = logging.getLogger(__name__)
 # Maximum matched value length stored in DB (truncated for safety)
 MAX_STORED_LENGTH = 60
 
+# Severity classification by secret type (normalized key)
+SECRET_SEVERITY_MAP: dict[str, str] = {
+    'aws access key id':          'critical',
+    'aws secret access key':      'critical',
+    'private key (pem)':          'critical',
+    'private key':                'critical',
+    'rsa private key':            'critical',
+    'stripe secret key':          'high',
+    'github personal access token': 'high',
+    'github oauth token':         'high',
+    'slack bot/user token':       'high',
+    'slack webhook url':          'high',
+    'hardcoded password':         'high',
+    'bearer token':               'high',
+    'sendgrid api key':           'high',
+    'jwt token':                  'medium',
+    'generic api key':            'medium',
+    'generic secret':             'medium',
+    'google api key':             'medium',
+    'twilio account sid':         'medium',
+    'twilio auth token':          'medium',
+    'database connection string': 'medium',
+    'mailgun api key':            'medium',
+    'npm auth token':             'medium',
+    'mailchimp api key':          'low',
+    'stripe publishable key':     'low',
+    'google oauth client id':     'low',
+    'firebase url':               'info',
+}
+
+# Confidence score (0–100) per secret type
+SECRET_CONFIDENCE_MAP: dict[str, int] = {
+    'aws access key id':            95,
+    'aws secret access key':        95,
+    'private key (pem)':            99,
+    'private key':                  99,
+    'rsa private key':              99,
+    'stripe secret key':            92,
+    'github personal access token': 90,
+    'github oauth token':           90,
+    'slack bot/user token':         88,
+    'slack webhook url':            90,
+    'hardcoded password':           65,
+    'bearer token':                 80,
+    'sendgrid api key':             90,
+    'jwt token':                    75,
+    'generic api key':              60,
+    'generic secret':               55,
+    'google api key':               80,
+    'twilio account sid':           85,
+    'twilio auth token':            82,
+    'database connection string':   85,
+    'mailgun api key':              85,
+    'npm auth token':               80,
+    'mailchimp api key':            85,
+    'stripe publishable key':       90,
+    'google oauth client id':       70,
+    'firebase url':                 80,
+}
+
+
+def _classify_secret(secret_type: str) -> tuple[str, int]:
+    """
+    Return (severity, confidence) for a given secret type label.
+    Normalizes the key and performs fuzzy fallback matching.
+    """
+    key = secret_type.lower().strip()
+
+    # Exact match
+    if key in SECRET_SEVERITY_MAP:
+        return SECRET_SEVERITY_MAP[key], SECRET_CONFIDENCE_MAP.get(key, 60)
+
+    # Partial match
+    for k, sev in SECRET_SEVERITY_MAP.items():
+        if k in key or key in k:
+            conf = SECRET_CONFIDENCE_MAP.get(k, 60)
+            return sev, conf
+
+    # Keyword fallback
+    if any(word in key for word in ('private', 'rsa', 'pem', 'certificate')):
+        return 'critical', 95
+    if any(word in key for word in ('aws', 'secret', 'password', 'passwd', 'token', 'github', 'slack', 'stripe')):
+        return 'high', 70
+    if any(word in key for word in ('api', 'key', 'jwt', 'oauth', 'database', 'db', 'connection')):
+        return 'medium', 60
+    if any(word in key for word in ('publishable', 'public', 'firebase', 'url')):
+        return 'low', 55
+
+    return 'info', 50
+
+
 # Each pattern: (secret_type_label, compiled_regex)
 # Patterns use capturing groups where the secret value is in group 1,
 # or no group (full match is used).
@@ -109,7 +200,8 @@ def run(scan_id: str, db) -> None:
     """
     Stage 5: Secret Detection.
     Scans all cached JS file content line-by-line using regex patterns.
-    Stores matches with type, source file, line number, and truncated value.
+    Stores matches with type, source file, line number, truncated value,
+    severity, and confidence score.
     """
     js_files = get_js_cache(scan_id)
     if not js_files:
@@ -122,7 +214,7 @@ def run(scan_id: str, db) -> None:
     for file_url, content in js_files.items():
         lines = content.splitlines()
         for line_no, line in enumerate(lines, start=1):
-            # Skip blank lines and minified megaliths (>5000 chars per line, scan anyway)
+            # Skip blank lines
             if not line.strip():
                 continue
 
@@ -138,6 +230,7 @@ def run(scan_id: str, db) -> None:
                 seen.add(dedup_key)
 
                 stored_value = value[:MAX_STORED_LENGTH]
+                severity, confidence = _classify_secret(secret_type)
 
                 secret = Secret(
                     scan_id=scan_id,
@@ -145,6 +238,8 @@ def run(scan_id: str, db) -> None:
                     secret_type=secret_type,
                     matched_value=stored_value,
                     line_number=line_no,
+                    severity=severity,
+                    confidence=confidence,
                 )
                 db.add(secret)
                 count += 1
