@@ -344,7 +344,7 @@ Distributed under the MIT License. See [`LICENSE`](LICENSE) for details.
 
 <div align="center">
 
-Built by [Mohammad Ayaan](https://github.com/Ayaan1911) · Powered by the [ProjectDiscovery](https://projectdiscovery.io) toolchain
+Built by [Mohammad Ayaan](https://github.com/Ayaan1911) · Uses open-source tools by [ProjectDiscovery](https://projectdiscovery.io) (subfinder, httpx, nuclei)
 
 *"The eye that sees everything is the eye that finds everything."*
 
