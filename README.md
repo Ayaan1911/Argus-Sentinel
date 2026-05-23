@@ -1,42 +1,24 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/version-2.0.0-00ff88?style=for-the-badge&labelColor=0a0a0a" />
-<img src="https://img.shields.io/badge/license-MIT-00ff88?style=for-the-badge&labelColor=0a0a0a" />
-<img src="https://img.shields.io/badge/docker-ready-00ff88?style=for-the-badge&logo=docker&logoColor=white&labelColor=0a0a0a" />
-<img src="https://img.shields.io/badge/python-3.11-00ff88?style=for-the-badge&logo=python&logoColor=white&labelColor=0a0a0a" />
-<img src="https://img.shields.io/badge/react-18-00ff88?style=for-the-badge&logo=react&logoColor=white&labelColor=0a0a0a" />
+# Argus-Sentinel
 
-<br /><br />
-
-```
-                                      █████╗ ██████╗  ██████╗ ██╗   ██╗███████╗
-                                     ██╔══██╗██╔══██╗██╔════╝ ██║   ██║██╔════╝
-                                     ███████║██████╔╝██║  ███╗██║   ██║███████╗
-                                     ██╔══██║██╔══██╗██║   ██║██║   ██║╚════██║
-                                     ██║  ██║██║  ██║╚██████╔╝╚██████╔╝███████║
-                                     ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚══════╝
-
-                               ███████╗███████╗███╗   ██╗████████╗██╗███╗   ██╗███████╗██╗
-                              ██╔════╝██╔════╝████╗  ██║╚══██╔══╝██║████╗  ██║██╔════╝██║
-                               ███████╗█████╗  ██╔██╗ ██║   ██║   ██║██╔██╗ ██║█████╗  ██║
-                               ╚════██║██╔══╝  ██║╚██╗██║   ██║   ██║██║╚██╗██║██╔══╝  ██║
-                               ███████║███████╗██║ ╚████║   ██║   ██║██║ ╚████║███████╗███████╗
-                              ╚══════╝╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝╚═╝  ╚═══╝╚══════╝╚══════╝
-```
-
-# A hundred eyes on your attack surface.
+### A hundred eyes on your attack surface.
 
 **Argus-Sentinel** is a fully automated offensive reconnaissance platform that replicates the exact workflow professional bug bounty hunters and penetration testers use — in a single button click.
 
 Drop in a domain. Walk away. Come back to a complete attack surface map.
 
-<br />
+<br/>
 
-[**Live Demo**](#) · [**Report a Bug**](https://github.com/Ayaan1911/Argus-Sentinel/issues) · [**Request Feature**](https://github.com/Ayaan1911/Argus-Sentinel/issues) · [**Documentation**](#architecture)
+[![Version](https://img.shields.io/badge/version-2.0.0-00ff88?style=flat-square&labelColor=0a0a0a)](https://github.com/Ayaan1911/Argus-Sentinel)
+[![License](https://img.shields.io/badge/license-MIT-00ff88?style=flat-square&labelColor=0a0a0a)](LICENSE)
+[![Docker](https://img.shields.io/badge/docker-ready-00ff88?style=flat-square&logo=docker&logoColor=white&labelColor=0a0a0a)](https://www.docker.com/)
+[![Python](https://img.shields.io/badge/python-3.11-00ff88?style=flat-square&logo=python&logoColor=white&labelColor=0a0a0a)](https://python.org)
+[![React](https://img.shields.io/badge/react-18-00ff88?style=flat-square&logo=react&logoColor=white&labelColor=0a0a0a)](https://react.dev)
 
-<br />
+<br/>
 
-![Argus-Sentinel Dashboard](https://raw.githubusercontent.com/Ayaan1911/Argus-Sentinel/main/docs/dashboard-preview.png)
+[**Quick Start**](#getting-started) · [**Architecture**](#architecture) · [**Report Bug**](https://github.com/Ayaan1911/Argus-Sentinel/issues) · [**Request Feature**](https://github.com/Ayaan1911/Argus-Sentinel/issues)
 
 </div>
 
@@ -80,14 +62,13 @@ This isn't a script wrapper. It's a full-stack distributed intelligence platform
 ```
 Target: hackthebox.com
 
-  Subdomains found:     100
-  Live hosts:            39
-  Open ports:           116
-  JS endpoints:         842
-  Secrets detected:       5
-  Vulnerabilities:       12
-  Takeover risks:         0
-  Screenshots:           39
+  Subdomains found  →   100
+  Live hosts        →    39
+  Open ports        →   116
+  JS endpoints      →   842
+  Secrets detected  →     5
+  Vulnerabilities   →    12
+  Screenshots       →    39
 
   Time elapsed: 8m 42s
 ```
@@ -97,45 +78,36 @@ Target: hackthebox.com
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│  React + Vite + Tailwind  (port 5173)                                │
-│  Real-time polling · 10-stage pipeline progress · 9 result tabs      │
-└───────────────────────────┬──────────────────────────────────────────┘
-                            │ REST API
-┌───────────────────────────▼──────────────────────────────────────────┐
-│  FastAPI  (port 8000)                                                │
-│  POST /api/scan → create job → enqueue                               │
-│  GET  /api/scan/{id} → stream results as they arrive                 │
-│  GET  /api/scan/{id}/report/pdf → download pentest report            │
-└──────────────┬────────────────────────────┬─────────────────────────┘
-               │ publish                    │ read/write
-      ┌────────▼──────────┐     ┌───────────▼──────────────┐
-      │  Redis  (broker)  │     │  PostgreSQL 15  (state)   │
-      └────────┬──────────┘     └──────────────────────────┘
-               │ consume
-      ┌────────▼──────────────────────────────────────────────────────┐
-      │  Celery Worker                                                 │
-      │                                                                │
-      │  1  Subdomain Enum    subfinder + DNS brute-force             │
-      │       ↓                                                        │
-      │  2  Live Hosts        /root/go/bin/httpx                      │
-      │       ↓                                                        │
-      │  3  Screenshots       /root/go/bin/gowitness                  │
-      │       ↓                                                        │
-      │  4  Port Scan         nmap -T4 --top-ports 1000               │
-      │       ↓                                                        │
-      │  5  JS Extraction     BeautifulSoup + HTTP fetch               │
-      │       ↓                                                        │
-      │  6  Secret Detection  24 regex pattern families                │
-      │       ↓                                                        │
-      │  7  Endpoint Mining   API path extraction from JS bundles      │
-      │       ↓                                                        │
-      │  8  Takeover Check    CNAME + cloud fingerprint matching       │
-      │       ↓                                                        │
-      │  9  Nuclei Scan       5000+ vuln templates (critical→medium)  │
-      │       ↓                                                        │
-      │  10 AI Summary        OpenRouter GPT-4o-mini analysis          │
-      └────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│  React + Vite + Tailwind  (port 5173)                           │
+│  Real-time polling · 10-stage pipeline · 9 result tabs          │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ REST API
+┌──────────────────────────▼──────────────────────────────────────┐
+│  FastAPI  (port 8000)                                           │
+│  POST /api/scan          → create job → enqueue                 │
+│  GET  /api/scan/{id}     → stream results as they arrive        │
+│  GET  /api/scan/{id}/report/pdf  → download pentest report      │
+└─────────────┬─────────────────────────────┬─────────────────────┘
+              │ publish                     │ read/write
+     ┌────────▼─────────┐       ┌───────────▼────────────┐
+     │  Redis (broker)  │       │  PostgreSQL 15 (state)  │
+     └────────┬─────────┘       └────────────────────────┘
+              │ consume
+     ┌────────▼──────────────────────────────────────────┐
+     │  Celery Worker                                     │
+     │                                                    │
+     │  Stage  1 │ Subdomain Enum   subfinder + wordlist  │
+     │  Stage  2 │ Live Hosts       httpx                 │
+     │  Stage  3 │ Screenshots      gowitness             │
+     │  Stage  4 │ Port Scan        nmap top-1000         │
+     │  Stage  5 │ JS Extraction    BeautifulSoup + fetch │
+     │  Stage  6 │ Secret Detection 24 regex families     │
+     │  Stage  7 │ Endpoint Mining  JS bundle analysis    │
+     │  Stage  8 │ Takeover Check   CNAME fingerprinting  │
+     │  Stage  9 │ Nuclei Scan      5000+ vuln templates  │
+     │  Stage 10 │ AI Summary       GPT-4o-mini analysis  │
+     └────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -148,14 +120,14 @@ Target: hackthebox.com
 | Backend | FastAPI, Python 3.11, SQLAlchemy 2 |
 | Task Queue | Celery 5, Redis 7 |
 | Database | PostgreSQL 15, Alembic migrations |
-| Recon | subfinder, httpx, nmap, gowitness, nuclei |
+| Recon Tools | subfinder, httpx, nmap, gowitness, nuclei |
 | AI | OpenRouter (GPT-4o-mini) |
 | Reports | WeasyPrint, Jinja2 |
 | Runtime | Docker, Docker Compose |
 
 ---
 
-## Getting started
+## Getting Started
 
 ### Prerequisites
 
@@ -172,13 +144,13 @@ cd Argus-Sentinel
 
 # 2. Configure
 cp .env.example .env
-# Edit .env — add your OPENROUTER_API_KEY (optional)
+# Add your OPENROUTER_API_KEY to .env (optional)
 
 # 3. Launch
 docker compose up --build
 ```
 
-> First build takes **8–12 minutes** — Go compiles subfinder, httpx, nuclei, and gowitness from source inside Docker. Subsequent builds use cache and start in seconds.
+> **First build takes 8–12 minutes** — Go compiles subfinder, httpx, nuclei, and gowitness from source inside Docker. Subsequent builds use cache and start in seconds.
 
 ### Access
 
@@ -186,7 +158,7 @@ docker compose up --build
 |---------|-----|
 | 🖥️ Dashboard | http://localhost:5173 |
 | 📡 API | http://localhost:8000 |
-| 📖 API Docs (Swagger) | http://localhost:8000/docs |
+| 📖 Swagger Docs | http://localhost:8000/docs |
 
 ---
 
@@ -198,7 +170,7 @@ docker compose up --build
 2. Enter a target domain you own or have permission to test
 3. Click **INITIATE SCAN**
 4. Watch the 10-stage pipeline execute in real time
-5. When complete — download the PDF report
+5. Download the PDF report when complete
 
 ### API
 
@@ -212,14 +184,14 @@ curl -X POST http://localhost:8000/api/scan \
 curl http://localhost:8000/api/scan/{scan_id}
 
 # Download PDF report
-curl http://localhost:8000/api/scan/{scan_id}/report/pdf \
-  --output report.pdf
+curl http://localhost:8000/api/scan/{scan_id}/report/pdf --output report.pdf
 
 # Export JSON
 curl http://localhost:8000/api/scan/{scan_id}/export
 ```
 
-All responses follow the envelope format:
+All responses use the envelope format:
+
 ```json
 {
   "success": true,
@@ -230,7 +202,7 @@ All responses follow the envelope format:
 
 ---
 
-## Secret detection patterns
+## Secret Detection Patterns
 
 | Pattern | Severity | Confidence |
 |---------|----------|------------|
@@ -249,16 +221,16 @@ All responses follow the envelope format:
 
 ---
 
-## Project structure
+## Project Structure
 
 ```
 argus-sentinel/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py              # FastAPI app + CORS
-│   │   ├── models.py            # SQLAlchemy ORM models (7 tables)
+│   │   ├── models.py            # SQLAlchemy ORM models
 │   │   ├── schemas.py           # Pydantic response schemas
-│   │   ├── database.py          # DB engine + session factory
+│   │   ├── database.py          # DB engine + session
 │   │   ├── routes/
 │   │   │   └── scans.py         # All API route handlers
 │   │   └── reports/
@@ -278,7 +250,7 @@ argus-sentinel/
 │   │       ├── takeover_check.py
 │   │       ├── nuclei_scan.py
 │   │       └── ai_summary.py
-│   ├── alembic/                 # DB migrations
+│   ├── alembic/
 │   ├── requirements.txt
 │   ├── Dockerfile
 │   └── start.sh
@@ -286,14 +258,9 @@ argus-sentinel/
 │   ├── src/
 │   │   ├── pages/
 │   │   │   ├── Home.jsx
-│   │   │   └── ScanDetail.jsx   # 9 tabs, live polling, gallery
+│   │   │   └── ScanDetail.jsx
 │   │   ├── components/
-│   │   │   ├── MetricCard.jsx
-│   │   │   ├── StatusBadge.jsx
-│   │   │   ├── TabView.jsx
-│   │   │   └── PipelineProgress.jsx
 │   │   └── api/
-│   │       └── client.js
 │   ├── package.json
 │   └── Dockerfile
 ├── wordlists/
@@ -321,44 +288,40 @@ argus-sentinel/
 - [ ] Continuous monitoring (scheduled rescans + diff alerts)
 - [ ] Discord / Slack / Telegram notifications
 - [ ] Multi-user support with workspaces
-- [ ] Distributed workers across multiple VPS
 - [ ] Custom Nuclei template upload
-- [ ] CVSS scoring per vulnerability
 - [ ] Kubernetes deployment manifests
 
 ---
 
-## Safe testing targets
+## Safe Testing Targets
 
-Only use Argus-Sentinel against domains you own or have explicit written authorization to test. Here are legal practice targets:
+Only use Argus-Sentinel against domains you own or have explicit written authorization to test.
 
 | Target | Notes |
 |--------|-------|
 | `scanme.nmap.org` | Nmap's official test host |
 | `testphp.vulnweb.com` | Acunetix intentionally vulnerable app |
 | Your own domain | Always safe |
-| HackTheBox / TryHackMe labs | Within lab scope |
+| HackTheBox / TryHackMe labs | Within lab scope only |
 
 ---
 
 ## Contributing
 
-Contributions are what make the open source community great. Any contribution you make is **hugely appreciated**.
+Contributions are what make the open source community great. Any contribution is hugely appreciated.
 
 ```bash
-# Fork → Branch → Commit → Push → PR
-
 git checkout -b feature/your-feature
 git commit -m 'feat: add your feature'
 git push origin feature/your-feature
 # Open a Pull Request
 ```
 
-Ideas for contributions: new Nuclei template categories, additional secret patterns, new export formats, UI improvements, performance optimizations.
+Ideas: new Nuclei template categories, additional secret patterns, new export formats, UI improvements, performance optimizations.
 
 ---
 
-## Legal disclaimer
+## Legal Disclaimer
 
 > Argus-Sentinel is intended for **authorized security testing only**.
 >
@@ -368,22 +331,16 @@ Ideas for contributions: new Nuclei template categories, additional secret patte
 
 ## License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the MIT License. See [`LICENSE`](LICENSE) for details.
 
 ---
 
 <div align="center">
 
-Built by [Mohammad Ayaan](https://github.com/Ayaan1911) · Powered by [ProjectDiscovery](https://projectdiscovery.io) toolchain
+Built by [Mohammad Ayaan](https://github.com/Ayaan1911) · Powered by the [ProjectDiscovery](https://projectdiscovery.io) toolchain
 
 *"The eye that sees everything is the eye that finds everything."*
 
-⭐ Star this repo if Argus-Sentinel helped you find something interesting.
+⭐ **Star this repo if Argus-Sentinel helped you find something interesting.**
 
 </div>
-
-MIT License — see [LICENSE](LICENSE) for details.
-
----
-
-*Built with ❤️ for the security community. Remember: with great power comes great responsibility.*
