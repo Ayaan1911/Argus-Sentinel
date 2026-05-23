@@ -10,11 +10,18 @@ Drop in a domain. Walk away. Come back to a complete attack surface map.
 
 <br/>
 
-[![Version](https://img.shields.io/badge/version-2.0.0-00ff88?style=flat-square&labelColor=0a0a0a)](https://github.com/Ayaan1911/Argus-Sentinel)
-[![License](https://img.shields.io/badge/license-MIT-00ff88?style=flat-square&labelColor=0a0a0a)](LICENSE)
-[![Docker](https://img.shields.io/badge/docker-ready-00ff88?style=flat-square&logo=docker&logoColor=white&labelColor=0a0a0a)](https://www.docker.com/)
-[![Python](https://img.shields.io/badge/python-3.11-00ff88?style=flat-square&logo=python&logoColor=white&labelColor=0a0a0a)](https://python.org)
-[![React](https://img.shields.io/badge/react-18-00ff88?style=flat-square&logo=react&logoColor=white&labelColor=0a0a0a)](https://react.dev)
+[![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev)
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://postgresql.org)
+[![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
+[![Celery](https://img.shields.io/badge/Celery-37814A?style=for-the-badge&logo=celery&logoColor=white)](https://docs.celeryq.dev)
+[![Go](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://golang.org)
+[![Tailwind](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
+[![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev)
+[![OpenAI](https://img.shields.io/badge/OpenRouter_AI-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openrouter.ai)
+[![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://linux.org)
 
 <br/>
 
