@@ -1,170 +1,230 @@
-# Argus-Sentinel 🔍
+<div align="center">
 
-> **A hundred eyes on your attack surface.**
+<img src="https://img.shields.io/badge/version-2.0.0-00ff88?style=for-the-badge&labelColor=0a0a0a" />
+<img src="https://img.shields.io/badge/license-MIT-00ff88?style=for-the-badge&labelColor=0a0a0a" />
+<img src="https://img.shields.io/badge/docker-ready-00ff88?style=for-the-badge&logo=docker&logoColor=white&labelColor=0a0a0a" />
+<img src="https://img.shields.io/badge/python-3.11-00ff88?style=for-the-badge&logo=python&logoColor=white&labelColor=0a0a0a" />
+<img src="https://img.shields.io/badge/react-18-00ff88?style=for-the-badge&logo=react&logoColor=white&labelColor=0a0a0a" />
 
-Argus-Sentinel is an automated cybersecurity reconnaissance tool designed for bug bounty hunters and security professionals. It takes a target domain and runs a comprehensive 8-stage recon pipeline — subdomain enumeration, live host detection, port scanning, JS file extraction, secret detection, endpoint mining, subdomain takeover checks, and AI-powered analysis — all presented in a sleek real-time dashboard.
+<br /><br />
 
-**GitHub Repository**: [https://github.com/Ayaan1911/Argus-Sentinel](https://github.com/Ayaan1911/Argus-Sentinel)
+```
+   ▄████████    ▄████████    ▄██████▄  ███    █▄     ▄████████
+  ███    ███   ███    ███   ███    ███ ███    ███   ███    ███
+  ███    ███   ███    ███   ███    █▀  ███    ███   ███    █▀
+  ███    ███  ▄███▄▄▄▄██▀  ▄███        ███    ███   ███
+▀███████████ ▀▀███▀▀▀▀▀   ▀▀███ ████▄ ███    ███ ▀███████████
+  ███    ███ ▀███████████   ███    ███ ███    ███          ███
+  ███    ███   ███    ███   ███    ███ ███    ███    ▄█    ███
+  ███    █▀    ███    ███   ████████▀  ████████▀   ████████▀
+               ███    ███
+
+  ███████▄     ▄████████    ▄████████ ███▄▄▄▄       ███      ▄█  ███▄▄▄▄      ▄████████  ▄█
+  ███   ▀███  ███    ███   ███    ███ ███▀▀▀██▄ ▀█████████▄ ███  ███▀▀▀██▄   ███    ███ ███
+  ███    ███  ███    █▀    ███    █▀  ███   ███    ▀███▀▀██ ███▌ ███   ███   ███    █▀  ███▌
+  ███    ███ ▄███▄▄▄       ███        ███   ███     ███   ▀ ███▌ ███   ███  ▄███▄▄▄     ███▌
+  ███    ███▀▀███▀▀▀     ▀███████████ ███   ███     ███     ███▌ ███   ███ ▀▀███▀▀▀     ███▌
+  ███    ███  ███    █▄           ███ ███   ███     ███     ███  ███   ███   ███    █▄  ███
+  ███   ▄███  ███    ███    ▄█    ███ ███   ███     ███     ███  ███   ███   ███    ███ ███
+  ████████▀   ██████████  ▄████████▀   ▀█   █▀     ▄████▀  █▀    ▀█   █▀    ██████████ █▀
+```
+
+# A hundred eyes on your attack surface.
+
+**Argus-Sentinel** is a fully automated offensive reconnaissance platform that replicates the exact workflow professional bug bounty hunters and penetration testers use — in a single button click.
+
+Drop in a domain. Walk away. Come back to a complete attack surface map.
+
+<br />
+
+[**Live Demo**](#) · [**Report a Bug**](https://github.com/Ayaan1911/Argus-Sentinel/issues) · [**Request Feature**](https://github.com/Ayaan1911/Argus-Sentinel/issues) · [**Documentation**](#architecture)
+
+<br />
+
+![Argus-Sentinel Dashboard](https://raw.githubusercontent.com/Ayaan1911/Argus-Sentinel/main/docs/dashboard-preview.png)
+
+</div>
 
 ---
 
-## ⚠️ Legal Disclaimer
+## Why Argus-Sentinel?
 
-> **Argus-Sentinel is intended for authorized security testing only.**
->
-> Only scan domains you own or have explicit written permission to test. Unauthorized scanning may violate computer crime laws including the Computer Fraud and Abuse Act (CFAA), the UK Computer Misuse Act, and similar legislation worldwide. The authors of Argus-Sentinel are not responsible for any misuse or damage caused by this tool.
+Most recon tools do one thing. You run subfinder, pipe it to httpx, run nmap, manually dig through JS files, check for secrets, look for takeovers — and you do this for every single target, every single time.
+
+**Argus-Sentinel automates the entire chain.**
+
+```
+You type a domain.
+It finds everything they didn't want you to find.
+```
+
+This isn't a script wrapper. It's a full-stack distributed intelligence platform — async task orchestration, real-time dashboard, AI-powered attack surface analysis, PDF pentest reports, and vulnerability scanning with 5000+ Nuclei templates — running in a single `docker compose up`.
+
+---
+
+## What it finds
+
+| Module | What it discovers |
+|--------|-------------------|
+| 🌐 **Subdomain Enumeration** | Every subdomain via cert transparency, DNS brute-force, public APIs |
+| 💓 **Live Host Detection** | Which hosts are actually alive, their status codes, tech stack |
+| 🔌 **Port Scanning** | Open ports, running services, version fingerprinting |
+| 📸 **Screenshots** | Visual recon — automatic screenshots of every live host |
+| 📜 **JS Extraction** | Every JavaScript file served by every live host |
+| 🔑 **Secret Detection** | AWS keys, JWTs, API tokens, private keys leaked in JS |
+| 🗺️ **Endpoint Mining** | Hidden API routes, admin paths, GraphQL endpoints in JS bundles |
+| ⚠️ **Takeover Detection** | Dangling CNAMEs pointing to unclaimed cloud resources |
+| 🎯 **Vulnerability Scanning** | 5000+ Nuclei templates — CVEs, misconfigs, exposed panels |
+| 🤖 **AI Analysis** | GPT-4o-mini summarizes findings as a senior bug bounty hunter would |
+| 📄 **PDF Reports** | Professional pentest-grade export you can hand to a client |
+
+---
+
+## Real results on real targets
+
+```
+Target: hackthebox.com
+
+  Subdomains found:     100
+  Live hosts:            39
+  Open ports:           116
+  JS endpoints:         842
+  Secrets detected:       5
+  Vulnerabilities:       12
+  Takeover risks:         0
+  Screenshots:           39
+
+  Time elapsed: 8m 42s
+```
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  Browser: React + Vite + Tailwind (port 5173)                               │
-│  Home → Submit domain → Poll /api/scan/{id} every 3s → Real-time dashboard  │
-└────────────────────────────┬────────────────────────────────────────────────┘
-                             │ HTTP REST API
-┌────────────────────────────▼────────────────────────────────────────────────┐
-│  FastAPI (port 8000)                                                         │
-│  POST /api/scan → create Scan row → enqueue Celery task                     │
-│  GET  /api/scan/{id} → read results from PostgreSQL                         │
-│  GET  /api/scans, DELETE /api/scan/{id}, GET /api/scan/{id}/export          │
-└───────────┬────────────────────────────────────┬────────────────────────────┘
-            │ publish task                        │ read/write
-   ┌────────▼──────────┐              ┌───────────▼──────────────┐
-   │  Redis (broker)   │              │  PostgreSQL 15 (state)    │
-   └────────┬──────────┘              └──────────────────────────┘
-            │ consume
-   ┌────────▼──────────────────────────────────────────────────────────┐
-   │  Celery Worker (same Docker image as API)                          │
-   │                                                                    │
-   │  Stage 1: Subdomain Enumeration (subfinder + DNS brute-force)      │
-   │     ↓                                                              │
-   │  Stage 2: Live Host Detection (httpx)                              │
-   │     ↓                                                              │
-   │  Stage 3: Port Scanning (nmap --top-ports 1000)                   │
-   │     ↓                                                              │
-   │  Stage 4: JS File Extraction (HTML parsing + JS fetch)            │
-   │     ↓                                                              │
-   │  Stage 5: Secret Detection (regex patterns on JS content)         │
-   │     ↓                                                              │
-   │  Stage 6: Endpoint Mining (URL/path extraction from JS)           │
-   │     ↓                                                              │
-   │  Stage 7: Subdomain Takeover Check (CNAME + fingerprint match)    │
-   │     ↓                                                              │
-   │  Stage 8: AI Summary (OpenRouter GPT-4o-mini analysis)            │
-   └───────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│  React + Vite + Tailwind  (port 5173)                                │
+│  Real-time polling · 10-stage pipeline progress · 9 result tabs      │
+└───────────────────────────┬──────────────────────────────────────────┘
+                            │ REST API
+┌───────────────────────────▼──────────────────────────────────────────┐
+│  FastAPI  (port 8000)                                                │
+│  POST /api/scan → create job → enqueue                               │
+│  GET  /api/scan/{id} → stream results as they arrive                 │
+│  GET  /api/scan/{id}/report/pdf → download pentest report            │
+└──────────────┬────────────────────────────┬─────────────────────────┘
+               │ publish                    │ read/write
+      ┌────────▼──────────┐     ┌───────────▼──────────────┐
+      │  Redis  (broker)  │     │  PostgreSQL 15  (state)   │
+      └────────┬──────────┘     └──────────────────────────┘
+               │ consume
+      ┌────────▼──────────────────────────────────────────────────────┐
+      │  Celery Worker                                                 │
+      │                                                                │
+      │  1  Subdomain Enum    subfinder + DNS brute-force             │
+      │       ↓                                                        │
+      │  2  Live Hosts        /root/go/bin/httpx                      │
+      │       ↓                                                        │
+      │  3  Screenshots       /root/go/bin/gowitness                  │
+      │       ↓                                                        │
+      │  4  Port Scan         nmap -T4 --top-ports 1000               │
+      │       ↓                                                        │
+      │  5  JS Extraction     BeautifulSoup + HTTP fetch               │
+      │       ↓                                                        │
+      │  6  Secret Detection  24 regex pattern families                │
+      │       ↓                                                        │
+      │  7  Endpoint Mining   API path extraction from JS bundles      │
+      │       ↓                                                        │
+      │  8  Takeover Check    CNAME + cloud fingerprint matching       │
+      │       ↓                                                        │
+      │  9  Nuclei Scan       5000+ vuln templates (critical→medium)  │
+      │       ↓                                                        │
+      │  10 AI Summary        OpenRouter GPT-4o-mini analysis          │
+      └────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Prerequisites
+## Stack
 
-- [Docker](https://docs.docker.com/get-docker/) (v24+)
-- [Docker Compose](https://docs.docker.com/compose/install/) (v2.20+)
-- An [OpenRouter API key](https://openrouter.ai/keys) (optional, for AI Summary)
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, Vite 5, Tailwind CSS 3 |
+| Backend | FastAPI, Python 3.11, SQLAlchemy 2 |
+| Task Queue | Celery 5, Redis 7 |
+| Database | PostgreSQL 15, Alembic migrations |
+| Recon | subfinder, httpx, nmap, gowitness, nuclei |
+| AI | OpenRouter (GPT-4o-mini) |
+| Reports | WeasyPrint, Jinja2 |
+| Runtime | Docker, Docker Compose |
 
 ---
 
-## Setup & Installation
+## Getting started
 
-### 1. Clone the Repository
+### Prerequisites
+
+- [Docker](https://www.docker.com/get-started) v24+
+- [Docker Compose](https://docs.docker.com/compose/) v2.20+
+- An [OpenRouter](https://openrouter.ai) API key *(optional — AI Summary only)*
+
+### Installation
 
 ```bash
+# 1. Clone
 git clone https://github.com/Ayaan1911/Argus-Sentinel.git
 cd Argus-Sentinel
-```
 
-### 2. Configure Environment
-
-```bash
+# 2. Configure
 cp .env.example .env
-```
+# Edit .env — add your OPENROUTER_API_KEY (optional)
 
-Edit `.env` and fill in your OpenRouter API key:
-
-```env
-OPENROUTER_API_KEY=your_key_here
-DATABASE_URL=postgresql://postgres:password@db:5432/argus
-REDIS_URL=redis://redis:6379/0
-```
-
-### 3. Build & Start
-
-```bash
+# 3. Launch
 docker compose up --build
 ```
 
-First build will take 5–10 minutes (installs Go, subfinder, httpx, nmap).
+> First build takes **8–12 minutes** — Go compiles subfinder, httpx, nuclei, and gowitness from source inside Docker. Subsequent builds use cache and start in seconds.
 
-### 4. Access the Dashboard
+### Access
 
-| Service   | URL                          |
-|-----------|------------------------------|
-| Frontend  | http://localhost:5173        |
-| API Docs  | http://localhost:8000/docs   |
-| API Root  | http://localhost:8000        |
+| Service | URL |
+|---------|-----|
+| 🖥️ Dashboard | http://localhost:5173 |
+| 📡 API | http://localhost:8000 |
+| 📖 API Docs (Swagger) | http://localhost:8000/docs |
 
 ---
 
 ## Usage
 
-### Submit a Scan
+### Run a scan
 
-1. Open **http://localhost:5173** in your browser
-2. Enter a target domain (e.g., `example.com`) in the input field
+1. Open `http://localhost:5173`
+2. Enter a target domain you own or have permission to test
 3. Click **INITIATE SCAN**
-4. You'll be redirected to the scan detail page
+4. Watch the 10-stage pipeline execute in real time
+5. When complete — download the PDF report
 
-### Read Results
-
-The scan detail page shows:
-- **Pipeline Progress Bar** — real-time stage updates
-- **Overview** — metric cards for all finding categories
-- **Subdomains** — table of all discovered subdomains
-- **Ports** — open ports grouped by host
-- **Secrets** — potential secrets found in JS files
-- **Endpoints** — API paths and URLs mined from JS
-- **Takeover Risks** — potential subdomain takeover vulnerabilities
-- **AI Summary** — GPT-4o-mini analysis of all findings
-
-### Export Results
-
-Click **EXPORT JSON** on the scan detail page, or call:
+### API
 
 ```bash
+# Start a scan
+curl -X POST http://localhost:8000/api/scan \
+  -H "Content-Type: application/json" \
+  -d '{"domain": "example.com"}'
+
+# Poll results
+curl http://localhost:8000/api/scan/{scan_id}
+
+# Download PDF report
+curl http://localhost:8000/api/scan/{scan_id}/report/pdf \
+  --output report.pdf
+
+# Export JSON
 curl http://localhost:8000/api/scan/{scan_id}/export
 ```
 
----
-
-## Pipeline Module Breakdown
-
-| # | Module | Tool/Method | Output |
-|---|--------|-------------|--------|
-| 1 | **Subdomain Enumeration** | `subfinder` + DNS brute-force (1000 wordlist) | Subdomains table |
-| 2 | **Live Host Detection** | `httpx` — status codes, titles, tech detection | Updates subdomains (is_alive, status_code, title, technologies) |
-| 3 | **Port Scanning** | `nmap -T4 --top-ports 1000 -sV` | Ports table per live host |
-| 4 | **JS File Extraction** | BeautifulSoup HTML parsing + HTTP fetch | JS file content in memory |
-| 5 | **Secret Detection** | Regex patterns (AWS, JWT, API keys, private keys, etc.) | Secrets table |
-| 6 | **Endpoint Mining** | Regex on JS content for API paths and full URLs | Endpoints table |
-| 7 | **Takeover Check** | DNS CNAME resolution + fingerprint matching | Takeover risks table |
-| 8 | **AI Summary** | OpenRouter GPT-4o-mini — structured bug bounty analysis | AI Summary (markdown) |
-
----
-
-## API Reference
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/scan` | Start a new scan `{"domain": "example.com"}` |
-| `GET` | `/api/scan/{id}` | Get scan status + all results |
-| `GET` | `/api/scans` | List all scans |
-| `DELETE` | `/api/scan/{id}` | Delete a scan |
-| `GET` | `/api/scan/{id}/export` | Export full results as JSON |
-| `POST` | `/api/scan/{id}/regenerate-summary` | Re-run AI summary |
-
-All responses use the envelope format:
+All responses follow the envelope format:
 ```json
 {
   "success": true,
@@ -175,29 +235,53 @@ All responses use the envelope format:
 
 ---
 
-## Project Structure
+## Secret detection patterns
+
+| Pattern | Severity | Confidence |
+|---------|----------|------------|
+| AWS Access Key (`AKIA...`) | 🔴 Critical | 95% |
+| Private Keys (RSA/EC/DSA) | 🔴 Critical | 99% |
+| AWS Secret Key | 🔴 Critical | 95% |
+| GitHub Token (`ghp_...`) | 🟠 High | 90% |
+| Stripe Secret Key (`sk_live_...`) | 🟠 High | 92% |
+| Hardcoded Password | 🟠 High | 65% |
+| JWT Token | 🟡 Medium | 75% |
+| Google API Key (`AIza...`) | 🟡 Medium | 80% |
+| Slack Token (`xoxb-...`) | 🟡 Medium | 88% |
+| Generic API Key | 🟡 Medium | 60% |
+| Stripe Publishable Key | 🔵 Low | 90% |
+| OAuth Client ID | ⚪ Info | 70% |
+
+---
+
+## Project structure
 
 ```
 argus-sentinel/
 ├── backend/
 │   ├── app/
-│   │   ├── main.py              # FastAPI app + CORS + router
-│   │   ├── models.py            # SQLAlchemy ORM models
+│   │   ├── main.py              # FastAPI app + CORS
+│   │   ├── models.py            # SQLAlchemy ORM models (7 tables)
 │   │   ├── schemas.py           # Pydantic response schemas
-│   │   ├── database.py          # DB engine + session
-│   │   └── routes/
-│   │       └── scans.py         # API route handlers
+│   │   ├── database.py          # DB engine + session factory
+│   │   ├── routes/
+│   │   │   └── scans.py         # All API route handlers
+│   │   └── reports/
+│   │       ├── generator.py     # PDF generation logic
+│   │       └── template.html    # Jinja2 pentest report template
 │   ├── tasks/
-│   │   ├── celery_app.py        # Celery instance
-│   │   ├── pipeline.py          # Main scan task + stage runner
+│   │   ├── celery_app.py        # Celery instance + config
+│   │   ├── pipeline.py          # Main scan orchestrator
 │   │   └── modules/
 │   │       ├── subdomain_enum.py
 │   │       ├── live_host_check.py
+│   │       ├── screenshot_capture.py
 │   │       ├── port_scan.py
 │   │       ├── js_extractor.py
 │   │       ├── secret_detector.py
 │   │       ├── endpoint_miner.py
 │   │       ├── takeover_check.py
+│   │       ├── nuclei_scan.py
 │   │       └── ai_summary.py
 │   ├── alembic/                 # DB migrations
 │   ├── requirements.txt
@@ -207,15 +291,14 @@ argus-sentinel/
 │   ├── src/
 │   │   ├── pages/
 │   │   │   ├── Home.jsx
-│   │   │   └── ScanDetail.jsx
+│   │   │   └── ScanDetail.jsx   # 9 tabs, live polling, gallery
 │   │   ├── components/
 │   │   │   ├── MetricCard.jsx
 │   │   │   ├── StatusBadge.jsx
 │   │   │   ├── TabView.jsx
 │   │   │   └── PipelineProgress.jsx
-│   │   ├── api/
-│   │   │   └── client.js
-│   │   └── App.jsx
+│   │   └── api/
+│   │       └── client.js
 │   ├── package.json
 │   └── Dockerfile
 ├── wordlists/
@@ -227,64 +310,82 @@ argus-sentinel/
 
 ---
 
-## Technology Stack
+## Roadmap
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 18, Vite 5, Tailwind CSS 3 |
-| Backend API | FastAPI, Python 3.11 |
-| Task Queue | Celery 5, Redis 7 |
-| Database | PostgreSQL 15, SQLAlchemy 2, Alembic |
-| Recon Tools | subfinder (Go), httpx (Go), nmap |
-| AI | OpenRouter API (GPT-4o-mini) |
-| Container | Docker, Docker Compose |
-
----
-
-## Secret Detection Patterns
-
-| Pattern | Severity |
-|---------|----------|
-| AWS Access Key (`AKIA...`) | 🔴 Critical |
-| Private Keys (RSA/EC/DSA) | 🔴 Critical |
-| JWT Tokens | 🟠 High |
-| Generic API Keys | 🟠 High |
-| GitHub Tokens (`ghp_...`) | 🟡 Medium |
-| Slack Tokens (`xox...`) | 🟡 Medium |
-| Google API Keys (`AIza...`) | 🟡 Medium |
-| Stripe Keys (`sk_live_...`) | 🟡 Medium |
-| Hardcoded Passwords | 🟡 Medium |
-| Bearer Tokens | 🟢 Low |
+- [x] Subdomain enumeration (subfinder + brute-force)
+- [x] Live host detection (httpx)
+- [x] Port scanning (nmap)
+- [x] JS extraction + secret detection
+- [x] Endpoint mining
+- [x] Subdomain takeover detection
+- [x] AI-powered attack surface summary
+- [x] Screenshot capture (gowitness)
+- [x] Nuclei vulnerability scanning
+- [x] PDF pentest report export
+- [x] Secret severity + confidence scoring
+- [ ] Continuous monitoring (scheduled rescans + diff alerts)
+- [ ] Discord / Slack / Telegram notifications
+- [ ] Multi-user support with workspaces
+- [ ] Distributed workers across multiple VPS
+- [ ] Custom Nuclei template upload
+- [ ] CVSS scoring per vulnerability
+- [ ] Kubernetes deployment manifests
 
 ---
 
-## Troubleshooting
+## Safe testing targets
 
-**Build takes too long?**
-The first build installs Go + subfinder + httpx which can take 5–10 minutes. Subsequent builds use Docker cache and are much faster.
+Only use Argus-Sentinel against domains you own or have explicit written authorization to test. Here are legal practice targets:
 
-**subfinder/httpx not working?**
-These tools require network access to query public APIs and DNS resolvers. Ensure your Docker container has internet access.
-
-**AI Summary not generating?**
-Ensure `OPENROUTER_API_KEY` is set in your `.env` file. Without it, a placeholder message is shown. Click "Regenerate Summary" after adding the key.
-
-**Port scan timing out?**
-Nmap is capped at 50 live hosts and has a 120s timeout per host. For large scans, this stage may take several minutes.
+| Target | Notes |
+|--------|-------|
+| `scanme.nmap.org` | Nmap's official test host |
+| `testphp.vulnweb.com` | Acunetix intentionally vulnerable app |
+| Your own domain | Always safe |
+| HackTheBox / TryHackMe labs | Within lab scope |
 
 ---
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/my-feature`
-3. Commit your changes: `git commit -m 'Add my feature'`
-4. Push to the branch: `git push origin feature/my-feature`
-5. Open a Pull Request
+Contributions are what make the open source community great. Any contribution you make is **hugely appreciated**.
+
+```bash
+# Fork → Branch → Commit → Push → PR
+
+git checkout -b feature/your-feature
+git commit -m 'feat: add your feature'
+git push origin feature/your-feature
+# Open a Pull Request
+```
+
+Ideas for contributions: new Nuclei template categories, additional secret patterns, new export formats, UI improvements, performance optimizations.
+
+---
+
+## Legal disclaimer
+
+> Argus-Sentinel is intended for **authorized security testing only**.
+>
+> Only scan domains you own or have **explicit written permission** to test. Unauthorized scanning may violate the Computer Fraud and Abuse Act (CFAA), the UK Computer Misuse Act, and equivalent laws in your jurisdiction. The authors accept no liability for misuse.
 
 ---
 
 ## License
+
+Distributed under the MIT License. See `LICENSE` for more information.
+
+---
+
+<div align="center">
+
+Built by [Mohammad Ayaan](https://github.com/Ayaan1911) · Powered by [ProjectDiscovery](https://projectdiscovery.io) toolchain
+
+*"The eye that sees everything is the eye that finds everything."*
+
+⭐ Star this repo if Argus-Sentinel helped you find something interesting.
+
+</div>
 
 MIT License — see [LICENSE](LICENSE) for details.
 
