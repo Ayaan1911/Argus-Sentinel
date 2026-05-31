@@ -63,7 +63,8 @@ def run(scan_id: str, db) -> None:
             'scan', 'file',
             '-f', tmp_path,
             '--screenshot-path', scan_screenshot_dir,
-            '--no-db',
+            '--screenshot-format', 'png',
+            '--write-none',
             '--timeout', '10',
         ]
 
@@ -77,7 +78,11 @@ def run(scan_id: str, db) -> None:
             env={**os.environ, 'GOWITNESS_HEADLESS': 'true'},
         )
 
-        if proc.returncode != 0 and proc.stderr:
+        if proc.returncode != 0:
+            logger.warning(f'[{scan_id}] gowitness exited with code {proc.returncode}')
+        
+        logger.info(f'[{scan_id}] gowitness stdout (first 500 chars): {proc.stdout[:500]}')
+        if proc.stderr:
             logger.warning(f'[{scan_id}] gowitness stderr: {proc.stderr[:500]}')
 
         # gowitness names screenshots after the URL hostname, sanitized
@@ -85,7 +90,8 @@ def run(scan_id: str, db) -> None:
         captured = 0
         if os.path.isdir(scan_screenshot_dir):
             screenshot_files = os.listdir(scan_screenshot_dir)
-            logger.info(f'[{scan_id}] Found {len(screenshot_files)} screenshot file(s)')
+            logger.info(f'[{scan_id}] DIAGNOSTICS: output dir {scan_screenshot_dir} exists.')
+            logger.info(f'[{scan_id}] DIAGNOSTICS: discovered {len(screenshot_files)} screenshot file(s) on disk')
 
             for subdomain_id, host, url in live_hosts:
                 # gowitness typically names files like: https-hostname-port-path.png
@@ -109,6 +115,7 @@ def run(scan_id: str, db) -> None:
                         captured += 1
 
         db.commit()
+        logger.info(f'[{scan_id}] DIAGNOSTICS: Inserted {captured} screenshot paths into DB')
         logger.info(f'[screenshot_capture] Captured {captured} screenshots')
 
     except subprocess.TimeoutExpired:
