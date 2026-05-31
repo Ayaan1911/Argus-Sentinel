@@ -96,14 +96,9 @@ def run(scan_id: str, db) -> None:
             for subdomain_id, host, url in live_hosts:
                 # gowitness typically names files like: https-hostname-port-path.png
                 host_sanitized = host.replace(':', '-').replace('/', '-').replace('.', '-')
-                # Try various naming conventions
                 matched_file = None
                 for fname in screenshot_files:
-                    if fname.endswith('.png') and (
-                        host_sanitized in fname or
-                        host.replace('.', '-') in fname or
-                        host in fname.replace('-', '.')
-                    ):
+                    if fname.endswith('.png') and f'---{host}-' in fname:
                         matched_file = fname
                         break
 
