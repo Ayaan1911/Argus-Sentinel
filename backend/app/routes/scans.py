@@ -81,8 +81,13 @@ def get_scan(scan_id: str, db: Session = Depends(get_db)):
     endpoints = db.query(Endpoint).filter(Endpoint.scan_id == scan_id).limit(100).all()
     secrets = db.query(Secret).filter(Secret.scan_id == scan_id).limit(100).all()
     takeovers = db.query(TakeoverRisk).filter(TakeoverRisk.scan_id == scan_id).limit(100).all()
-    from ..models import VulnerabilityFinding
+    from ..models import VulnerabilityFinding, Port
     vulns = db.query(VulnerabilityFinding).filter(VulnerabilityFinding.scan_id == scan_id).limit(100).all()
+
+    subdomains_count = db.query(func.count(Subdomain.id)).filter(Subdomain.scan_id == scan_id).scalar()
+    live_hosts_count = db.query(func.count(Subdomain.id)).filter(Subdomain.scan_id == scan_id, Subdomain.is_alive == True).scalar()
+    screenshots_count = db.query(func.count(Subdomain.id)).filter(Subdomain.scan_id == scan_id, Subdomain.screenshot_path != None).scalar()
+    ports_count = db.query(func.count(Port.id)).join(Subdomain).filter(Subdomain.scan_id == scan_id).scalar()
 
     scan_data = {
         'id': scan.id,
@@ -97,7 +102,11 @@ def get_scan(scan_id: str, db: Session = Depends(get_db)):
         'secrets': secrets,
         'takeover_risks': takeovers,
         'ai_summary': scan.ai_summary,
-        'vulnerability_findings': vulns
+        'vulnerability_findings': vulns,
+        'subdomains_count': subdomains_count or 0,
+        'live_hosts_count': live_hosts_count or 0,
+        'ports_count': ports_count or 0,
+        'screenshots_count': screenshots_count or 0
     }
     
     data = ScanSchema.model_validate(scan_data)

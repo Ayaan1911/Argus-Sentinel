@@ -104,15 +104,16 @@ def run(scan_id: str, db) -> None:
     db.commit()
 
     def prioritize_subdomains(subdomains_list, limit=150):
+        import random
         # Priority tiers - pick from each tier in order
-        high_priority_keywords = [
+        high_priority_keywords = {
             'api', 'www', 'app', 'admin', 'mail', 'smtp', 'ftp',
             'dev', 'staging', 'prod', 'portal', 'dashboard', 'login',
             'auth', 'sso', 'cdn', 'static', 'assets', 'media',
             'docs', 'help', 'support', 'status', 'monitor',
             'vpn', 'remote', 'git', 'jira', 'jenkins', 'gitlab',
             'raw', 'gist', 'pages', 'shop', 'store', 'blog'
-        ]
+        }
         
         # Filter out obvious garbage (pure numbers, very long random strings)
         def is_quality_subdomain(sub):
@@ -129,23 +130,25 @@ def run(scan_id: str, db) -> None:
         
         quality = [s for s in subdomains_list if is_quality_subdomain(s)]
         
-        # Tier 1: high priority keywords
-        tier1 = [s for s in quality 
-                 if any(kw in s.split('.')[0].lower() 
-                        for kw in high_priority_keywords)]
+        # Tier 1: high priority keywords (exact match on first label)
+        tier1 = [s for s in quality if s.split('.')[0].lower() in high_priority_keywords]
+        tier1.sort(key=lambda s: s.count('.'))
         
         # Tier 2: remaining quality subdomains
         tier2 = [s for s in quality if s not in tier1]
+        tier2.sort(key=lambda s: s.count('.'))
         
-        # Build final list: fill tier1 first, then tier2
+        # Build final list
         result = []
-        result.extend(tier1[:min(len(tier1), limit // 2)])
+        result.extend(tier1[:limit])
+        
         remaining = limit - len(result)
         result.extend(tier2[:remaining])
         
-        # If still under limit, add back some numeric ones
+        # If still under limit, add back some numeric ones (randomly)
         if len(result) < limit:
             all_subs = [s for s in subdomains_list if s not in result]
+            random.shuffle(all_subs)
             result.extend(all_subs[:limit - len(result)])
         
         return result[:limit]

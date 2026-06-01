@@ -100,6 +100,11 @@ class ScanSchema(BaseModel):
     takeover_risks: List[TakeoverRiskSchema] = []
     ai_summary: Optional[AISummarySchema] = None
     vulnerability_findings: List[VulnerabilityFindingSchema] = []
+    
+    subdomains_count: Optional[int] = 0
+    live_hosts_count: Optional[int] = 0
+    ports_count: Optional[int] = 0
+    screenshots_count: Optional[int] = 0
 
     class Config:
         from_attributes = True

@@ -156,8 +156,13 @@ function Spinner({ size = 'md', color = 'var(--accent)' }) {
 
 function OverviewTab({ scan }) {
   const subdomains  = scan.subdomains ?? []
-  const liveHosts   = subdomains.filter((s) => s.is_alive || s.alive || s.live)
-  const totalPorts  = subdomains.reduce((acc, s) => acc + (s.ports?.length ?? 0), 0)
+  
+  // Use explicit counts from backend, fallback to array lengths for backwards compatibility
+  const totalSubdomains  = scan.subdomains_count ?? subdomains.length
+  const liveHostsCount   = scan.live_hosts_count ?? subdomains.filter((s) => s.is_alive || s.alive || s.live).length
+  const totalPortsCount  = scan.ports_count ?? subdomains.reduce((acc, s) => acc + (s.ports?.length ?? 0), 0)
+  const screenshotsCount = scan.screenshots_count ?? subdomains.filter(s => s.screenshot_path).length
+  
   const secrets     = scan.secrets ?? []
   const endpoints   = scan.endpoints ?? []
   const takeovers   = scan.takeover_risks ?? scan.takeovers ?? []
@@ -166,9 +171,9 @@ function OverviewTab({ scan }) {
   return (
     <div className="animate-fade-in">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard label="Total Subdomains" value={subdomains.length} />
-        <MetricCard label="Live Hosts"        value={liveHosts.length} />
-        <MetricCard label="Open Ports"        value={totalPorts} />
+        <MetricCard label="Total Subdomains" value={totalSubdomains} />
+        <MetricCard label="Live Hosts"        value={liveHostsCount} />
+        <MetricCard label="Open Ports"        value={totalPortsCount} />
         <MetricCard
           label="Vulnerabilities"
           value={vulns.length}
@@ -185,7 +190,7 @@ function OverviewTab({ scan }) {
           value={takeovers.length}
           variant={takeovers.length > 0 ? 'danger' : 'default'}
         />
-        <MetricCard label="Screenshots" value={subdomains.filter(s => s.screenshot_path).length} />
+        <MetricCard label="Screenshots" value={screenshotsCount} />
       </div>
     </div>
   )
@@ -927,13 +932,16 @@ export default function ScanDetail() {
   const endpoints   = scan?.endpoints ?? []
   const takeovers   = scan?.takeover_risks ?? scan?.takeovers ?? []
   const vulns       = scan?.vulnerability_findings ?? []
-  const totalPorts  = subdomains.reduce((acc, s) => acc + (s.ports?.length ?? 0), 0)
+  
+  const totalSubdomainsCount = scan?.subdomains_count ?? subdomains.length
+  const totalPortsCount      = scan?.ports_count ?? subdomains.reduce((acc, s) => acc + (s.ports?.length ?? 0), 0)
+  const galleryCount         = scan?.screenshots_count ?? subdomains.filter(s => s.screenshot_path).length
 
   const tabs = [
     { id: 'overview',   label: 'Overview' },
-    { id: 'subdomains', label: 'Subdomains', count: subdomains.length },
-    { id: 'gallery',    label: 'Gallery',    count: subdomains.filter(s => s.screenshot_path).length },
-    { id: 'ports',      label: 'Ports',      count: totalPorts },
+    { id: 'subdomains', label: 'Subdomains', count: totalSubdomainsCount },
+    { id: 'gallery',    label: 'Gallery',    count: galleryCount },
+    { id: 'ports',      label: 'Ports',      count: totalPortsCount },
     { id: 'secrets',    label: 'Secrets',    count: secrets.length },
     { id: 'endpoints',  label: 'Endpoints',  count: endpoints.length },
     { id: 'takeover',   label: 'Takeover',   count: takeovers.length },
