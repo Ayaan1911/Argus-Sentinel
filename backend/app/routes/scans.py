@@ -89,6 +89,18 @@ def get_scan(scan_id: str, db: Session = Depends(get_db)):
     screenshots_count = db.query(func.count(Subdomain.id)).filter(Subdomain.scan_id == scan_id, Subdomain.screenshot_path != None).scalar()
     ports_count = db.query(func.count(Port.id)).join(Subdomain).filter(Subdomain.scan_id == scan_id).scalar()
 
+    ports_data_raw = db.query(Port, Subdomain.subdomain).join(Subdomain).filter(Subdomain.scan_id == scan_id).limit(500).all()
+    ports_list = []
+    for p, sub_name in ports_data_raw:
+        ports_list.append({
+            "id": p.id,
+            "port": p.port,
+            "protocol": p.protocol,
+            "service": p.service,
+            "version": p.version,
+            "subdomain": sub_name
+        })
+
     scan_data = {
         'id': scan.id,
         'domain': scan.domain,
@@ -103,6 +115,7 @@ def get_scan(scan_id: str, db: Session = Depends(get_db)):
         'takeover_risks': takeovers,
         'ai_summary': scan.ai_summary,
         'vulnerability_findings': vulns,
+        'ports': ports_list,
         'subdomains_count': subdomains_count or 0,
         'live_hosts_count': live_hosts_count or 0,
         'ports_count': ports_count or 0,

@@ -386,10 +386,8 @@ function GalleryTab({ subdomains = [], scanId }) {
 
 // ── PORTS TAB ─────────────────────────────────────────────────────────────────
 
-function PortsTab({ subdomains = [] }) {
-  const hostsWithPorts = subdomains.filter((s) => s.ports && s.ports.length > 0)
-
-  if (hostsWithPorts.length === 0) {
+function PortsTab({ ports = [] }) {
+  if (ports.length === 0) {
     return (
       <div className="animate-fade-in py-16 text-center">
         <p className="text-text-muted text-[13px]">No open ports discovered.</p>
@@ -397,53 +395,57 @@ function PortsTab({ subdomains = [] }) {
     )
   }
 
+  const grouped = ports.reduce((acc, p) => {
+    const host = p.subdomain || 'unknown'
+    if (!acc[host]) acc[host] = []
+    acc[host].push(p)
+    return acc
+  }, {})
+
   return (
     <div className="animate-fade-in space-y-6">
-      {hostsWithPorts.map((s, si) => {
-        const host = s.subdomain ?? s.host ?? s.domain ?? `host-${si}`
-        return (
-          <div key={host + si} className="bg-bg-surface border border-border rounded-[6px] overflow-hidden">
-            <div className="px-4 py-3 border-b border-border flex items-center gap-3 bg-bg-elevated">
-              <span className="font-mono text-text-primary text-[13px] font-medium">{host}</span>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Port</th>
-                    <th>Protocol</th>
-                    <th>Service</th>
-                    <th>Version / Banner</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {s.ports.map((p, pi) => {
-                    const port     = p.port ?? p.number ?? p
-                    const protocol = p.protocol ?? 'tcp'
-                    const service  = p.service ?? p.name ?? '—'
-                    const version  = p.version ?? p.banner ?? p.product ?? ''
-
-                    return (
-                      <tr key={pi}>
-                        <td>
-                          <span className={`font-mono font-medium text-[13px] ${portColor(port)}`}>
-                            {port}
-                          </span>
-                        </td>
-                        <td className="font-mono text-text-secondary text-[12px] uppercase">{protocol}</td>
-                        <td className="text-text-primary text-[13px]">{service}</td>
-                        <td className="font-mono text-text-muted text-[12px] max-w-[200px] truncate" title={version}>
-                          {version || '—'}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+      {Object.entries(grouped).map(([host, hostPorts], si) => (
+        <div key={host + si} className="bg-bg-surface border border-border rounded-[6px] overflow-hidden">
+          <div className="px-4 py-3 border-b border-border flex items-center gap-3 bg-bg-elevated">
+            <span className="font-mono text-text-primary text-[13px] font-medium">{host}</span>
           </div>
-        )
-      })}
+          <div className="overflow-x-auto">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Port</th>
+                  <th>Protocol</th>
+                  <th>Service</th>
+                  <th>Version / Banner</th>
+                </tr>
+              </thead>
+              <tbody>
+                {hostPorts.map((p, pi) => {
+                  const port     = p.port ?? p.number ?? p
+                  const protocol = p.protocol ?? 'tcp'
+                  const service  = p.service ?? p.name ?? '—'
+                  const version  = p.version ?? p.banner ?? p.product ?? ''
+
+                  return (
+                    <tr key={pi}>
+                      <td>
+                        <span className={`font-mono font-medium text-[13px] ${portColor(port)}`}>
+                          {port}
+                        </span>
+                      </td>
+                      <td className="font-mono text-text-secondary text-[12px] uppercase">{protocol}</td>
+                      <td className="text-text-primary text-[13px]">{service}</td>
+                      <td className="font-mono text-text-muted text-[12px] max-w-[200px] truncate" title={version}>
+                        {version || '—'}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -1037,7 +1039,7 @@ export default function ScanDetail() {
             {activeTab === 'overview'   && <OverviewTab   scan={scan} />}
             {activeTab === 'subdomains' && <SubdomainsTab subdomains={subdomains} scanId={id} />}
             {activeTab === 'gallery'    && <GalleryTab    subdomains={subdomains} scanId={id} />}
-            {activeTab === 'ports'      && <PortsTab      subdomains={subdomains} />}
+            {activeTab === 'ports'      && <PortsTab      ports={scan.ports ?? []} />}
             {activeTab === 'secrets'    && <SecretsTab    secrets={secrets} />}
             {activeTab === 'endpoints'  && <EndpointsTab  endpoints={endpoints} />}
             {activeTab === 'takeover'   && <TakeoverTab   takeovers={takeovers} />}

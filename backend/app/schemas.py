@@ -13,6 +13,17 @@ class PortSchema(BaseModel):
     class Config:
         from_attributes = True
 
+class PortDetailSchema(BaseModel):
+    id: int
+    port: int
+    protocol: str
+    service: Optional[str] = None
+    version: Optional[str] = None
+    subdomain: str
+
+    class Config:
+        from_attributes = True
+
 
 class SubdomainSchema(BaseModel):
     id: int
@@ -100,6 +111,8 @@ class ScanSchema(BaseModel):
     takeover_risks: List[TakeoverRiskSchema] = []
     ai_summary: Optional[AISummarySchema] = None
     vulnerability_findings: List[VulnerabilityFindingSchema] = []
+    
+    ports: List[PortDetailSchema] = []
     
     subdomains_count: Optional[int] = 0
     live_hosts_count: Optional[int] = 0
