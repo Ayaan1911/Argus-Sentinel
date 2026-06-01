@@ -46,6 +46,7 @@ def run(scan_id: str, db) -> None:
         return
 
     logger.info(f'[{scan_id}] Capturing screenshots for {len(live_hosts)} live hosts')
+    print(f"[STAGE] screenshot_capture: input={len(live_hosts)} live hosts")
 
     # Create screenshot directory for this scan
     scan_screenshot_dir = os.path.join(SCREENSHOTS_BASE, scan_id)
@@ -110,6 +111,11 @@ def run(scan_id: str, db) -> None:
                         captured += 1
 
         db.commit()
+        
+        count = db.query(Subdomain).filter(Subdomain.scan_id == scan_id, Subdomain.screenshot_path != None).count()
+        print(f"[STAGE] screenshot_capture: output={count} screenshots")
+        print(f"[DB] Verified {count} screenshots committed for scan {scan_id}")
+
         logger.info(f'[{scan_id}] DIAGNOSTICS: Inserted {captured} screenshot paths into DB')
         logger.info(f'[screenshot_capture] Captured {captured} screenshots')
 

@@ -71,13 +71,37 @@ def list_scans(db: Session = Depends(get_db)):
 @router.get('/scan/{scan_id}')
 def get_scan(scan_id: str, db: Session = Depends(get_db)):
     """
-    Get full scan details including all findings.
+    Get scan details. Heavy lists are truncated to optimize performance.
     """
     scan = db.query(Scan).filter(Scan.id == scan_id).first()
     if not scan:
         raise HTTPException(status_code=404, detail='Scan not found')
-    data = ScanSchema.from_orm(scan)
-    return envelope(data.model_dump())
+        
+    subdomains = db.query(Subdomain).filter(Subdomain.scan_id == scan_id).limit(100).all()
+    endpoints = db.query(Endpoint).filter(Endpoint.scan_id == scan_id).limit(100).all()
+    secrets = db.query(Secret).filter(Secret.scan_id == scan_id).limit(100).all()
+    takeovers = db.query(TakeoverRisk).filter(TakeoverRisk.scan_id == scan_id).limit(100).all()
+    from ..models import VulnerabilityFinding
+    vulns = db.query(VulnerabilityFinding).filter(VulnerabilityFinding.scan_id == scan_id).limit(100).all()
+
+    scan_data = {
+        'id': scan.id,
+        'domain': scan.domain,
+        'status': scan.status,
+        'created_at': scan.created_at,
+        'completed_at': scan.completed_at,
+        'current_stage': scan.current_stage,
+        'error_message': scan.error_message,
+        'subdomains': subdomains,
+        'endpoints': endpoints,
+        'secrets': secrets,
+        'takeover_risks': takeovers,
+        'ai_summary': scan.ai_summary,
+        'vulnerability_findings': vulns
+    }
+    
+    data = ScanSchema.model_validate(scan_data)
+    return envelope(data.model_dump(exclude_unset=True))
 
 
 @router.delete('/scan/{scan_id}')

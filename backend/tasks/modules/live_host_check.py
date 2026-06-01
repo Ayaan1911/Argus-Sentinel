@@ -73,9 +73,12 @@ def _httpx_scan(subdomains: list) -> dict:
             '-title',
             '-tech-detect',
             '-follow-redirects',
+            '-fc', '400,404,410',
+            '-p', '80,443,8080,8443',
+            '-H', 'User-Agent: Mozilla/5.0 (compatible; SecurityScanner/1.0)',
             '-json',
-            '-timeout', '10',
-            '-retries', '1',
+            '-timeout', '15',
+            '-retries', '3',
         ]
         print(f"DEBUG: Running httpx with cmd: {' '.join(cmd)}", flush=True)
         
@@ -157,10 +160,14 @@ def run(scan_id: str, db) -> None:
         return
 
     logger.info(f'[{scan_id}] Probing {len(subdomains)} hosts for liveness')
+    print(f"[STAGE] live_host_check: input={len(subdomains)} subdomains")
 
     # Try httpx first, fall back to requests
     try:
         results = _httpx_scan(subdomains)
+        if len(results) == 0:
+            logger.info(f'[{scan_id}] Primary live host detection returned 0, trying fallback...')
+            results = _requests_fallback(subdomains)
     except FileNotFoundError:
         logger.info(f'[{scan_id}] Falling back to requests for live host check')
         results = _requests_fallback(subdomains)
@@ -179,5 +186,8 @@ def run(scan_id: str, db) -> None:
 
     db.commit()
 
-    alive_count = sum(1 for s in subdomains if s.is_alive)
+    alive_count = db.query(Subdomain).filter(Subdomain.scan_id == scan_id, Subdomain.is_alive == True).count()
+    print(f"[STAGE] live_host_check: output={alive_count} live hosts")
+    print(f"[DB] Verified {alive_count} live hosts committed for scan {scan_id}")
+
     logger.info(f'[{scan_id}] Live host detection complete: {alive_count}/{len(subdomains)} alive')

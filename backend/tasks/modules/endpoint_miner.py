@@ -56,6 +56,7 @@ def run(scan_id: str, db) -> None:
         logger.info(f'[{scan_id}] No JS files in cache, skipping endpoint mining')
         return
 
+    print(f"[STAGE] endpoint_miner: input={len(js_files)} JS files")
     seen: set[str] = set()
     count = 0
 
@@ -84,4 +85,9 @@ def run(scan_id: str, db) -> None:
             add_endpoint(match, file_url)
 
     db.commit()
+    
+    total_endpoints = db.query(Endpoint).filter(Endpoint.scan_id == scan_id).count()
+    print(f"[STAGE] endpoint_miner: output={total_endpoints} endpoints")
+    print(f"[DB] Verified {total_endpoints} endpoints committed for scan {scan_id}")
+    
     logger.info(f'[{scan_id}] Endpoint mining complete: {count} endpoint(s) discovered')

@@ -103,8 +103,34 @@ def run(scan_id: str, db) -> None:
     db.query(Subdomain).filter(Subdomain.scan_id == scan_id).delete()
     db.commit()
 
+    # Cap to 150 results max to prevent pipeline timeout for huge targets like github.com
+    import random
+    found_list = list(found)
+    if len(found_list) > 150:
+        logger.info(f'[{scan_id}] Capping {len(found_list)} found subdomains to 150')
+        
+        # Priority 1: Root domain
+        prioritized = [domain] if domain in found else []
+        
+        # Priority 2: Common highly-active prefixes
+        common_prefixes = ('www.', 'api.', 'dev.', 'staging.', 'app.', 'blog.', 'test.', 'mail.', 'admin.', 'docs.', 'portal.')
+        for sub in found_list:
+            if sub == domain:
+                continue
+            if sub.startswith(common_prefixes) and len(prioritized) < 150:
+                prioritized.append(sub)
+                
+        # Priority 3: Random sample for the remainder
+        remaining = list(set(found_list) - set(prioritized))
+        if len(prioritized) < 150:
+            needed = 150 - len(prioritized)
+            random.shuffle(remaining)
+            prioritized.extend(remaining[:needed])
+            
+        found_list = prioritized
+
     # Persist results
-    for sub in sorted(found):
+    for sub in found_list:
         subdomain = Subdomain(scan_id=scan_id, subdomain=sub)
         db.add(subdomain)
     db.commit()

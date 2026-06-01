@@ -108,6 +108,7 @@ def run(scan_id: str, db) -> None:
         return
 
     logger.info(f'[{scan_id}] Starting nuclei scan against {len(live_urls)} live hosts')
+    print(f"[STAGE] nuclei_scan: input={len(live_urls)} live hosts")
 
     # Write targets to temp file
     tmp_path = f'/tmp/{scan_id}_nuclei_hosts.txt'
@@ -174,6 +175,10 @@ def run(scan_id: str, db) -> None:
 
         for host, n in host_counts.items():
             logger.info(f'[nuclei_scan] Found {n} vulnerabilities on {host}')
+
+        total_vulns = db.query(VulnerabilityFinding).filter(VulnerabilityFinding.scan_id == scan_id).count()
+        print(f"[STAGE] nuclei_scan: output={total_vulns} vulns")
+        print(f"[DB] Verified {total_vulns} vulns committed for scan {scan_id}")
 
         logger.info(f'[{scan_id}] Nuclei scan complete: {count} finding(s) saved')
 

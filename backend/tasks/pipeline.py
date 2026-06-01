@@ -75,8 +75,14 @@ def run_scan(self, scan_id: str):
             logger.info(f'[{scan_id}] Starting stage: {stage_name}')
 
             try:
-                module_map[stage_key](scan_id, db)
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(module_map[stage_key], scan_id, db)
+                    future.result(timeout=300)  # 5 minutes max per stage
                 logger.info(f'[{scan_id}] Completed stage: {stage_name}')
+            except concurrent.futures.TimeoutError:
+                logger.warning(f'[{scan_id}] Stage "{stage_name}" timed out after 5 minutes. Continuing to next stage.')
+                continue
             except Exception as e:
                 logger.error(
                     f'[{scan_id}] Stage "{stage_name}" failed: {e}',

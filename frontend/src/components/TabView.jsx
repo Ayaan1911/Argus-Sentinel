@@ -1,16 +1,11 @@
 /**
- * TabView — Tabbed navigation component.
- * Props:
- *   tabs: Array<{ id: string, label: string, count?: number }>
- *   activeTab: string
- *   onTabChange: (id: string) => void
- *   children: React node (rendered for active tab)
+ * TabView — Clean horizontal tab navigation.
  */
 export default function TabView({ tabs = [], activeTab, onTabChange, children }) {
   return (
     <div className="flex flex-col min-h-0">
       {/* Tab bar */}
-      <div className="flex items-end gap-0 border-b border-[#222222] overflow-x-auto scrollbar-none">
+      <div className="flex items-center gap-6 border-b border-border overflow-x-auto scrollbar-none px-6">
         {tabs.map((tab) => {
           const isActive = tab.id === activeTab
           return (
@@ -18,31 +13,24 @@ export default function TabView({ tabs = [], activeTab, onTabChange, children })
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
               className={`
-                relative flex items-center gap-2 px-5 py-3 text-sm font-medium
-                whitespace-nowrap transition-all duration-150 focus:outline-none
-                border-b-2 -mb-px
+                relative flex items-center gap-2 py-3 text-[13px] font-medium
+                whitespace-nowrap transition-colors duration-150 focus:outline-none
+                border-b-2 -mb-[1px]
                 ${isActive
-                  ? 'border-[#00ff88] text-[#00ff88] bg-[rgba(0,255,136,0.04)]'
-                  : 'border-transparent text-[#666666] hover:text-[#aaaaaa] hover:border-[#444444] hover:bg-[rgba(255,255,255,0.02)]'
+                  ? 'border-accent text-text-primary'
+                  : 'border-transparent text-text-secondary hover:text-text-primary'
                 }
               `}
               aria-selected={isActive}
               role="tab"
             >
-              <span className="tracking-wide">{tab.label}</span>
+              <span>{tab.label}</span>
               {tab.count !== undefined && tab.count !== null && (
                 <span
                   className={`
-                    inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5
-                    rounded-full text-[0.6rem] font-bold
-                    ${isActive
-                      ? tab.danger
-                        ? 'bg-[rgba(255,68,68,0.2)] text-[#ff4444]'
-                        : 'bg-[rgba(0,255,136,0.15)] text-[#00ff88]'
-                      : tab.danger && tab.count > 0
-                      ? 'bg-[rgba(255,68,68,0.15)] text-[#ff6666]'
-                      : 'bg-[#1e1e1e] text-[#555555]'
-                    }
+                    inline-flex items-center justify-center px-1.5 h-[18px]
+                    text-[11px] font-medium rounded-full bg-bg-elevated
+                    ${isActive ? 'text-text-primary' : 'text-text-secondary'}
                   `}
                 >
                   {tab.count > 999 ? '999+' : tab.count}
@@ -54,7 +42,7 @@ export default function TabView({ tabs = [], activeTab, onTabChange, children })
       </div>
 
       {/* Tab content */}
-      <div className="flex-1 min-h-0 animate-fade-in pt-6">
+      <div className="flex-1 min-h-0 p-6">
         {children}
       </div>
     </div>

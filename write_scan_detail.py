@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import os
+
+file_content = """import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -797,9 +799,7 @@ export default function ScanDetail() {
   const [isRegeneratingAI, setIsRegeneratingAI] = useState(false)
   const [exportLoading, setExportLoading]       = useState(false)
   const [pdfLoading, setPdfLoading]             = useState(false)
-  const [pollStatus, setPollStatus]             = useState('')
-  const timeoutRef = useRef(null)
-  const startTimeRef = useRef(Date.now())
+  const intervalRef = useRef(null)
 
   const fetchScan = useCallback(async () => {
     try {
@@ -807,12 +807,7 @@ export default function ScanDetail() {
       setScan(data)
       setError(null)
     } catch (ex) {
-      if (ex.isTimeout) {
-        // Do not set error for timeout, keep showing current UI and polling
-        console.warn('Scan poll timed out, will retry...')
-      } else {
-        setError(ex?.response?.data?.error ?? ex?.message ?? 'Failed to load scan.')
-      }
+      setError(ex?.response?.data?.error ?? ex?.message ?? 'Failed to load scan.')
     } finally {
       setLoading(false)
     }
@@ -827,45 +822,17 @@ export default function ScanDetail() {
     const status = (scan.status ?? '').toLowerCase()
     const isActive = status === 'queued' || status === 'running'
 
-    if (!isActive) {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current)
-      setPollStatus('')
-      return
-    }
-
-    let isSubscribed = true
-
-    const poll = async () => {
-      if (!isSubscribed) return
-      
-      const elapsedMs = Date.now() - startTimeRef.current
-      const elapsedSec = elapsedMs / 1000
-
-      let intervalMs = 3000
-      if (elapsedSec > 600) {
-        setPollStatus('Scan may have failed - check console')
-        return // stop polling after 10m
-      } else if (elapsedSec > 150) {
-        intervalMs = 10000
-      } else if (elapsedSec > 30) {
-        intervalMs = 5000
-      }
-
-      setPollStatus(`Checking every ${intervalMs / 1000}s...`)
-      
-      await fetchScan()
-      
-      if (isSubscribed) {
-        timeoutRef.current = setTimeout(poll, intervalMs)
+    if (isActive) {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+      intervalRef.current = setInterval(fetchScan, 3000)
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
       }
     }
-
-    if (timeoutRef.current) clearTimeout(timeoutRef.current)
-    timeoutRef.current = setTimeout(poll, 3000)
-
     return () => {
-      isSubscribed = false
-      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      if (intervalRef.current) clearInterval(intervalRef.current)
     }
   }, [scan?.status, fetchScan])
 
@@ -988,10 +955,7 @@ export default function ScanDetail() {
                   <StatusBadge status={status} dot />
                 </div>
                 <div className="text-text-secondary text-[13px]">
-                  {status === 'running' || status === 'queued'
-                    ? `Started ${formatRelativeTime(createdAt)} ${pollStatus ? `· ${pollStatus}` : ''}`
-                    : `Started ${formatRelativeTime(createdAt)} ${doneAt ? `· Completed ${formatRelativeTime(doneAt)}` : ''}`
-                  }
+                  Started {formatRelativeTime(createdAt)} {doneAt && `· Completed ${formatRelativeTime(doneAt)}`}
                 </div>
               </div>
             </div>
@@ -1048,3 +1012,9 @@ export default function ScanDetail() {
     </div>
   )
 }
+"""
+
+with open(r"d:\Projects\Argus-Sentinel\frontend\src\pages\ScanDetail.jsx", "w", encoding="utf-8") as f:
+    f.write(file_content)
+
+print("ScanDetail.jsx written successfully.")

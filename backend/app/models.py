@@ -28,7 +28,7 @@ class Subdomain(Base):
     __tablename__ = 'subdomains'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    scan_id = Column(String, ForeignKey('scans.id'), nullable=False)
+    scan_id = Column(String, ForeignKey('scans.id'), nullable=False, index=True)
     subdomain = Column(String, nullable=False)
     is_alive = Column(Boolean, default=False)
     status_code = Column(Integer, nullable=True)
@@ -44,7 +44,7 @@ class Port(Base):
     __tablename__ = 'ports'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    subdomain_id = Column(Integer, ForeignKey('subdomains.id'), nullable=False)
+    subdomain_id = Column(Integer, ForeignKey('subdomains.id'), nullable=False, index=True)
     port = Column(Integer, nullable=False)
     protocol = Column(String, default='tcp')
     service = Column(String, nullable=True)
@@ -57,7 +57,7 @@ class Secret(Base):
     __tablename__ = 'secrets'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    scan_id = Column(String, ForeignKey('scans.id'), nullable=False)
+    scan_id = Column(String, ForeignKey('scans.id'), nullable=False, index=True)
     file_url = Column(String, nullable=False)
     secret_type = Column(String, nullable=False)
     matched_value = Column(String, nullable=False)
@@ -72,7 +72,7 @@ class Endpoint(Base):
     __tablename__ = 'endpoints'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    scan_id = Column(String, ForeignKey('scans.id'), nullable=False)
+    scan_id = Column(String, ForeignKey('scans.id'), nullable=False, index=True)
     url = Column(String, nullable=False)
     source_file = Column(String, nullable=True)
 
@@ -83,7 +83,7 @@ class TakeoverRisk(Base):
     __tablename__ = 'takeover_risks'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    scan_id = Column(String, ForeignKey('scans.id'), nullable=False)
+    scan_id = Column(String, ForeignKey('scans.id'), nullable=False, index=True)
     subdomain = Column(String, nullable=False)
     cname = Column(String, nullable=True)
     provider = Column(String, nullable=False)
@@ -96,7 +96,7 @@ class AISummary(Base):
     __tablename__ = 'ai_summaries'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    scan_id = Column(String, ForeignKey('scans.id'), nullable=False, unique=True)
+    scan_id = Column(String, ForeignKey('scans.id'), nullable=False, unique=True, index=True)
     summary_text = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -107,7 +107,7 @@ class VulnerabilityFinding(Base):
     __tablename__ = 'vulnerability_findings'
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    scan_id = Column(String, ForeignKey('scans.id'), nullable=False)
+    scan_id = Column(String, ForeignKey('scans.id'), nullable=False, index=True)
     template_id = Column(String, nullable=False)
     template_name = Column(String, nullable=False)
     severity = Column(String, nullable=False)  # critical, high, medium, low, info

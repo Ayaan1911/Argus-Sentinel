@@ -95,6 +95,7 @@ def run(scan_id: str, db) -> None:
         return
 
     logger.info(f'[{scan_id}] Checking {len(subdomains)} subdomains for takeover risks')
+    print(f"[STAGE] takeover_check: input={len(subdomains)} subdomains")
     count = 0
 
     for sub in subdomains:
@@ -126,4 +127,9 @@ def run(scan_id: str, db) -> None:
                 break  # One risk per subdomain is enough
 
     db.commit()
+    
+    total_takeovers = db.query(TakeoverRisk).filter(TakeoverRisk.scan_id == scan_id).count()
+    print(f"[STAGE] takeover_check: output={total_takeovers} takeovers")
+    print(f"[DB] Verified {total_takeovers} takeovers committed for scan {scan_id}")
+    
     logger.info(f'[{scan_id}] Takeover check complete: {count} risk(s) found')

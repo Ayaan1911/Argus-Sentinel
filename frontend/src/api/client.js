@@ -5,14 +5,18 @@ const client = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000,
+  timeout: 120000,
 })
 
 // Response interceptor for unified error handling
 client.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response) {
+    if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+      console.error('[Argus API Error] Timeout exceeded')
+      error.isTimeout = true
+      error.message = 'Scan is still running... this may take a few minutes for large targets'
+    } else if (error.response) {
       console.error('[Argus API Error]', error.response.status, error.response.data)
     } else if (error.request) {
       console.error('[Argus API Error] No response received:', error.request)

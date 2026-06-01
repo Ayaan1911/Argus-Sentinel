@@ -84,6 +84,7 @@ def run(scan_id: str, db) -> None:
         .all()
     )
 
+    print(f"[STAGE] js_extractor: input={len(live_subs)} live hosts")
     js_files: dict[str, str] = {}
 
     for sub in live_subs:
@@ -116,4 +117,8 @@ def run(scan_id: str, db) -> None:
             logger.debug(f'[{scan_id}] Could not fetch {sub.subdomain}')
 
     _js_cache[scan_id] = js_files
+    
+    print(f"[STAGE] js_extractor: output={len(js_files)} JS files")
+    print(f"[DB] Verified {len(js_files)} JS files cached for scan {scan_id}")
+    
     logger.info(f'[{scan_id}] JS extraction complete: {len(js_files)} JS file(s) cached')

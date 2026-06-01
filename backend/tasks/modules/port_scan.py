@@ -70,6 +70,7 @@ def run(scan_id: str, db) -> None:
         return
 
     logger.info(f'[{scan_id}] Port scanning {len(live_subs)} live hosts')
+    print(f"[STAGE] port_scan: input={len(live_subs)} live hosts")
     nmap_available = True
 
     for sub in live_subs:
@@ -113,5 +114,9 @@ def run(scan_id: str, db) -> None:
         except Exception as e:
             logger.error(f'[{scan_id}] nmap error for {sub.subdomain}: {e}')
             db.commit()
+
+    count = db.query(Port).join(Subdomain).filter(Subdomain.scan_id == scan_id).count()
+    print(f"[STAGE] port_scan: output={count} open ports")
+    print(f"[DB] Verified {count} ports committed for scan {scan_id}")
 
     logger.info(f'[{scan_id}] Port scanning complete')

@@ -208,6 +208,7 @@ def run(scan_id: str, db) -> None:
         logger.info(f'[{scan_id}] No JS files in cache, skipping secret detection')
         return
 
+    print(f"[STAGE] secret_detector: input={len(js_files)} JS files")
     count = 0
     seen: set[str] = set()  # Deduplicate exact same match per file
 
@@ -245,4 +246,9 @@ def run(scan_id: str, db) -> None:
                 count += 1
 
     db.commit()
-    logger.info(f'[{scan_id}] Secret detection complete: {count} potential secret(s) found')
+    
+    total_secrets = db.query(Secret).filter(Secret.scan_id == scan_id).count()
+    print(f"[STAGE] secret_detector: output={total_secrets} secrets")
+    print(f"[DB] Verified {total_secrets} secrets committed for scan {scan_id}")
+    
+    logger.info(f'[{scan_id}] Secret detection complete: {count} secret(s) found')
