@@ -71,14 +71,12 @@ def _httpx_scan(subdomains: list) -> dict:
             '-silent',
             '-status-code',
             '-title',
-            '-tech-detect',
             '-follow-redirects',
-            '-fc', '400,404,410',
-            '-p', '80,443,8080,8443',
-            '-H', 'User-Agent: Mozilla/5.0 (compatible; SecurityScanner/1.0)',
             '-json',
             '-timeout', '15',
-            '-retries', '3',
+            '-retries', '2',
+            '-threads', '50',
+            '-mc', '200,201,301,302,303,307,308,401,403,404,500,502,503'
         ]
         print(f"DEBUG: Running httpx with cmd: {' '.join(cmd)}", flush=True)
         
@@ -107,6 +105,39 @@ def _httpx_scan(subdomains: list) -> dict:
         
         print(f"DEBUG: httpx total results collected: {len(results)}", flush=True)
         print(f"DEBUG: httpx result keys: {list(results.keys())[:5]}", flush=True)
+        
+        if len(results) == 0:
+            print("Primary httpx returned 0 results, running fallback probe...")
+            common = ['www', 'api', 'docs', 'mail', 'app', 'dev', 'staging',
+                      'admin', 'blog', 'status', 'cdn', 'static', 'raw']
+            
+            # Subdomains are strings here because we use `[s.subdomain for s in subdomains]` to write them.
+            # wait, `subdomains` in this context is a list of Subdomain objects.
+            target = subdomains[0].subdomain.split('.', 1)[1] if (subdomains and '.' in subdomains[0].subdomain) else (subdomains[0].subdomain if subdomains else '')
+            fallback_hosts = [f"{kw}.{target}" for kw in common if target]
+            
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as fallback_f:
+                for f_host in fallback_hosts:
+                    fallback_f.write(f_host + '\n')
+                fallback_tmp = fallback_f.name
+            
+            try:
+                fb_cmd = cmd.copy()
+                fb_cmd[2] = fallback_tmp
+                proc_fb = subprocess.run(fb_cmd, capture_output=True, text=True, timeout=HTTPX_TIMEOUT)
+                for line in proc_fb.stdout.splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    parsed = _parse_httpx_line(line)
+                    if parsed:
+                        host, info = parsed
+                        results[host] = info
+            finally:
+                try:
+                    os.unlink(fallback_tmp)
+                except OSError:
+                    pass
     except subprocess.TimeoutExpired:
         print('ERROR: httpx global timeout reached', flush=True)
     except FileNotFoundError:
@@ -161,13 +192,11 @@ def run(scan_id: str, db) -> None:
 
     logger.info(f'[{scan_id}] Probing {len(subdomains)} hosts for liveness')
     print(f"[STAGE] live_host_check: input={len(subdomains)} subdomains")
+    print(f"[HTTPX] Probing these hosts: {[s.subdomain for s in subdomains[:5]]}...")
 
     # Try httpx first, fall back to requests
     try:
         results = _httpx_scan(subdomains)
-        if len(results) == 0:
-            logger.info(f'[{scan_id}] Primary live host detection returned 0, trying fallback...')
-            results = _requests_fallback(subdomains)
     except FileNotFoundError:
         logger.info(f'[{scan_id}] Falling back to requests for live host check')
         results = _requests_fallback(subdomains)
