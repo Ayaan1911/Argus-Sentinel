@@ -482,6 +482,7 @@ function SecretsTab({ secrets = [] }) {
                 const value   = s.matched_value ?? s.value ?? s.secret ?? s.match ?? ''
                 const lineNum = s.line_number ?? s.line ?? s.line_num ?? '—'
                 const sev     = (s.severity || 'medium').toLowerCase()
+                const isValidated = s.validated
 
                 return (
                   <tr key={i}>
@@ -489,9 +490,20 @@ function SecretsTab({ secrets = [] }) {
                       <SeverityBadge severity={sev} />
                     </td>
                     <td>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${getSecretStyle(type).color}`}>
-                        {type}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${getSecretStyle(type).color}`}>
+                          {type}
+                        </span>
+                        {isValidated ? (
+                          <span className="px-1.5 py-0.5 rounded bg-green/10 text-green text-[9px] font-bold uppercase tracking-wide">
+                            VALID
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded bg-gray-500/10 text-text-muted text-[9px] font-bold uppercase tracking-wide">
+                            UNVERIFIED
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td>
                       <span className="font-mono text-text-primary text-[12px]">
@@ -514,6 +526,80 @@ function SecretsTab({ secrets = [] }) {
                       )}
                     </td>
                     <td className="font-mono text-text-secondary text-[12px]">{lineNum}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── VALIDATED SECRETS TAB ──────────────────────────────────────────────────────
+
+function ValidatedSecretsTab({ secrets = [] }) {
+  const validatedSecrets = secrets.filter((s) => s.validated)
+
+  if (validatedSecrets.length === 0) {
+    return (
+      <div className="animate-fade-in py-16 text-center">
+        <p className="text-text-muted text-[13px]">No validated secrets found.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="animate-fade-in space-y-4">
+      <div className="bg-bg-surface border border-border rounded-[6px] overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Severity</th>
+                <th>Type</th>
+                <th>Found On</th>
+                <th>Proof</th>
+              </tr>
+            </thead>
+            <tbody>
+              {validatedSecrets.map((s, i) => {
+                const type    = s.secret_type ?? s.type ?? s.kind ?? 'unknown'
+                const fileUrl = s.file_url ?? s.url ?? s.source ?? s.js_file ?? ''
+                const proof   = s.validation_proof ?? 'Valid'
+                const sev     = (s.severity || 'medium').toLowerCase()
+
+                return (
+                  <tr key={i}>
+                    <td>
+                      <SeverityBadge severity={sev} />
+                    </td>
+                    <td>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${getSecretStyle(type).color}`}>
+                        {type}
+                      </span>
+                    </td>
+                    <td className="max-w-[220px]">
+                      {fileUrl ? (
+                        <a
+                          href={fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-mono text-blue text-[12px] hover:underline truncate block"
+                          title={fileUrl}
+                        >
+                          {fileUrl.replace(/^https?:\/\/[^/]+/, '')}
+                        </a>
+                      ) : (
+                        <span className="text-text-muted text-[12px]">—</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className="font-mono text-text-primary text-[12px]">
+                        {proof}
+                      </span>
+                    </td>
                   </tr>
                 )
               })}
@@ -938,6 +1024,7 @@ export default function ScanDetail() {
   const totalSubdomainsCount = scan?.subdomains_count ?? subdomains.length
   const totalPortsCount      = scan?.ports_count ?? subdomains.reduce((acc, s) => acc + (s.ports?.length ?? 0), 0)
   const galleryCount         = scan?.screenshots_count ?? subdomains.filter(s => s.screenshot_path).length
+  const validatedSecretsCount= secrets.filter(s => s.validated).length
 
   const tabs = [
     { id: 'overview',   label: 'Overview' },
@@ -945,6 +1032,7 @@ export default function ScanDetail() {
     { id: 'gallery',    label: 'Gallery',    count: galleryCount },
     { id: 'ports',      label: 'Ports',      count: totalPortsCount },
     { id: 'secrets',    label: 'Secrets',    count: secrets.length },
+    { id: 'validated_secrets', label: 'Validated Secrets', count: validatedSecretsCount, dangerCount: true },
     { id: 'endpoints',  label: 'Endpoints',  count: endpoints.length },
     { id: 'takeover',   label: 'Takeover',   count: takeovers.length },
     { id: 'vulns',      label: 'Vulns',      count: vulns.length },
@@ -1041,6 +1129,7 @@ export default function ScanDetail() {
             {activeTab === 'gallery'    && <GalleryTab    subdomains={subdomains} scanId={id} />}
             {activeTab === 'ports'      && <PortsTab      ports={scan.ports ?? []} />}
             {activeTab === 'secrets'    && <SecretsTab    secrets={secrets} />}
+            {activeTab === 'validated_secrets' && <ValidatedSecretsTab secrets={secrets} />}
             {activeTab === 'endpoints'  && <EndpointsTab  endpoints={endpoints} />}
             {activeTab === 'takeover'   && <TakeoverTab   takeovers={takeovers} />}
             {activeTab === 'vulns'      && <VulnerabilitiesTab vulns={vulns} />}

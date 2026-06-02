@@ -64,6 +64,9 @@ class Secret(Base):
     line_number = Column(Integer, nullable=True)
     severity = Column(String, nullable=True, default='medium')
     confidence = Column(Integer, nullable=True, default=60)
+    
+    validated = Column(Boolean, default=False)
+    validation_proof = Column(Text, nullable=True)
 
     scan = relationship('Scan', back_populates='secrets')
 

@@ -47,6 +47,9 @@ class SecretSchema(BaseModel):
     line_number: Optional[int] = None
     severity: Optional[str] = 'medium'
     confidence: Optional[int] = 60
+    
+    validated: Optional[bool] = False
+    validation_proof: Optional[str] = None
 
     class Config:
         from_attributes = True

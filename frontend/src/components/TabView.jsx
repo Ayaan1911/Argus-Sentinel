@@ -29,8 +29,11 @@ export default function TabView({ tabs = [], activeTab, onTabChange, children })
                 <span
                   className={`
                     inline-flex items-center justify-center px-1.5 h-[18px]
-                    text-[11px] font-medium rounded-full bg-bg-elevated
-                    ${isActive ? 'text-text-primary' : 'text-text-secondary'}
+                    text-[11px] font-medium rounded-full
+                    ${tab.dangerCount && tab.count > 0
+                        ? 'bg-red/10 text-red'
+                        : isActive ? 'bg-bg-elevated text-text-primary' : 'bg-bg-elevated text-text-secondary'
+                    }
                   `}
                 >
                   {tab.count > 999 ? '999+' : tab.count}

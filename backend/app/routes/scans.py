@@ -190,6 +190,25 @@ def get_scan_status(scan_id: str, db: Session = Depends(get_db)):
     })
 
 
+@router.get('/scan/{scan_id}/validated-secrets')
+def get_validated_secrets(scan_id: str, db: Session = Depends(get_db)):
+    """
+    Returns only secrets where validated=true, including validation_proof field.
+    """
+    scan = db.query(Scan).filter(Scan.id == scan_id).first()
+    if not scan:
+        raise HTTPException(status_code=404, detail='Scan not found')
+        
+    validated_secrets = db.query(Secret).filter(
+        Secret.scan_id == scan_id, 
+        Secret.validated == True
+    ).all()
+    
+    # We can use SecretSchema directly since we added validated/validation_proof
+    from ..schemas import SecretSchema
+    data = [SecretSchema.model_validate(s).model_dump(exclude_unset=True) for s in validated_secrets]
+    return envelope(data)
+
 @router.get('/scan/{scan_id}/screenshot/{subdomain_id}')
 def get_screenshot(scan_id: str, subdomain_id: int, db: Session = Depends(get_db)):
     """
