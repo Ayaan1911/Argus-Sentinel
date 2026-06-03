@@ -14,9 +14,9 @@ depends_on = None
 
 def upgrade() -> None:
     # ── Add validated + validation_proof to secrets ─────────────────────────────
-    op.add_column('secrets', sa.Column('validated', sa.Boolean(), nullable=True, server_default='false'))
-    op.add_column('secrets', sa.Column('validation_proof', sa.Text(), nullable=True))
+    op.execute("ALTER TABLE secrets ADD COLUMN IF NOT EXISTS validated BOOLEAN DEFAULT FALSE")
+    op.execute("ALTER TABLE secrets ADD COLUMN IF NOT EXISTS validation_proof TEXT")
 
 def downgrade() -> None:
-    op.drop_column('secrets', 'validation_proof')
-    op.drop_column('secrets', 'validated')
+    op.execute("ALTER TABLE secrets DROP COLUMN IF EXISTS validation_proof")
+    op.execute("ALTER TABLE secrets DROP COLUMN IF EXISTS validated")
