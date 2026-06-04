@@ -12,9 +12,8 @@ MAX_STORED_LENGTH = 60
 SECRET_SEVERITY_MAP: dict[str, str] = {
     'aws access key id':          'critical',
     'aws secret access key':      'critical',
-    'private key (pem)':          'critical',
+    'github token':               'critical',
     'private key':                'critical',
-    'rsa private key':            'critical',
     'stripe secret key':          'high',
     'github personal access token': 'high',
     'github oauth token':         'high',
@@ -22,6 +21,7 @@ SECRET_SEVERITY_MAP: dict[str, str] = {
     'slack webhook url':          'high',
     'hardcoded password':         'high',
     'bearer token':               'high',
+    'api key':                    'high',
     'sendgrid api key':           'high',
     'jwt token':                  'medium',
     'generic api key':            'medium',
@@ -42,15 +42,15 @@ SECRET_SEVERITY_MAP: dict[str, str] = {
 SECRET_CONFIDENCE_MAP: dict[str, int] = {
     'aws access key id':            95,
     'aws secret access key':        95,
-    'private key (pem)':            99,
+    'github token':                 95,
+    'api key':                      85,
     'private key':                  99,
-    'rsa private key':              99,
     'stripe secret key':            92,
     'github personal access token': 90,
     'github oauth token':           90,
     'slack bot/user token':         88,
     'slack webhook url':            90,
-    'hardcoded password':           65,
+    'hardcoded password':           75,
     'bearer token':                 80,
     'sendgrid api key':             90,
     'jwt token':                    75,
@@ -124,11 +124,11 @@ PATTERNS: list[tuple[str, re.Pattern]] = [
      re.compile(r'\b(eyJ[a-zA-Z0-9_-]{10,}\.eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,})\b')),
 
     ('Bearer Token',
-     re.compile(r'[Aa]uthorization\s*[=:]\s*[\'"]?[Bb]earer\s+([a-zA-Z0-9\-._~+/]+=*)', re.IGNORECASE)),
+     re.compile(r'Bearer ([a-zA-Z0-9\-._~+/]+=*)', re.IGNORECASE)),
 
     # Private keys / certificates
-    ('Private Key (PEM)',
-     re.compile(r'(-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----)', re.IGNORECASE)),
+    ('Private Key',
+     re.compile(r'(-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)', re.IGNORECASE)),
 
     # SaaS / platform tokens
     ('Slack Bot/User Token',
@@ -137,11 +137,8 @@ PATTERNS: list[tuple[str, re.Pattern]] = [
     ('Slack Webhook URL',
      re.compile(r'(https://hooks\.slack\.com/services/T[a-zA-Z0-9_]+/B[a-zA-Z0-9_]+/[a-zA-Z0-9_]+)')),
 
-    ('GitHub Personal Access Token',
-     re.compile(r'\b(gh[pousr]_[A-Za-z0-9]{36})\b')),
-
-    ('GitHub OAuth Token',
-     re.compile(r'\b(gho_[A-Za-z0-9]{36})\b')),
+    ('GitHub Token',
+     re.compile(r'\b(ghp_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9_]{82})\b')),
 
     ('Stripe Secret Key',
      re.compile(r'\b(sk_live_[0-9a-zA-Z]{24,})\b')),
@@ -168,14 +165,14 @@ PATTERNS: list[tuple[str, re.Pattern]] = [
      re.compile(r'(?://registry\.npmjs\.org/:_authToken=)([a-zA-Z0-9\-_]{36})', re.IGNORECASE)),
 
     # Generic secrets
-    ('Generic API Key',
-     re.compile(r'(?:api[_\-\.]?key|apikey|api_token)\s*[=:]\s*[\'"]?([a-zA-Z0-9\-_]{20,})', re.IGNORECASE)),
+    ('API Key',
+     re.compile(r'(?:api_key|apikey|api-key|access_key|secret_key)\s*[=:]\s*[\'"]?([a-zA-Z0-9_-]{32,45})\b', re.IGNORECASE)),
 
     ('Generic Secret',
      re.compile(r'(?:secret|secret[_\-\.]?key|client[_\-\.]?secret)\s*[=:]\s*[\'"]?([a-zA-Z0-9\-_+/]{16,})', re.IGNORECASE)),
 
     ('Hardcoded Password',
-     re.compile(r'(?:password|passwd|pwd)\s*[=:]\s*[\'"]([^\s\'"]{8,})[\'"]', re.IGNORECASE)),
+     re.compile(r'(?:password|passwd|pwd)\s*[=:]\s*[\'"](?=[a-zA-Z]*[^a-zA-Z\'"])([^\s\'"]{8,})[\'"]', re.IGNORECASE)),
 
     ('Database Connection String',
      re.compile(r'(?:mongodb|postgresql|mysql|redis|amqp|jdbc)://[^\s\'"<>]{10,}', re.IGNORECASE)),
@@ -232,6 +229,10 @@ def run(scan_id: str, db) -> None:
 
                 stored_value = value[:MAX_STORED_LENGTH]
                 severity, confidence = _classify_secret(secret_type)
+                
+                # Confidence filter > 0.7 (70 out of 100)
+                if confidence <= 70:
+                    continue
 
                 secret = Secret(
                     scan_id=scan_id,
