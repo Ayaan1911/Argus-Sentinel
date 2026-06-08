@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, noload
 from typing import List, Dict, Any
 
 from app.database import get_db
@@ -16,12 +16,16 @@ async def create_scan(scan_in: ScanCreate, db: AsyncSession = Depends(get_db)):
     db_scan = Scan(target=scan_in.target, audience=scan_in.audience, status="pending")
     db.add(db_scan)
     await db.commit()
-    await db.refresh(db_scan)
     
     # Trigger celery task
     run_scan.delay(str(db_scan.id), db_scan.target, db_scan.audience)
     
-    return db_scan
+    # Re-fetch with selectinload to prevent Greenlet async load errors during serialization
+    stmt = select(Scan).options(selectinload(Scan.findings)).where(Scan.id == db_scan.id)
+    result = await db.execute(stmt)
+    loaded_scan = result.scalar_one()
+    
+    return loaded_scan
 
 @router.get("/", response_model=List[Dict[str, Any]])
 async def list_scans(db: AsyncSession = Depends(get_db)):
@@ -65,7 +69,7 @@ async def get_scan_status(scan_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.delete("/{scan_id}")
 async def delete_scan(scan_id: str, db: AsyncSession = Depends(get_db)):
-    stmt = select(Scan).where(Scan.id == scan_id)
+    stmt = select(Scan).options(noload(Scan.findings)).where(Scan.id == scan_id)
     result = await db.execute(stmt)
     scan = result.scalar_one_or_none()
     if not scan:
