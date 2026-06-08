@@ -1,41 +1,25 @@
-import { useState, useEffect } from 'react'
-import './index.css'
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Layout from './components/Layout';
+import Dashboard from './pages/Dashboard';
+import NewScan from './pages/NewScan';
+import ScanDetail from './pages/ScanDetail';
+import FindingDetail from './pages/FindingDetail';
+import Intelligence from './pages/Intelligence';
 
 function App() {
-  const [apiStatus, setApiStatus] = useState('Checking...')
-  const [isOnline, setIsOnline] = useState(false)
-
-  useEffect(() => {
-    fetch('http://localhost:8000/health')
-      .then(res => res.json())
-      .then(data => {
-        if (data.status === 'ok') {
-          setApiStatus('API Online')
-          setIsOnline(true)
-        }
-      })
-      .catch(() => {
-        setApiStatus('API Offline')
-        setIsOnline(false)
-      })
-  }, [])
-
   return (
-    <div style={{ backgroundColor: '#0a0f1a', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif' }}>
-      <h1 style={{ color: 'white', fontSize: '3rem', margin: '0 0 10px 0' }}>Argus Sentinel</h1>
-      <p style={{ color: 'gray', fontSize: '1.2rem', marginBottom: '30px' }}>AI-Powered Cybersecurity Reasoning Engine</p>
-      
-      <div style={{
-        padding: '8px 16px',
-        borderRadius: '20px',
-        backgroundColor: isOnline ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-        color: isOnline ? '#22c55e' : '#ef4444',
-        fontWeight: 'bold'
-      }}>
-        {apiStatus}
-      </div>
-    </div>
-  )
+    <BrowserRouter>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/scan/new" element={<NewScan />} />
+          <Route path="/scan/:scan_id" element={<ScanDetail />} />
+          <Route path="/scan/:scan_id/finding/:finding_id" element={<FindingDetail />} />
+          <Route path="/intelligence" element={<Intelligence />} />
+        </Routes>
+      </Layout>
+    </BrowserRouter>
+  );
 }
 
-export default App
+export default App;
