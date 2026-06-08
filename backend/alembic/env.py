@@ -6,12 +6,15 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 import os
 
+from app.models.base import Base
+import app.models  # ensure models are imported
+
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-target_metadata = None
+target_metadata = Base.metadata
 
 def get_url():
     return os.getenv("DATABASE_URL", config.get_main_option("sqlalchemy.url"))
