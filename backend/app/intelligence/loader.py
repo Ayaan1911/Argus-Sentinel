@@ -61,3 +61,7 @@ def get_technology(name: str):
 
 def get_vulnerability(name: str):
     return loader_instance.get_vulnerability(name)
+
+
+def get_intelligence_loader():
+    return loader_instance

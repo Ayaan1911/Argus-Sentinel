@@ -8,7 +8,7 @@ router = APIRouter()
 @router.get("/services")
 async def list_services():
     loader = get_intelligence_loader()
-    return loader._cache.get("services", {})
+    return loader.data.get("services", {})
 
 @router.get("/services/{name}")
 async def get_service(name: str):
@@ -21,7 +21,7 @@ async def get_service(name: str):
 @router.get("/technologies")
 async def list_technologies():
     loader = get_intelligence_loader()
-    return loader._cache.get("technologies", {})
+    return loader.data.get("technologies", {})
 
 @router.get("/technologies/{name}")
 async def get_technology(name: str):
@@ -34,7 +34,7 @@ async def get_technology(name: str):
 @router.get("/vulnerabilities")
 async def list_vulnerabilities():
     loader = get_intelligence_loader()
-    return loader._cache.get("vulnerabilities", {})
+    return loader.data.get("vulnerabilities", {})
 
 @router.get("/vulnerabilities/{name}")
 async def get_vulnerability(name: str):
@@ -51,7 +51,7 @@ async def search_intelligence(q: str = Query(..., min_length=1)):
     query = q.lower()
     
     for category in ["services", "technologies", "vulnerabilities"]:
-        items = loader._cache.get(category, {})
+        items = loader.data.get(category, {})
         for name, data in items.items():
             if query in name.lower() or query in str(data.get("description", "")).lower() or query in str(data.get("service", "")).lower() or query in str(data.get("technology", "")).lower():
                 results.append({

@@ -24,6 +24,7 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      - ./argus-intelligence:/argus-intelligence
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/argus
       - REDIS_URL=redis://redis:6379/0
@@ -39,6 +40,7 @@ services:
     command: celery -A app.tasks.celery_app worker --loglevel=info
     volumes:
       - ./backend:/app
+      - ./argus-intelligence:/argus-intelligence
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/argus
       - REDIS_URL=redis://redis:6379/0

@@ -109,8 +109,8 @@ async def health_check():
         "database": db_status,
         "redis": redis_status,
         "intelligence_library": {
-            "services": len(loader._cache.get("services", {})),
-            "technologies": len(loader._cache.get("technologies", {})),
-            "vulnerabilities": len(loader._cache.get("vulnerabilities", {}))
+            "services": len(loader.data.get("services", {})),
+            "technologies": len(loader.data.get("technologies", {})),
+            "vulnerabilities": len(loader.data.get("vulnerabilities", {}))
         }
     }
