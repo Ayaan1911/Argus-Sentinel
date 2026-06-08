@@ -7,6 +7,14 @@ export default {
   theme: {
     extend: {
       colors: {
+        'argus-bg': '#0a0f1a',
+        'argus-surface': '#111827',
+        'argus-card': '#1a2235',
+        'argus-border': '#1e2d40',
+        'argus-accent': '#00d4ff',
+        'argus-danger': '#ff4444',
+        'argus-warning': '#ffaa00',
+        'argus-success': '#00ff88',
         background: "#0a0f1a",
         surface: "#111827",
         card: "#1a2235",
@@ -17,10 +25,6 @@ export default {
         success: "#00ff88",
         textpri: "#e2e8f0",
         textmut: "#64748b",
-      },
-      fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace'],
       }
     },
   },
