@@ -1,0 +1,60 @@
+{
+  "service": "Server-Side Request Forgery (SSRF)",
+  "port": 0,
+  "protocol": "",
+  "purpose": "Vulnerability Class",
+  "risk_level": "Critical",
+  "description": "SSRF allows an attacker to induce the server-side application to make HTTP requests to an arbitrary domain of the attacker's choosing.",
+  "common_risks": [
+    "Access to internal APIs",
+    "Cloud metadata exfiltration (AWS IAM credentials)",
+    "Internal port scanning"
+  ],
+  "misconfigurations": [
+    "Accepting URLs from users and fetching them without validation",
+    "Lack of network segmentation"
+  ],
+  "attack_patterns": [
+    "Accessing 169.254.169.254 (Cloud Metadata)",
+    "Accessing localhost administrative interfaces"
+  ],
+  "real_world_incidents": [
+    "Capital One breach where an SSRF vulnerability was used to extract AWS IAM credentials from the metadata service."
+  ],
+  "recommended_actions": [
+    "Validate and sanitize URLs.",
+    "Use allowlists for domains/IPs.",
+    "Disable HTTP redirections.",
+    "Implement network segmentation."
+  ],
+  "audience_guidance": {
+    "student": "SSRF tricks a server into making web requests on the hacker's behalf, often to access internal, hidden systems.",
+    "developer": "Never fetch URLs provided by users directly. If necessary, strictly validate against an allowlist and resolve IPs to block private ranges.",
+    "bug_bounty_hunter": "Test webhooks, image uploaders, and PDF generators with internal IPs or cloud metadata endpoints.",
+    "pentester": "If SSRF is found, attempt to retrieve cloud IAM keys, access internal Redis/Memcached, or scan the internal network.",
+    "security_team": "Enforce IMDSv2 in AWS, segment application networks to prevent lateral movement from SSRF."
+  },
+  "correlation_rules": {
+    "amplifies": [
+      "cloud_environment",
+      "internal_services_without_auth"
+    ],
+    "requires": [
+      "server_fetches_user_url"
+    ],
+    "mitigates": [
+      "imdsv2",
+      "network_segmentation",
+      "url_allowlist"
+    ]
+  },
+  "learning_resources": [],
+  "related_findings": [],
+  "mitre_attack": [
+    "T1190"
+  ],
+  "risk_weight": 9,
+  "version": "1.0",
+  "last_updated": "2026-06-08",
+  "reviewed_by": "argus-team"
+}

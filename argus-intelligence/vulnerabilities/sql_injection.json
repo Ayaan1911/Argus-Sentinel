@@ -1,0 +1,59 @@
+{
+  "service": "SQL Injection (SQLi)",
+  "port": 0,
+  "protocol": "",
+  "purpose": "Vulnerability Class",
+  "risk_level": "Critical",
+  "description": "SQL Injection is a web security vulnerability that allows an attacker to interfere with the queries that an application makes to its database.",
+  "common_risks": [
+    "Data breach",
+    "Authentication bypass",
+    "Remote code execution"
+  ],
+  "misconfigurations": [
+    "Using string concatenation for SQL queries instead of prepared statements",
+    "Insufficient input sanitization"
+  ],
+  "attack_patterns": [
+    "Union-based SQLi",
+    "Error-based SQLi",
+    "Blind SQLi (Boolean/Time-based)"
+  ],
+  "real_world_incidents": [
+    "TalkTalk data breach, numerous high-profile compromises of user databases."
+  ],
+  "recommended_actions": [
+    "Use prepared statements (parameterized queries).",
+    "Use stored procedures.",
+    "Enforce least privilege on the DB user."
+  ],
+  "audience_guidance": {
+    "student": "SQL injection happens when an app mistakes user input for a database command, letting hackers steal data.",
+    "developer": "Never concatenate strings to build SQL. Always use ORMs or parameterized queries provided by your framework.",
+    "bug_bounty_hunter": "Test all inputs (GET, POST, Headers) with single quotes, sleep() payloads, and logic operators.",
+    "pentester": "Use sqlmap to automate extraction once confirmed, attempt to read local files or gain shell via xp_cmdshell/UDF.",
+    "security_team": "Deploy WAFs with strict SQLi rules and mandate SAST/DAST scanning in the SDLC."
+  },
+  "correlation_rules": {
+    "amplifies": [
+      "db_running_as_root",
+      "verbose_errors"
+    ],
+    "requires": [
+      "untrusted_input_in_query"
+    ],
+    "mitigates": [
+      "prepared_statements",
+      "waf"
+    ]
+  },
+  "learning_resources": [],
+  "related_findings": [],
+  "mitre_attack": [
+    "T1190"
+  ],
+  "risk_weight": 10,
+  "version": "1.0",
+  "last_updated": "2026-06-08",
+  "reviewed_by": "argus-team"
+}

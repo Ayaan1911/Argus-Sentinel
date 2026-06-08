@@ -1,0 +1,62 @@
+{
+  "service": "Cross-Site Scripting (XSS)",
+  "port": 0,
+  "protocol": "",
+  "purpose": "Vulnerability Class",
+  "risk_level": "High",
+  "description": "XSS allows attackers to inject malicious scripts into web pages viewed by other users.",
+  "common_risks": [
+    "Session hijacking",
+    "Credential theft",
+    "Defacement",
+    "Phishing"
+  ],
+  "misconfigurations": [
+    "Reflecting user input without HTML encoding",
+    "Improper use of dangerouslySetInnerHTML in React"
+  ],
+  "attack_patterns": [
+    "Stored XSS",
+    "Reflected XSS",
+    "DOM-based XSS"
+  ],
+  "real_world_incidents": [
+    "Samy worm on MySpace, which propagated via a Stored XSS vulnerability."
+  ],
+  "recommended_actions": [
+    "Context-aware output encoding.",
+    "Implement Content Security Policy (CSP).",
+    "Use HttpOnly flags for session cookies."
+  ],
+  "audience_guidance": {
+    "student": "XSS lets hackers run malicious JavaScript in another user's browser, stealing their session.",
+    "developer": "Always encode user input before rendering it in the browser. Rely on modern frameworks (React, Angular) that escape by default.",
+    "bug_bounty_hunter": "Inject payloads like <script>alert(1)</script> or javascript: URLs in all input fields and URL parameters.",
+    "pentester": "Demonstrate impact by stealing cookies or exploiting administrative functionalities via the victim's session.",
+    "security_team": "Enforce strong CSP headers and utilize automated DAST tools to catch reflected input."
+  },
+  "correlation_rules": {
+    "amplifies": [
+      "lack_of_httponly_cookies",
+      "weak_csp"
+    ],
+    "requires": [
+      "untrusted_input_in_html"
+    ],
+    "mitigates": [
+      "context_aware_encoding",
+      "csp",
+      "httponly_cookies"
+    ]
+  },
+  "learning_resources": [],
+  "related_findings": [],
+  "mitre_attack": [
+    "T1190",
+    "T1059.007"
+  ],
+  "risk_weight": 7,
+  "version": "1.0",
+  "last_updated": "2026-06-08",
+  "reviewed_by": "argus-team"
+}

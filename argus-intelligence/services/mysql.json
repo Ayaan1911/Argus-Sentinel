@@ -1,0 +1,67 @@
+{
+  "service": "MySQL",
+  "port": 3306,
+  "protocol": "TCP",
+  "purpose": "Relational database management system.",
+  "risk_level": "High",
+  "description": "MySQL is an open-source relational database management system. Exposing it directly to the internet is highly discouraged.",
+  "common_risks": [
+    "Brute force",
+    "Unauthorized data access",
+    "SQL Injection pivoting"
+  ],
+  "misconfigurations": [
+    "Exposed to public internet",
+    "Default root credentials",
+    "Anonymous user accounts enabled"
+  ],
+  "attack_patterns": [
+    "Credential brute force",
+    "Exploitation of CVEs",
+    "UDF (User Defined Function) exploitation for RCE"
+  ],
+  "real_world_incidents": [
+    "Numerous database dumps resulting from misconfigured, internet-facing MySQL servers."
+  ],
+  "recommended_actions": [
+    "Bind to localhost or internal network only.",
+    "Use strong passwords.",
+    "Disable anonymous access.",
+    "Require TLS for connections."
+  ],
+  "audience_guidance": {
+    "student": "A database stores all sensitive information. It should never be directly accessible from the internet.",
+    "developer": "Ensure the database binds to 127.0.0.1 or an internal VPC IP, and enforce strong authentication.",
+    "bug_bounty_hunter": "Attempt to connect using default credentials (root/blank) or perform a light brute force.",
+    "pentester": "If access is gained, extract hashes, dump data, and attempt to write files or execute commands via UDF.",
+    "security_team": "Alert on any external traffic destined for port 3306. Enforce least privilege access."
+  },
+  "correlation_rules": {
+    "amplifies": [
+      "default_credentials",
+      "publicly_accessible"
+    ],
+    "requires": [
+      "network_exposure"
+    ],
+    "mitigates": [
+      "internal_network_only",
+      "strong_auth"
+    ]
+  },
+  "learning_resources": [
+    "https://dev.mysql.com/doc/refman/8.0/en/security-guidelines.html"
+  ],
+  "related_findings": [
+    "exposed_database",
+    "weak_credentials"
+  ],
+  "mitre_attack": [
+    "T1190",
+    "T1059"
+  ],
+  "risk_weight": 8,
+  "version": "1.0",
+  "last_updated": "2026-06-08",
+  "reviewed_by": "argus-team"
+}

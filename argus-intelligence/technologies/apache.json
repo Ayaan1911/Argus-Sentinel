@@ -1,0 +1,58 @@
+{
+  "service": "Apache HTTP Server",
+  "port": 0,
+  "protocol": "",
+  "purpose": "Web Server",
+  "risk_level": "Medium",
+  "description": "Apache is a widely-used open-source cross-platform web server software.",
+  "common_risks": [
+    "Directory traversal",
+    "Information disclosure via server status",
+    "Misconfigured .htaccess"
+  ],
+  "misconfigurations": [
+    "mod_status enabled publicly",
+    "Directory listing enabled",
+    "Verbose server banners"
+  ],
+  "attack_patterns": [
+    "Path traversal attacks",
+    "Exploiting vulnerable CGI scripts",
+    "Information gathering via server headers"
+  ],
+  "real_world_incidents": [
+    "Exploitation of Apache Struts (related technology) led to massive data breaches (e.g., Equifax)."
+  ],
+  "recommended_actions": [
+    "Disable server signature and banners.",
+    "Disable directory browsing.",
+    "Restrict access to /server-status."
+  ],
+  "audience_guidance": {
+    "student": "Apache serves websites. If not configured correctly, it might show files it shouldn't.",
+    "developer": "Use ServerTokens Prod and ServerSignature Off in the configuration.",
+    "bug_bounty_hunter": "Check for /server-status, directory listings, and old CVEs based on the version header.",
+    "pentester": "Look for misconfigured Alias directives, evaluate HTTP methods enabled (e.g., PUT).",
+    "security_team": "Ensure standard secure baseline configs are deployed across all Apache instances."
+  },
+  "correlation_rules": {
+    "amplifies": [
+      "verbose_errors",
+      "directory_listing"
+    ],
+    "requires": [],
+    "mitigates": [
+      "secure_headers",
+      "waf_enabled"
+    ]
+  },
+  "learning_resources": [],
+  "related_findings": [],
+  "mitre_attack": [
+    "T1190"
+  ],
+  "risk_weight": 5,
+  "version": "1.0",
+  "last_updated": "2026-06-08",
+  "reviewed_by": "argus-team"
+}

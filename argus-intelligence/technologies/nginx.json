@@ -1,0 +1,57 @@
+{
+  "service": "Nginx",
+  "port": 0,
+  "protocol": "",
+  "purpose": "Web Server / Reverse Proxy",
+  "risk_level": "Medium",
+  "description": "Nginx is a web server that can also be used as a reverse proxy, load balancer, mail proxy and HTTP cache.",
+  "common_risks": [
+    "Alias traversal",
+    "CRLF Injection",
+    "Server-Side Request Forgery via proxy_pass"
+  ],
+  "misconfigurations": [
+    "Missing trailing slash in alias directives",
+    "Verbose server tokens",
+    "Insecure proxy_pass"
+  ],
+  "attack_patterns": [
+    "Off-by-slash alias traversal",
+    "HTTP Request Smuggling",
+    "SSRF"
+  ],
+  "real_world_incidents": [
+    "Numerous off-by-slash vulnerabilities allowing attackers to read source code outside the intended web root."
+  ],
+  "recommended_actions": [
+    "Ensure trailing slashes match in location and alias blocks.",
+    "Set server_tokens off;"
+  ],
+  "audience_guidance": {
+    "student": "Nginx is fast and popular, but small typos in its config file can expose hidden files.",
+    "developer": "Be extremely careful with location block matching and trailing slashes.",
+    "bug_bounty_hunter": "Test for off-by-slash directory traversal by appending '../' to paths.",
+    "pentester": "Evaluate reverse proxy configurations for SSRF and HTTP smuggling vulnerabilities.",
+    "security_team": "Lint Nginx configurations automatically in CI/CD pipelines to catch misconfigurations."
+  },
+  "correlation_rules": {
+    "amplifies": [
+      "misconfigured_alias",
+      "ssrf_vulnerable_proxy"
+    ],
+    "requires": [],
+    "mitigates": [
+      "strict_routing",
+      "server_tokens_off"
+    ]
+  },
+  "learning_resources": [],
+  "related_findings": [],
+  "mitre_attack": [
+    "T1190"
+  ],
+  "risk_weight": 5,
+  "version": "1.0",
+  "last_updated": "2026-06-08",
+  "reviewed_by": "argus-team"
+}

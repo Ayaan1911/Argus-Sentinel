@@ -1,0 +1,61 @@
+{
+  "service": "HTTP",
+  "port": 80,
+  "protocol": "TCP",
+  "purpose": "Unencrypted web traffic delivery.",
+  "risk_level": "Medium",
+  "description": "Hypertext Transfer Protocol (HTTP) is the foundation of data communication for the World Wide Web. On port 80, it is unencrypted.",
+  "common_risks": [
+    "man-in-the-middle attacks",
+    "cleartext credential transmission",
+    "session hijacking"
+  ],
+  "misconfigurations": [
+    "No redirection to HTTPS",
+    "sensitive data exposed without TLS",
+    "default welcome pages"
+  ],
+  "attack_patterns": [
+    "Packet sniffing",
+    "Session hijacking",
+    "Bypassing HSTS"
+  ],
+  "real_world_incidents": [
+    "Firesheep demonstrated the ease of session hijacking over open HTTP networks."
+  ],
+  "recommended_actions": [
+    "Redirect all HTTP traffic to HTTPS via 301.",
+    "Enforce HSTS."
+  ],
+  "audience_guidance": {
+    "student": "HTTP sends data in plain text. Anyone on the same network can read it.",
+    "developer": "Ensure all endpoints immediately redirect to port 443 with a 301 status.",
+    "bug_bounty_hunter": "Check if sensitive functionality (like login) works over HTTP.",
+    "pentester": "Sniff traffic on the network to capture credentials or session cookies.",
+    "security_team": "Enforce strict transport security across the organization and monitor for unencrypted HTTP traffic."
+  },
+  "correlation_rules": {
+    "amplifies": [
+      "sensitive_data_transmission",
+      "login_page"
+    ],
+    "requires": [],
+    "mitigates": [
+      "http_to_https_redirect"
+    ]
+  },
+  "learning_resources": [
+    "https://developer.mozilla.org/en-US/docs/Web/HTTP"
+  ],
+  "related_findings": [
+    "cleartext_transmission"
+  ],
+  "mitre_attack": [
+    "T1040",
+    "T1557"
+  ],
+  "risk_weight": 5,
+  "version": "1.0",
+  "last_updated": "2026-06-08",
+  "reviewed_by": "argus-team"
+}

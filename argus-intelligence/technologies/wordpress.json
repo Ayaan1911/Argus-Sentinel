@@ -1,0 +1,61 @@
+{
+  "service": "WordPress",
+  "port": 0,
+  "protocol": "",
+  "purpose": "Content Management System (CMS)",
+  "risk_level": "High",
+  "description": "WordPress is the world's most popular open-source CMS, making it a massive target for attackers.",
+  "common_risks": [
+    "Vulnerable plugins/themes",
+    "XML-RPC attacks",
+    "Brute force admin login",
+    "User enumeration"
+  ],
+  "misconfigurations": [
+    "Exposed xmlrpc.php",
+    "Default admin username",
+    "Directory listing in wp-content"
+  ],
+  "attack_patterns": [
+    "Exploiting outdated plugins for RCE/SQLi",
+    "Brute forcing wp-login.php",
+    "XML-RPC pingback SSRF/Brute force"
+  ],
+  "real_world_incidents": [
+    "Countless mass-compromises of WordPress sites due to vulnerable third-party plugins (e.g., TimThumb, Revolution Slider)."
+  ],
+  "recommended_actions": [
+    "Keep core, plugins, and themes updated.",
+    "Disable XML-RPC.",
+    "Use strong passwords and MFA.",
+    "Limit login attempts."
+  ],
+  "audience_guidance": {
+    "student": "WordPress powers much of the web. Because it's so popular, hackers constantly look for weaknesses in its plugins.",
+    "developer": "Implement auto-updates, avoid abandoned plugins, and restrict access to the wp-admin directory.",
+    "bug_bounty_hunter": "Use wpscan to enumerate plugins, check for exposed xmlrpc.php, and find CVEs for identified plugins.",
+    "pentester": "Focus heavily on third-party plugin vulnerabilities rather than WordPress core. Exploit plugins for shell access.",
+    "security_team": "Implement a WAF to block common WordPress attacks and strictly manage the plugin inventory."
+  },
+  "correlation_rules": {
+    "amplifies": [
+      "outdated_plugins",
+      "xmlrpc_enabled"
+    ],
+    "requires": [],
+    "mitigates": [
+      "waf_enabled",
+      "auto_updates"
+    ]
+  },
+  "learning_resources": [],
+  "related_findings": [],
+  "mitre_attack": [
+    "T1190",
+    "T1133"
+  ],
+  "risk_weight": 7,
+  "version": "1.0",
+  "last_updated": "2026-06-08",
+  "reviewed_by": "argus-team"
+}

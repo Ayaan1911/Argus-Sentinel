@@ -1,0 +1,68 @@
+{
+  "service": "Redis",
+  "port": 6379,
+  "protocol": "TCP",
+  "purpose": "In-memory data structure store used as a database, cache, and message broker.",
+  "risk_level": "Critical",
+  "description": "Redis is extremely fast but historically lacked robust security features by default, making internet exposure catastrophic.",
+  "common_risks": [
+    "Unauthenticated access",
+    "Data theft",
+    "Remote Code Execution (RCE)"
+  ],
+  "misconfigurations": [
+    "No authentication (requirepass not set)",
+    "Bound to 0.0.0.0",
+    "Running as root"
+  ],
+  "attack_patterns": [
+    "Unauthenticated command execution",
+    "Writing malicious SSH keys to ~/.ssh/authorized_keys",
+    "Writing cron jobs"
+  ],
+  "real_world_incidents": [
+    "Massive cryptomining botnet campaigns leveraging open Redis instances to gain RCE via cron jobs."
+  ],
+  "recommended_actions": [
+    "Bind to localhost.",
+    "Set a strong 'requirepass' password.",
+    "Rename dangerous commands (CONFIG, FLUSHDB)."
+  ],
+  "audience_guidance": {
+    "student": "Redis trusts everyone by default. If it's on the internet, attackers can completely take over the server in seconds.",
+    "developer": "Always configure a password and never expose Redis directly to the public internet.",
+    "bug_bounty_hunter": "Connect using redis-cli. If it connects without auth, you have Critical impact.",
+    "pentester": "Exploit unauthenticated Redis to gain a reverse shell by writing to crontab or authorized_keys.",
+    "security_team": "Monitor for exposed 6379. Mandate Redis authentication across the organization."
+  },
+  "correlation_rules": {
+    "amplifies": [
+      "no_auth",
+      "publicly_accessible",
+      "running_as_root"
+    ],
+    "requires": [
+      "network_exposure"
+    ],
+    "mitigates": [
+      "auth_enabled",
+      "internal_network_only",
+      "renamed_commands"
+    ]
+  },
+  "learning_resources": [
+    "https://redis.io/topics/security"
+  ],
+  "related_findings": [
+    "unauthenticated_access",
+    "exposed_database"
+  ],
+  "mitre_attack": [
+    "T1190",
+    "T1053.003"
+  ],
+  "risk_weight": 9,
+  "version": "1.0",
+  "last_updated": "2026-06-08",
+  "reviewed_by": "argus-team"
+}

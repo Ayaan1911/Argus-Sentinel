@@ -1,0 +1,59 @@
+{
+  "service": "Apache Tomcat",
+  "port": 0,
+  "protocol": "",
+  "purpose": "Java Servlet Container",
+  "risk_level": "High",
+  "description": "Apache Tomcat is an open-source implementation of the Java Servlet, JavaServer Pages, Java Expression Language and WebSocket technologies.",
+  "common_risks": [
+    "Remote Code Execution via Manager application",
+    "Ghostcat vulnerability",
+    "Information disclosure"
+  ],
+  "misconfigurations": [
+    "Default manager credentials (tomcat:tomcat)",
+    "AJP port (8009) exposed",
+    "Verbose error pages"
+  ],
+  "attack_patterns": [
+    "Deploying malicious WAR files",
+    "Brute forcing manager app",
+    "Exploiting Ghostcat (CVE-2020-1938)"
+  ],
+  "real_world_incidents": [
+    "Widespread exploitation of default manager credentials to deploy web shells."
+  ],
+  "recommended_actions": [
+    "Change default manager passwords.",
+    "Block public access to /manager.",
+    "Disable or secure AJP connector."
+  ],
+  "audience_guidance": {
+    "student": "Tomcat runs Java web apps. If you leave the admin panel open with default passwords, anyone can upload a virus.",
+    "developer": "Remove the default manager application if not needed in production. Secure the AJP connector.",
+    "bug_bounty_hunter": "Check for /manager/html, try default credentials like tomcat:tomcat, admin:admin.",
+    "pentester": "If manager access is achieved, generate a malicious WAR payload using msfvenom and deploy it for a reverse shell.",
+    "security_team": "Monitor for WAR file deployments and enforce strong access controls on administrative interfaces."
+  },
+  "correlation_rules": {
+    "amplifies": [
+      "default_credentials",
+      "exposed_manager_app"
+    ],
+    "requires": [],
+    "mitigates": [
+      "ip_restricted_manager",
+      "strong_passwords"
+    ]
+  },
+  "learning_resources": [],
+  "related_findings": [],
+  "mitre_attack": [
+    "T1190",
+    "T1505.003"
+  ],
+  "risk_weight": 8,
+  "version": "1.0",
+  "last_updated": "2026-06-08",
+  "reviewed_by": "argus-team"
+}

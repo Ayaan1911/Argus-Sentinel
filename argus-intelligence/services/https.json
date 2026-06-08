@@ -1,0 +1,66 @@
+{
+  "service": "HTTPS",
+  "port": 443,
+  "protocol": "TCP",
+  "purpose": "Encrypted web traffic delivery.",
+  "risk_level": "Low",
+  "description": "HTTPS is an extension of HTTP used for secure communication over a computer network.",
+  "common_risks": [
+    "Weak TLS configurations",
+    "Expired certificates",
+    "Application layer vulnerabilities"
+  ],
+  "misconfigurations": [
+    "Supporting TLS 1.0/1.1",
+    "Weak cipher suites",
+    "Self-signed certificates in production"
+  ],
+  "attack_patterns": [
+    "POODLE",
+    "BEAST",
+    "Heartbleed (historic)",
+    "Web app attacks (XSS, SQLi)"
+  ],
+  "real_world_incidents": [
+    "Heartbleed vulnerability exposed memory contents over HTTPS connections globally."
+  ],
+  "recommended_actions": [
+    "Enforce TLS 1.2 or 1.3.",
+    "Disable weak ciphers.",
+    "Use strong certificate authorities.",
+    "Implement HSTS."
+  ],
+  "audience_guidance": {
+    "student": "HTTPS ensures your data is encrypted, but the website itself could still have flaws.",
+    "developer": "Configure web servers to use modern TLS standards and strong cipher suites.",
+    "bug_bounty_hunter": "Review certificate details, check for weak ciphers via SSLlabs/testssl.sh, then focus on app layer.",
+    "pentester": "Test for downgrade attacks and weak encryption; focus primary efforts on web application vulnerabilities.",
+    "security_team": "Automate certificate renewal and continuously scan for non-compliant TLS configurations."
+  },
+  "correlation_rules": {
+    "amplifies": [
+      "weak_ciphers",
+      "expired_cert"
+    ],
+    "requires": [],
+    "mitigates": [
+      "tls_1_3",
+      "hsts"
+    ]
+  },
+  "learning_resources": [
+    "https://www.ssllabs.com/"
+  ],
+  "related_findings": [
+    "weak_tls",
+    "expired_certificate"
+  ],
+  "mitre_attack": [
+    "T1573.002",
+    "T1190"
+  ],
+  "risk_weight": 3,
+  "version": "1.0",
+  "last_updated": "2026-06-08",
+  "reviewed_by": "argus-team"
+}

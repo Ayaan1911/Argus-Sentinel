@@ -1,0 +1,73 @@
+{
+  "service": "SSH",
+  "port": 22,
+  "protocol": "TCP",
+  "purpose": "Secure shell access for remote administration.",
+  "risk_level": "High",
+  "description": "Secure Shell (SSH) is a cryptographic network protocol for operating network services securely over an unsecured network.",
+  "common_risks": [
+    "brute force",
+    "credential stuffing",
+    "weak ciphers",
+    "outdated versions"
+  ],
+  "misconfigurations": [
+    "password auth enabled",
+    "root login permitted",
+    "no IP restrictions",
+    "default port"
+  ],
+  "attack_patterns": [
+    "brute force",
+    "credential stuffing",
+    "CVE exploitation on outdated OpenSSH"
+  ],
+  "real_world_incidents": [
+    "Numerous ransomware strains utilizing exposed SSH ports to pivot into internal networks."
+  ],
+  "recommended_actions": [
+    "Disable password authentication.",
+    "Disable root login.",
+    "Use Key-based auth only.",
+    "Restrict IP access.",
+    "Implement fail2ban."
+  ],
+  "audience_guidance": {
+    "student": "SSH is like a secure tunnel into a computer. If left wide open, anyone can try to guess the password to get in.",
+    "developer": "Configure sshd_config with PasswordAuthentication no and PermitRootLogin no.",
+    "bug_bounty_hunter": "Check for version CVEs, username enumeration capabilities, and if password auth is allowed.",
+    "pentester": "Use Hydra to brute force passwords, search for Metasploit modules for older versions, perform banner grabbing.",
+    "security_team": "Implement strict firewall rules, monitor for failed login spikes, enforce MFA for SSH access."
+  },
+  "correlation_rules": {
+    "amplifies": [
+      "password_auth_enabled",
+      "internet_facing",
+      "outdated_version"
+    ],
+    "requires": [
+      "network_exposure"
+    ],
+    "mitigates": [
+      "key_based_auth",
+      "ip_restricted",
+      "fail2ban",
+      "mfa_enabled"
+    ]
+  },
+  "learning_resources": [
+    "https://man.openbsd.org/sshd_config"
+  ],
+  "related_findings": [
+    "weak_credentials",
+    "exposed_administrative_interface"
+  ],
+  "mitre_attack": [
+    "T1110",
+    "T1021.004"
+  ],
+  "risk_weight": 7,
+  "version": "1.0",
+  "last_updated": "2026-06-08",
+  "reviewed_by": "argus-team"
+}

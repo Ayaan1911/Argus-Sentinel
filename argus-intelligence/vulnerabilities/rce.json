@@ -1,0 +1,62 @@
+{
+  "service": "Remote Code Execution (RCE)",
+  "port": 0,
+  "protocol": "",
+  "purpose": "Vulnerability Class",
+  "risk_level": "Critical",
+  "description": "RCE allows an attacker to execute arbitrary commands or code on a target machine over a network.",
+  "common_risks": [
+    "Complete system compromise",
+    "Data exfiltration",
+    "Lateral movement",
+    "Ransomware deployment"
+  ],
+  "misconfigurations": [
+    "Using insecure deserialization",
+    "Passing user input to os.system() or eval()",
+    "Unrestricted file uploads"
+  ],
+  "attack_patterns": [
+    "OS Command Injection",
+    "Insecure Deserialization",
+    "File Upload to Web Shell"
+  ],
+  "real_world_incidents": [
+    "Log4Shell (CVE-2021-44228), WannaCry (EternalBlue)."
+  ],
+  "recommended_actions": [
+    "Never pass untrusted data to system shells or eval functions.",
+    "Use language-safe APIs.",
+    "Run applications with least privilege."
+  ],
+  "audience_guidance": {
+    "student": "RCE is the holy grail for hackers. It means they can run any command on your computer as if they were sitting in front of it.",
+    "developer": "Avoid system calls. If necessary, strictly validate input and do not use a shell wrapper. Avoid insecure deserialization formats.",
+    "bug_bounty_hunter": "Look for input fields that interact with the OS, test deserialization endpoints with payloads from Ysoserial, test file uploads.",
+    "pentester": "Obtain a reverse shell, escalate privileges, and pivot into the internal network.",
+    "security_team": "Run applications in highly restricted containers (e.g., read-only filesystems, dropped capabilities) to limit post-exploitation impact."
+  },
+  "correlation_rules": {
+    "amplifies": [
+      "running_as_root",
+      "outdated_dependencies"
+    ],
+    "requires": [
+      "insecure_code_execution_path"
+    ],
+    "mitigates": [
+      "least_privilege",
+      "container_sandboxing"
+    ]
+  },
+  "learning_resources": [],
+  "related_findings": [],
+  "mitre_attack": [
+    "T1190",
+    "T1059"
+  ],
+  "risk_weight": 10,
+  "version": "1.0",
+  "last_updated": "2026-06-08",
+  "reviewed_by": "argus-team"
+}
