@@ -1,16 +1,34 @@
 import xml.etree.ElementTree as ET
 import logging
-from .utils import run_cmd
+import asyncio
 
 logger = logging.getLogger(__name__)
 
 async def run(target: str) -> list[dict]:
-    cmd = f"nmap -sV -sC -T4 --open -oX - {target}"
-    code, stdout, stderr = await run_cmd(cmd)
-    
     findings = []
-    if code == -1:
-        logger.warning(f"Nmap failed to run or timed out: {stderr}")
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "nmap", "-sV", "-sC", "-T4", "--open", "-oX", "-", target,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
+        code = proc.returncode
+        stdout = stdout.decode('utf-8', errors='replace')
+        stderr = stderr.decode('utf-8', errors='replace')
+        
+        if code == -1 or not stdout:
+            logger.warning(f"Nmap failed to run or timed out: {stderr}")
+            return findings
+    except asyncio.TimeoutError:
+        try:
+            proc.kill()
+        except:
+            pass
+        logger.warning("Nmap timed out")
+        return findings
+    except Exception as e:
+        logger.warning(f"Nmap failed to execute: {e}")
         return findings
 
     if not stdout:
