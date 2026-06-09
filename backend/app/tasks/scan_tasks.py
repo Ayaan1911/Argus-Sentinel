@@ -13,6 +13,7 @@ from app.scanners import subfinder, httpx, nmap, nuclei
 from app.scanners.processor import FindingProcessor
 from app.engines import correlation_engine
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Setup sync database for celery
@@ -43,8 +44,15 @@ def run_scan(scan_id: str, target: str, audience: str):
         db.commit()
         
         logger.info(f"Running scanners for {target}")
-        scanner_results = asyncio.run(_run_scanners(target))
-        raw_findings = [f for res in scanner_results for f in res]
+        subfinder_results, httpx_results, nmap_results, nuclei_results = asyncio.run(_run_scanners(target))
+        
+        logger.info(f"subfinder: {len(subfinder_results)} results")
+        logger.info(f"httpx: {len(httpx_results)} results")
+        logger.info(f"nmap: {len(nmap_results)} results")
+        logger.info(f"nuclei: {len(nuclei_results)} results")
+        
+        raw_findings = subfinder_results + httpx_results + nmap_results + nuclei_results
+        logger.info(f"Total raw findings: {len(raw_findings)}")
         
         processor = FindingProcessor()
         db_findings = []

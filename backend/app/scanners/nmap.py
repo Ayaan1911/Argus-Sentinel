@@ -5,6 +5,7 @@ import asyncio
 logger = logging.getLogger(__name__)
 
 async def run(target: str) -> list[dict]:
+    logger.info(f"Starting nmap scan for {target}")
     findings = []
     try:
         proc = await asyncio.create_subprocess_exec(
@@ -17,6 +18,10 @@ async def run(target: str) -> list[dict]:
         stdout = stdout.decode('utf-8', errors='replace')
         stderr = stderr.decode('utf-8', errors='replace')
         
+        logger.info(f"nmap stdout length: {len(stdout)}")
+        if stderr:
+            logger.warning(f"nmap stderr: {stderr[:500]}")
+            
         if code == -1 or not stdout:
             logger.warning(f"Nmap failed to run or timed out: {stderr}")
             return findings
@@ -66,5 +71,9 @@ async def run(target: str) -> list[dict]:
                 })
     except Exception as e:
         logger.warning(f"Failed to parse Nmap XML: {e}")
+        
+    logger.info(f"nmap found {len(findings)} results for {target}")
+    if not findings:
+        logger.warning(f"nmap returned 0 results for {target}. stdout: {stdout[:200]}")
         
     return findings
