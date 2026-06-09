@@ -20,11 +20,8 @@ async def run(target: str) -> list[dict]:
         
         logger.info(f"subfinder stdout length: {len(stdout)}")
         if stderr:
-            logger.warning(f"subfinder stderr: {stderr[:500]}")
+            logger.warning(f"subfinder stderr (informational): {stderr[:500]}")
             
-        if code != 0 and not stdout.strip():
-            logger.warning(f"Subfinder failed to run or timed out: {stderr}")
-            return findings
     except asyncio.TimeoutError:
         try:
             proc.kill()
@@ -36,20 +33,19 @@ async def run(target: str) -> list[dict]:
         logger.warning(f"Subfinder failed to execute: {e}")
         return findings
 
+    if not stdout.strip():
+        logger.warning(f"subfinder returned 0 results for {target}.")
+        return findings
+
     for line in stdout.strip().split('\n'):
         line = line.strip()
-        if not line:
-            continue
-        
-        findings.append({
-            "source": "subfinder",
-            "type": "subdomain",
-            "title": f"Subdomain: {line}",
-            "raw_data": {"host": line}
-        })
+        if line and not line.startswith('['):
+            findings.append({
+                "source": "subfinder",
+                "type": "subdomain",
+                "title": f"Subdomain: {line}",
+                "raw_data": {"host": line}
+            })
             
     logger.info(f"subfinder found {len(findings)} results for {target}")
-    if not findings:
-        logger.warning(f"subfinder returned 0 results for {target}. stdout: {stdout[:200]}")
-        
     return findings

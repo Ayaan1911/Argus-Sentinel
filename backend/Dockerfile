@@ -24,7 +24,7 @@ RUN wget -q https://github.com/projectdiscovery/nuclei/releases/download/v3.3.9/
     rm /tmp/nuclei.zip
 
 # Update nuclei templates
-RUN nuclei -update-templates -silent || true
+RUN /usr/local/bin/nuclei -update-templates -duc -silent || true
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
