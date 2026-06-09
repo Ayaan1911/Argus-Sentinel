@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import os
+
+scandetail_content = """import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Loader2, AlertTriangle, AlertCircle, Info, ArrowRight } from 'lucide-react';
 import client from '../api/client';
@@ -158,3 +160,7 @@ export default function ScanDetail() {
     </div>
   );
 }
+"""
+
+with open("frontend/src/pages/ScanDetail.jsx", "w") as f:
+    f.write(scandetail_content)
