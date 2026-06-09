@@ -18,7 +18,7 @@ RUN wget -q https://github.com/projectdiscovery/httpx/releases/download/v1.6.5/h
     rm /tmp/httpx.zip
 
 # Install nuclei
-RUN wget -q https://github.com/projectdiscovery/nuclei/releases/download/v3.2.4/nuclei_3.2.4_linux_amd64.zip -O /tmp/nuclei.zip && \
+RUN wget -q https://github.com/projectdiscovery/nuclei/releases/download/v3.3.9/nuclei_3.3.9_linux_amd64.zip -O /tmp/nuclei.zip && \
     unzip -q /tmp/nuclei.zip nuclei -d /usr/local/bin/ && \
     chmod +x /usr/local/bin/nuclei && \
     rm /tmp/nuclei.zip
