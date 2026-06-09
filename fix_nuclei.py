@@ -1,4 +1,6 @@
-import json
+import os
+
+nuclei_code = """import json
 import logging
 import asyncio
 
@@ -69,7 +71,7 @@ async def run(target: str) -> list[dict]:
         logger.warning(f"Nuclei failed to execute: {e}")
         return findings
 
-    for line in stdout.strip().split('\n'):
+    for line in stdout.strip().split('\\n'):
         if not line:
             continue
         try:
@@ -90,3 +92,19 @@ async def run(target: str) -> list[dict]:
         logger.warning(f"nuclei returned 0 results for {target}. stdout: {stdout[:200]}")
         
     return findings
+"""
+with open("backend/app/scanners/nuclei.py", "w") as f:
+    f.write(nuclei_code)
+
+# Ensure Dockerfile has v3.3.9
+with open("backend/Dockerfile", "r") as f:
+    content = f.read()
+
+content = content.replace(
+    "https://github.com/projectdiscovery/nuclei/releases/download/v3.2.4/nuclei_3.2.4_linux_amd64.zip",
+    "https://github.com/projectdiscovery/nuclei/releases/download/v3.3.9/nuclei_3.3.9_linux_amd64.zip"
+)
+with open("backend/Dockerfile", "w") as f:
+    f.write(content)
+
+print("Updated nuclei.py and Dockerfile")
