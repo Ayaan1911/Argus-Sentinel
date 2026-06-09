@@ -21,7 +21,7 @@ async def run(target: str) -> list[dict]:
         logger.warning(f"Failed to check nuclei version: {e}")
 
     command = [
-        "/usr/local/bin/nuclei", "-u", target, "-json", "-silent",
+        "/usr/local/bin/nuclei", "-u", target, "-jsonl", "-silent",
         "-severity", "low,medium,high,critical",
         "-tags", "exposure,misconfig,tech",
         "-timeout", "30", "-duc", "-no-interactsh"
