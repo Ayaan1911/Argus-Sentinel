@@ -15,8 +15,8 @@ class FindingBase(BaseModel):
     recommended_actions: Optional[List[str]] = None
     learning_resources: Optional[List[str]] = None
     related_findings: Optional[List[str]] = None
-    audience_guidance: Optional[Dict[str, str]] = None
-    reasoning_breakdown: Optional[List[str]] = None
+    audience_guidance: Optional[Dict[str, Any]] = None
+    reasoning_breakdown: Optional[List[Dict[str, Any]]] = None
     correlation_modifier: float = 0.0
     final_risk_score: float
 

@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+import os
+
+# findings.py
+findings_content = """from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from typing import List, Optional
@@ -110,3 +113,44 @@ async def get_scan_summary(scan_id: str, db: AsyncSession = Depends(get_db)):
         "combined_risk_level": _get_risk_level(combined_risk),
         "audience": scan.audience
     }
+"""
+with open("backend/app/routers/findings.py", "w") as f:
+    f.write(findings_content)
+
+
+# finding.py schema
+schema_content = """from pydantic import BaseModel, UUID4
+from typing import Optional, List, Dict, Any
+from datetime import datetime
+
+class FindingBase(BaseModel):
+    type: str
+    title: str
+    raw_data: Optional[Dict[str, Any]] = None
+    severity: str
+    confidence: float
+    risk_score: float
+    technical_impact: Optional[str] = None
+    business_impact: Optional[str] = None
+    attack_patterns: Optional[List[str]] = None
+    recommended_actions: Optional[List[str]] = None
+    learning_resources: Optional[List[str]] = None
+    related_findings: Optional[List[str]] = None
+    audience_guidance: Optional[Dict[str, Any]] = None
+    reasoning_breakdown: Optional[List[Dict[str, Any]]] = None
+    correlation_modifier: float = 0.0
+    final_risk_score: float
+
+class FindingCreate(FindingBase):
+    pass
+
+class FindingRead(FindingBase):
+    id: UUID4
+    scan_id: UUID4
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+"""
+with open("backend/app/schemas/finding.py", "w") as f:
+    f.write(schema_content)
