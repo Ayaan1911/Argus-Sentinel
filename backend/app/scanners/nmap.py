@@ -6,10 +6,11 @@ logger = logging.getLogger(__name__)
 
 async def run(target: str) -> list[dict]:
     logger.info(f"Starting nmap scan for {target}")
+    command = ["/usr/bin/nmap", "-sV", "-sC", "-T4", "--open", "-oX", "-", target]
     findings = []
     try:
         proc = await asyncio.create_subprocess_exec(
-            "nmap", "-sV", "-sC", "-T4", "--open", "-oX", "-", target,
+            *command,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
