@@ -17,6 +17,12 @@ services:
     ports:
       - "6379:6379"
 
+  juice-shop:
+    image: bkimminich/juice-shop
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
   api:
     build:
       context: ./backend
@@ -45,6 +51,7 @@ services:
     depends_on:
       - db
       - redis
+      - juice-shop
 
   frontend:
     build:

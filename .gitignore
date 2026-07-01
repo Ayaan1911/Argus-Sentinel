@@ -16,3 +16,11 @@ __pycache__/
 # Node
 node_modules/
 .npm
+
+# Build artifacts
+dist/
+build/
+*.zip
+
+# Python cache
+*.pyc

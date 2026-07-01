@@ -10,7 +10,7 @@ async def run(target: str) -> list[dict]:
     command = [
         "/usr/local/bin/nuclei", "-u", target,
         "-jsonl", "-silent",
-        "-severity", "low,medium,high,critical",
+        "-severity", "info,low,medium,high,critical",
         "-tags", "exposure,misconfig,tech",
         "-t", "/root/nuclei-templates",
         # Anti-bot: spoof a real browser so WAF/CDN fingerprinting doesn't block us
@@ -26,6 +26,7 @@ async def run(target: str) -> list[dict]:
         # Skip update check at runtime
         "-duc",
     ]
+    logger.info(f"nuclei command: {' '.join(command)}")
     findings = []
     try:
         proc = await asyncio.create_subprocess_exec(
