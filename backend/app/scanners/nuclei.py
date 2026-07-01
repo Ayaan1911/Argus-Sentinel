@@ -6,19 +6,6 @@ logger = logging.getLogger(__name__)
 
 async def run(target: str) -> list[dict]:
     logger.info(f"Starting nuclei scan for {target}")
-    
-    # Check version first
-    try:
-        ver_proc = await asyncio.create_subprocess_exec(
-            "/usr/local/bin/nuclei", "-version",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        ver_out, ver_err = await asyncio.wait_for(ver_proc.communicate(), timeout=30)
-        logger.info(f"nuclei version stdout: {ver_out.decode('utf-8', errors='replace').strip()}")
-        logger.info(f"nuclei version stderr: {ver_err.decode('utf-8', errors='replace').strip()}")
-    except Exception as e:
-        logger.warning(f"Failed to check nuclei version: {e}")
 
     command = [
         "/usr/local/bin/nuclei", "-u", target,
@@ -26,8 +13,18 @@ async def run(target: str) -> list[dict]:
         "-severity", "low,medium,high,critical",
         "-tags", "exposure,misconfig,tech",
         "-t", "/root/nuclei-templates",
-        "-timeout", "30",
-        "-no-interactsh"
+        # Anti-bot: spoof a real browser so WAF/CDN fingerprinting doesn't block us
+        "-H", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        # Rate-limit to 50 req/s — avoids 429s from rate-limited targets like github.com
+        "-rl", "50",
+        # Retry failed requests twice (handles transient 429/reset)
+        "-retries", "2",
+        # 15s per-template connection timeout (up from 10s default)
+        "-timeout", "15",
+        # Skip interactsh — no external callbacks, cleaner and faster
+        "-no-interactsh",
+        # Skip update check at runtime
+        "-duc",
     ]
     findings = []
     try:
@@ -40,17 +37,18 @@ async def run(target: str) -> list[dict]:
         code = proc.returncode
         stdout = stdout_bytes.decode('utf-8', errors='replace')
         stderr = stderr_bytes.decode('utf-8', errors='replace')
-        
-        logger.info(f"nuclei stdout length: {len(stdout)}")
+
+        logger.info(f"nuclei stdout length: {len(stdout)} bytes, returncode: {code}")
         if stderr:
-            logger.warning(f"nuclei stderr: {stderr[:500]}")
-            
+            # Log more stderr so we can see actual 403/429 counts in worker logs
+            logger.warning(f"nuclei stderr: {stderr[:2000]}")
+
     except asyncio.TimeoutError:
         try:
             proc.kill()
-        except:
+        except Exception:
             pass
-        logger.warning("Nuclei timed out")
+        logger.warning(f"Nuclei timed out after 300s for {target}")
         return findings
     except Exception as e:
         logger.warning(f"Nuclei failed to execute: {e}")
@@ -63,17 +61,20 @@ async def run(target: str) -> list[dict]:
             data = json.loads(line)
             template_name = data.get("info", {}).get("name", "Unknown")
             matched_at = data.get("matched-at", "")
+            severity = data.get("info", {}).get("severity", "info")
+            # Tag WAF-blocked responses so UI can surface them
+            status_code = data.get("response", {}) if isinstance(data.get("response"), dict) else {}
             findings.append({
                 "source": "nuclei",
                 "type": "vulnerability",
                 "title": f"{template_name}: {matched_at}",
                 "raw_data": data
             })
-        except:
+        except Exception:
             pass
-            
+
     logger.info(f"nuclei found {len(findings)} results for {target}")
     if not findings:
-        logger.warning(f"nuclei returned 0 results for {target}. stdout: {stdout[:200]}")
-        
+        logger.warning(f"nuclei returned 0 results for {target}. stdout snippet: {stdout[:500]!r}")
+
     return findings

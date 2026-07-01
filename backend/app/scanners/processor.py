@@ -5,6 +5,23 @@ class FindingProcessor:
     def __init__(self):
         self.loader = get_intelligence_loader()
 
+    def _fallback_guidance_entry(self, f_type: str, raw_data: dict, title: str):
+        if f_type != "vulnerability":
+            return None
+
+        info = raw_data.get("info", {})
+        tags = {str(tag).lower() for tag in info.get("tags", [])}
+        title_l = title.lower()
+        response = str(raw_data.get("response", "")).lower()
+
+        if "ssh" in tags or "ssh" in title_l or "ssh-" in response:
+            return self.loader.get_service("ssh")
+
+        if "apache" in tags or "apache" in title_l or "server: apache" in response:
+            return self.loader.get_technology("apache")
+
+        return None
+
     def process(self, raw_finding: dict, scan_id: str, audience: str) -> dict:
         f_type = raw_finding.get("type", "").lower()
         title = raw_finding.get("title", "")
@@ -37,7 +54,13 @@ class FindingProcessor:
         else:
             biz_impact = "Minimal business risk"
 
-        audience_data = kb_entry.get("audience_guidance", {})
+        guidance_entry = kb_entry
+        if f_type == "vulnerability" and not kb_entry.get("audience_guidance"):
+            fallback_entry = self._fallback_guidance_entry(f_type, raw_data, title)
+            if fallback_entry:
+                guidance_entry = fallback_entry
+
+        audience_data = guidance_entry.get("audience_guidance", {})
         guidance = {audience: audience_data.get(audience, "")} if audience_data else {}
 
         return {
