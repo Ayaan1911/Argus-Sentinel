@@ -1,4 +1,6 @@
-import json
+import os
+
+httpx_code = """import json
 import logging
 import asyncio
 
@@ -50,7 +52,7 @@ async def run(target: str) -> list[dict]:
         logger.warning(f"HTTPX failed to execute: {e}")
         return findings
 
-    for line in stdout.strip().split('\n'):
+    for line in stdout.strip().split('\\n'):
         if not line:
             continue
         try:
@@ -76,3 +78,116 @@ async def run(target: str) -> list[dict]:
         logger.warning(f"httpx returned 0 results for {target}. stdout: {stdout[:200]}")
         
     return findings
+"""
+
+with open("backend/app/scanners/httpx.py", "w") as f:
+    f.write(httpx_code)
+
+docker_compose_code = """version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: argus
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./argus-intelligence:/argus-intelligence
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+
+  worker:
+    build:
+      context: ./backend
+    command: celery -A app.tasks.celery_app worker --loglevel=info
+    volumes:
+      - ./backend:/app
+      - ./argus-intelligence:/argus-intelligence
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  postgres_data:
+"""
+
+with open("docker-compose.yml", "w") as f:
+    f.write(docker_compose_code)
+
+env_content = """DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/argus
+REDIS_URL=redis://redis:6379/0
+SECRET_KEY=change-me-in-production
+ENVIRONMENT=development
+"""
+
+env_example_content = """DATABASE_URL=postgresql+asyncpg://user:password@db:5432/dbname
+REDIS_URL=redis://redis:6379/0
+SECRET_KEY=your-super-secret-key-here
+ENVIRONMENT=production
+"""
+
+with open(".env", "w") as f:
+    f.write(env_content)
+
+with open(".env.example", "w") as f:
+    f.write(env_example_content)
+
+# Setup gitignore
+gitignore_content = """
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Node
+node_modules/
+.npm
+"""
+if not os.path.exists(".gitignore"):
+    with open(".gitignore", "w") as f:
+        f.write(gitignore_content)
+else:
+    with open(".gitignore", "a") as f:
+        f.write("\n.env\n")
+        
+print("Updated httpx.py, docker-compose.yml, .env, and .gitignore")

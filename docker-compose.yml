@@ -25,11 +25,8 @@ services:
     volumes:
       - ./backend:/app
       - ./argus-intelligence:/argus-intelligence
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/argus
-      - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=change-me-in-production
-      - ENVIRONMENT=development
+    env_file:
+      - .env
     depends_on:
       - db
       - redis
@@ -41,11 +38,8 @@ services:
     volumes:
       - ./backend:/app
       - ./argus-intelligence:/argus-intelligence
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/argus
-      - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=change-me-in-production
-      - ENVIRONMENT=development
+    env_file:
+      - .env
     depends_on:
       - db
       - redis
