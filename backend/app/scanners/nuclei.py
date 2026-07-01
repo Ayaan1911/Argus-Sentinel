@@ -22,7 +22,7 @@ async def run(target: str) -> list[dict]:
 
     command = [
         "/usr/local/bin/nuclei", "-u", target,
-        "-json", "-silent",
+        "-jsonl", "-silent",
         "-severity", "low,medium,high,critical",
         "-tags", "exposure,misconfig,tech",
         "-t", "/root/nuclei-templates",
