@@ -25,6 +25,7 @@ services:
     volumes:
       - ./backend:/app
       - ./argus-intelligence:/argus-intelligence
+      - nuclei_templates:/root/nuclei-templates
     env_file:
       - .env
     depends_on:
@@ -38,6 +39,7 @@ services:
     volumes:
       - ./backend:/app
       - ./argus-intelligence:/argus-intelligence
+      - nuclei_templates:/root/nuclei-templates
     env_file:
       - .env
     depends_on:
@@ -55,3 +57,4 @@ services:
 
 volumes:
   postgres_data:
+  nuclei_templates:

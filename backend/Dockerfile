@@ -2,8 +2,8 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install wget, unzip, curl
-RUN apt-get update && apt-get install -y wget unzip curl nmap && rm -rf /var/lib/apt/lists/*
+# Install wget, unzip, curl, git (git required by nuclei template downloader)
+RUN apt-get update && apt-get install -y wget unzip curl nmap git ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Install subfinder
 RUN wget -q https://github.com/projectdiscovery/subfinder/releases/download/v2.6.6/subfinder_2.6.6_linux_amd64.zip -O /tmp/subfinder.zip && \
@@ -25,8 +25,10 @@ RUN rm -f /usr/local/bin/nuclei && \
     rm /tmp/nuclei.zip && \
     nuclei -version
 
-# Update nuclei templates
-RUN /usr/local/bin/nuclei -update-templates -duc -silent || true
+# Download nuclei templates (no -duc so templates actually download)
+# HOME must be set so nuclei writes to /root/nuclei-templates
+RUN HOME=/root /usr/local/bin/nuclei -update-templates -silent || true
+RUN ls /root/nuclei-templates 2>/dev/null | head -5 || echo 'WARNING: nuclei-templates directory empty or missing'
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
