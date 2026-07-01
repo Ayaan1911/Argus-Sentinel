@@ -36,7 +36,7 @@ async def run(target: str) -> list[dict]:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
-        stdout_bytes, stderr_bytes = await asyncio.wait_for(proc.communicate(), timeout=120)
+        stdout_bytes, stderr_bytes = await asyncio.wait_for(proc.communicate(), timeout=300)
         code = proc.returncode
         stdout = stdout_bytes.decode('utf-8', errors='replace')
         stderr = stderr_bytes.decode('utf-8', errors='replace')
