@@ -1,12 +1,15 @@
 import xml.etree.ElementTree as ET
 import logging
 import asyncio
+import urllib.parse
 
 logger = logging.getLogger(__name__)
 
 async def run(target: str) -> list[dict]:
     logger.info(f"Starting nmap scan for {target}")
-    command = ["/usr/bin/nmap", "-sV", "-sC", "-T4", "--open", "-oX", "-", target]
+    parsed = urllib.parse.urlparse(target if "//" in target else f"http://{target}")
+    nmap_target = parsed.hostname or target
+    command = ["/usr/bin/nmap", "-sV", "-sC", "-T4", "--open", "-oX", "-", nmap_target]
     findings = []
     try:
         proc = await asyncio.create_subprocess_exec(

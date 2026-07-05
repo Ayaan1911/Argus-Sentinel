@@ -5,10 +5,59 @@ class FindingProcessor:
     def __init__(self):
         self.loader = get_intelligence_loader()
 
-    def _fallback_guidance_entry(self, f_type: str, raw_data: dict, title: str):
-        if f_type != "vulnerability":
-            return None
+    # Map nuclei template tags → Intelligence Library vulnerability filenames
+    TAG_TO_VULN_KEY = {
+        "sqli": "sql_injection",
+        "sql": "sql_injection",
+        "time-based-sqli": "sql_injection",
+        "xss": "xss",
+        "rxss": "xss",
+        "ssrf": "ssrf",
+        "rce": "rce",
+        "idor": "idor",
+    }
 
+    def _match_vuln_entry(self, raw_data: dict, title: str):
+        """Match a nuclei finding to an Intelligence Library vulnerability entry.
+
+        Strategy:
+        1. Tag-based match — nuclei tags are normalized (xss, sqli, ssrf, rce, idor)
+        2. Title keyword fallback
+        3. Returns None if no match found
+        """
+        info = raw_data.get("info", {})
+        tags = {str(tag).lower() for tag in info.get("tags", [])}
+        title_l = title.lower()
+
+        for tag in tags:
+            key = self.TAG_TO_VULN_KEY.get(tag)
+            if key:
+                entry = self.loader.get_vulnerability(key)
+                if entry:
+                    return entry
+
+        keyword_map = {
+            "sql injection": "sql_injection",
+            "sqli": "sql_injection",
+            "xss": "xss",
+            "cross-site scripting": "xss",
+            "ssrf": "ssrf",
+            "server-side request forgery": "ssrf",
+            "rce": "rce",
+            "remote code execution": "rce",
+            "idor": "idor",
+            "insecure direct object": "idor",
+        }
+        for keyword, key in keyword_map.items():
+            if keyword in title_l:
+                entry = self.loader.get_vulnerability(key)
+                if entry:
+                    return entry
+
+        return None
+
+    def _fallback_service_entry(self, raw_data: dict, title: str):
+        """For vuln findings that didn't match a vuln class, try matching a service/tech entry."""
         info = raw_data.get("info", {})
         tags = {str(tag).lower() for tag in info.get("tags", [])}
         title_l = title.lower()
@@ -16,7 +65,6 @@ class FindingProcessor:
 
         if "ssh" in tags or "ssh" in title_l or "ssh-" in response:
             return self.loader.get_service("ssh")
-
         if "apache" in tags or "apache" in title_l or "server: apache" in response:
             return self.loader.get_technology("apache")
 
@@ -33,12 +81,15 @@ class FindingProcessor:
             service_name = raw_data.get("service", "")
             kb_entry = self.loader.get_service(service_name)
         elif f_type == "technology":
-            tech_name = raw_data.get("title", "") # fallback or actual detection
+            tech_name = raw_data.get("title", "")
             kb_entry = self.loader.get_technology(tech_name)
         elif f_type == "vulnerability":
-            vuln_name = raw_data.get("info", {}).get("name", "")
-            kb_entry = self.loader.get_vulnerability(vuln_name)
-        
+            # Primary: tag+keyword based vuln class match
+            kb_entry = self._match_vuln_entry(raw_data, title)
+            # Fallback: service/tech match (e.g. SSH-related nuclei findings)
+            if kb_entry is None:
+                kb_entry = self._fallback_service_entry(raw_data, title)
+
         if kb_entry is None:
             kb_entry = {}
 
@@ -46,7 +97,7 @@ class FindingProcessor:
         confidence_res = confidence_engine.calculate_confidence(source, raw_data, kb_entry)
 
         risk_level = reasoning_res.risk_level
-        
+
         if risk_level in ["critical", "high"]:
             biz_impact = "Significant business risk"
         elif risk_level == "medium":
@@ -54,13 +105,7 @@ class FindingProcessor:
         else:
             biz_impact = "Minimal business risk"
 
-        guidance_entry = kb_entry
-        if f_type == "vulnerability" and not kb_entry.get("audience_guidance"):
-            fallback_entry = self._fallback_guidance_entry(f_type, raw_data, title)
-            if fallback_entry:
-                guidance_entry = fallback_entry
-
-        audience_data = guidance_entry.get("audience_guidance", {})
+        audience_data = kb_entry.get("audience_guidance", {})
         guidance = {audience: audience_data.get(audience, "")} if audience_data else {}
 
         return {
