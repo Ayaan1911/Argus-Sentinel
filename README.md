@@ -1,23 +1,70 @@
 # Argus Sentinel
 
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Python](https://img.shields.io/badge/python-3.11-blue)
+![React](https://img.shields.io/badge/react-18-blue)
+![Docker](https://img.shields.io/badge/docker-compose-blue)
+
 AI-Powered Cybersecurity Reasoning Engine — turns raw scan output into prioritized, explainable findings with audience-aware guidance.
+
+## Why I Built This
+
+Most security tools answer: **"What did you find?"** But for many teams, a list of 500 unprioritized CVEs and ports is overwhelming and unactionable. I built Argus to answer the questions that actually matter: **"What does it mean, why does it matter, and what should you do next?"** By wrapping industry-standard scanners in an intelligence and deterministic reasoning layer, Argus turns raw data into contextualized, audience-aware knowledge that developers and security teams can actually use.
+
+## Table of Contents
+- [Quick Start](#quick-start)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Screenshots](#screenshots)
+- [Verified Behavior](#verified-behavior)
+- [Known Limitations](#known-limitations)
+- [Roadmap (V2)](#roadmap-v2)
+- [License](#license)
 
 ---
 
-## The Core Idea
+## Quick Start
 
-Most security tools answer: **"What did you find?"**
+```bash
+git clone https://github.com/Ayaan1911/Argus-Sentinel
+cd Argus-Sentinel
 
-Argus answers: **"What does it mean, why does it matter, and what should you do next?"**
+cp .env.example .env
+# Edit .env if you need non-default credentials
 
-The scanners (Subfinder, Httpx, Nmap, Nuclei) are inputs. The intelligence and reasoning layer is the product. Any tool can wrap a scanner in a UI. What Argus builds — the knowledge base, the deterministic reasoning engine, the correlation logic, and the audience-aware guidance — is what makes findings actually useful.
+docker compose up --build
+```
+
+Services after startup:
+- Frontend: http://localhost:5173
+- API: http://localhost:8000
+- API docs: http://localhost:8000/docs
+- OWASP Juice Shop (local scan target): http://localhost:3000
+
+Run a scan against Juice Shop to verify the full pipeline end-to-end:
+```bash
+curl -X POST http://localhost:8000/api/v1/scans/ \
+  -H "Content-Type: application/json" \
+  -d '{"target": "http://juice-shop:3000"}'
+```
 
 ---
 
 ## Architecture
 
-```
-Discovery → Intelligence → Reasoning → Guidance → Learning
+```mermaid
+flowchart LR
+    subgraph Discovery
+        S[Subfinder]
+        H[Httpx]
+        N[Nmap]
+        Nu[Nuclei]
+    end
+
+    Discovery --> I[Intelligence]
+    I --> R[Reasoning]
+    R --> G[Guidance]
+    G --> L[Learning]
 ```
 
 **Discovery** — Subfinder enumerates subdomains, Httpx probes live hosts, Nmap maps ports and services, Nuclei runs vulnerability templates.
@@ -45,38 +92,9 @@ Discovery → Intelligence → Reasoning → Guidance → Learning
 
 ---
 
-## Setup
-
-```bash
-git clone https://github.com/Ayaan1911/Argus-Sentinel
-cd Argus-Sentinel
-
-cp .env.example .env
-# Edit .env if you need non-default credentials
-
-docker compose up --build
-```
-
-Services after startup:
-
-- Frontend: http://localhost:5173
-- API: http://localhost:8000
-- API docs: http://localhost:8000/docs
-- OWASP Juice Shop (local scan target): http://localhost:3000
-
-Run a scan against Juice Shop to verify the full pipeline end-to-end:
-
-```bash
-curl -X POST http://localhost:8000/api/v1/scans/ \
-  -H "Content-Type: application/json" \
-  -d '{"target": "http://juice-shop:3000"}'
-```
-
----
-
 ## Screenshots
 
-<!-- Screenshots and GIFs to be added -->
+[Add 2-3 screenshots/GIF of the scan flow and Intelligence Card here before publishing]
 
 ---
 
@@ -101,6 +119,14 @@ Tested against OWASP Juice Shop running in the same Docker network:
 
 ---
 
+## Roadmap (V2)
+
+- **Headless Discovery & Crawling**: Enhance the discovery phase by introducing web crawling capabilities to map application surfaces more deeply.
+- **Deep Scan Mode**: Run comprehensive, deeply intrusive scan configurations on verified assets.
+- **Katana Integration**: Leverage ProjectDiscovery's Katana for advanced payload generation and fuzzing.
+
+---
+
 ## License
 
-MIT — see [LICENSE](LICENSE) for details.
+MIT — see [LICENSE](LICENSE) for details. (Note: Please confirm this license preference)
