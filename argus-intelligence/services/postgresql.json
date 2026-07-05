@@ -1,0 +1,66 @@
+{
+  "service": "PostgreSQL",
+  "port": 5432,
+  "protocol": "TCP",
+  "purpose": "Open-source relational database.",
+  "risk_level": "High",
+  "description": "PostgreSQL is a powerful, open source object-relational database system.",
+  "common_risks": [
+    "brute force",
+    "data exposure",
+    "RCE via COPY FROM PROGRAM"
+  ],
+  "misconfigurations": [
+    "internet facing",
+    "default credentials",
+    "trust authentication enabled in pg_hba.conf"
+  ],
+  "attack_patterns": [
+    "brute force",
+    "SQL injection pivot",
+    "command execution via superuser"
+  ],
+  "real_world_incidents": [
+    "Databases held for ransom after attackers brute-forced exposed instances."
+  ],
+  "recommended_actions": [
+    "Restrict access to local network or specific IPs.",
+    "Disable 'trust' authentication.",
+    "Enforce strong passwords.",
+    "Use SSL for connections."
+  ],
+  "audience_guidance": {
+    "student": "Databases hold all an app's sensitive info. They should never be directly accessible from the internet.",
+    "developer": "Configure pg_hba.conf to only allow internal IPs. Require md5/scram-sha-256 auth, never 'trust'.",
+    "bug_bounty_hunter": "Check for default postgres/postgres credentials. If connected, attempt to read files or execute commands using COPY.",
+    "pentester": "Brute force credentials. If superuser, escalate to RCE using the COPY FROM PROGRAM feature.",
+    "security_team": "Ensure databases are in private subnets. Monitor for repeated connection failures indicating brute force."
+  },
+  "correlation_rules": {
+    "amplifies": [
+      "internet_facing",
+      "default_credentials"
+    ],
+    "requires": [
+      "network_exposure"
+    ],
+    "mitigates": [
+      "ip_restricted",
+      "ssl_required"
+    ]
+  },
+  "learning_resources": [
+    "https://www.postgresql.org/docs/current/auth-pg-hba-conf.html"
+  ],
+  "related_findings": [
+    "weak_credentials"
+  ],
+  "mitre_attack": [
+    "T1190",
+    "T1059"
+  ],
+  "risk_weight": 8,
+  "version": "1.0",
+  "last_updated": "2026-07-05",
+  "reviewed_by": "argus-team"
+}

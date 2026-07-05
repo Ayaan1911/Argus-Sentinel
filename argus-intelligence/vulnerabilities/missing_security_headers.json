@@ -1,0 +1,25 @@
+{
+  "vulnerability_class": "Missing Security Headers",
+  "description": "Web application does not implement standard HTTP security headers.",
+  "severity": "Low",
+  "impact": "Leaves users vulnerable to client-side attacks like Clickjacking, Cross-Site Scripting (XSS), and MIME-sniffing.",
+  "remediation": [
+    "Implement Content-Security-Policy (CSP).",
+    "Set X-Frame-Options to DENY or SAMEORIGIN.",
+    "Set Strict-Transport-Security (HSTS).",
+    "Set X-Content-Type-Options to nosniff."
+  ],
+  "audience_guidance": {
+    "student": "Security headers are instructions to the browser to protect the user from certain types of attacks, like being tricked into clicking a hidden button.",
+    "developer": "Add CSP, HSTS, X-Frame-Options, and X-Content-Type-Options headers to your web server or application middleware.",
+    "bug_bounty_hunter": "Note the missing headers. Look for Clickjacking if X-Frame-Options is missing, or XSS if CSP is absent/weak.",
+    "pentester": "Document missing headers. Prove impact by demonstrating Clickjacking or framing the application.",
+    "security_team": "Enforce baseline security headers at the WAF or edge proxy layer (e.g., Cloudflare, AWS CloudFront) for all apps."
+  },
+  "learning_resources": [
+    "https://owasp.org/www-project-secure-headers/"
+  ],
+  "version": "1.0",
+  "last_updated": "2026-07-05",
+  "reviewed_by": "argus-team"
+}

@@ -1,0 +1,68 @@
+{
+  "service": "RDP",
+  "port": 3389,
+  "protocol": "TCP",
+  "purpose": "Remote Desktop Protocol for Windows GUI access.",
+  "risk_level": "High",
+  "description": "Proprietary protocol developed by Microsoft, which provides a user with a graphical interface to connect to another computer.",
+  "common_risks": [
+    "brute force",
+    "BlueKeep",
+    "credential theft"
+  ],
+  "misconfigurations": [
+    "internet facing",
+    "NLA disabled",
+    "weak passwords"
+  ],
+  "attack_patterns": [
+    "brute force",
+    "ransomware deployment",
+    "exploit public CVEs (e.g. BlueKeep)"
+  ],
+  "real_world_incidents": [
+    "Primary initial access vector for countless ransomware campaigns targeting Windows domains."
+  ],
+  "recommended_actions": [
+    "Enable Network Level Authentication (NLA).",
+    "Place behind a VPN or RD Gateway.",
+    "Enforce MFA.",
+    "Restrict IP access.",
+    "Lock out after failed attempts."
+  ],
+  "audience_guidance": {
+    "student": "RDP lets you control a Windows PC remotely. Leaving it open to the internet is a common way hackers spread ransomware.",
+    "developer": "Ensure Network Level Authentication (NLA) is required. Never expose 3389 directly to the internet.",
+    "bug_bounty_hunter": "Check for NLA status. If NLA is disabled, the server is much more vulnerable to exploitation.",
+    "pentester": "Check for BlueKeep vulnerability. Brute force credentials. Use Nmap scripts to check supported encryption levels.",
+    "security_team": "Block 3389 at the perimeter. Require VPN or Zero Trust Network Access (ZTNA) for RDP. Enforce MFA via Duo or similar."
+  },
+  "correlation_rules": {
+    "amplifies": [
+      "nla_disabled",
+      "internet_facing"
+    ],
+    "requires": [
+      "network_exposure"
+    ],
+    "mitigates": [
+      "vpn_required",
+      "nla_enabled",
+      "mfa_enabled"
+    ]
+  },
+  "learning_resources": [
+    "https://www.cisa.gov/news-events/alerts/2019/11/05/understanding-and-mitigating-russian-state-sponsored-cyber-threats"
+  ],
+  "related_findings": [
+    "weak_credentials"
+  ],
+  "mitre_attack": [
+    "T1133",
+    "T1021.001"
+  ],
+  "risk_weight": 8,
+  "version": "1.0",
+  "last_updated": "2026-07-05",
+  "reviewed_by": "argus-team"
+}

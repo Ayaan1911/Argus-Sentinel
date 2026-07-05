@@ -1,0 +1,64 @@
+{
+  "service": "MongoDB",
+  "port": 27017,
+  "protocol": "TCP",
+  "purpose": "NoSQL document database.",
+  "risk_level": "Critical",
+  "description": "MongoDB is a source-available cross-platform document-oriented database program.",
+  "common_risks": [
+    "unauthenticated access",
+    "data exfiltration",
+    "ransom"
+  ],
+  "misconfigurations": [
+    "no authentication enabled (default in older versions)",
+    "exposed to internet"
+  ],
+  "attack_patterns": [
+    "data wiping",
+    "ransom note insertion",
+    "data theft"
+  ],
+  "real_world_incidents": [
+    "Tens of thousands of exposed MongoDB databases wiped and held for ransom by automated scripts."
+  ],
+  "recommended_actions": [
+    "Enable authentication (--auth).",
+    "Bind to localhost/private IP.",
+    "Configure firewall rules."
+  ],
+  "audience_guidance": {
+    "student": "Older versions of MongoDB didn't require a password by default. Hackers love finding these to steal data and demand ransom.",
+    "developer": "Always start mongod with --auth. Edit mongod.conf to bind_ip 127.0.0.1 or your private VPC IP.",
+    "bug_bounty_hunter": "Attempt to connect without credentials. If successful, you have full access to dump the database.",
+    "pentester": "Connect via mongo shell. Check for sensitive data. Do NOT modify data during testing.",
+    "security_team": "Scan internal network for unauthenticated MongoDB instances. Ensure security groups block 27017 externally."
+  },
+  "correlation_rules": {
+    "amplifies": [
+      "unauthenticated",
+      "internet_facing"
+    ],
+    "requires": [
+      "network_exposure"
+    ],
+    "mitigates": [
+      "auth_enabled",
+      "ip_restricted"
+    ]
+  },
+  "learning_resources": [
+    "https://www.mongodb.com/docs/manual/administration/security-checklist/"
+  ],
+  "related_findings": [
+    "unauthenticated_access"
+  ],
+  "mitre_attack": [
+    "T1190",
+    "T1486"
+  ],
+  "risk_weight": 9,
+  "version": "1.0",
+  "last_updated": "2026-07-05",
+  "reviewed_by": "argus-team"
+}

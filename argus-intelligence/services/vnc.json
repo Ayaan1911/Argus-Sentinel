@@ -1,0 +1,63 @@
+{
+  "service": "VNC",
+  "port": 5900,
+  "protocol": "TCP",
+  "purpose": "Virtual Network Computing for graphical desktop sharing.",
+  "risk_level": "High",
+  "description": "VNC is a graphical desktop-sharing system that uses the Remote Frame Buffer protocol to remotely control another computer.",
+  "common_risks": [
+    "brute force",
+    "unencrypted keystrokes",
+    "unauthenticated access"
+  ],
+  "misconfigurations": [
+    "internet facing",
+    "no password",
+    "weak password (max 8 chars in standard VNC)"
+  ],
+  "attack_patterns": [
+    "brute force",
+    "credential theft",
+    "unauthenticated desktop takeover"
+  ],
+  "real_world_incidents": [
+    "Attackers frequently scan for open VNC ports without passwords to instantly compromise industrial control systems (ICS) and servers."
+  ],
+  "recommended_actions": [
+    "Require strong passwords.",
+    "Tunnel VNC over SSH.",
+    "Block port 5900 at edge firewalls."
+  ],
+  "audience_guidance": {
+    "student": "VNC shares a screen. If left open without a password, anyone can click around on the computer.",
+    "developer": "Never expose VNC directly. Always tunnel it through SSH (e.g., ssh -L 5900:localhost:5900).",
+    "bug_bounty_hunter": "Attempt to connect. Many VNC instances are misconfigured to require no password.",
+    "pentester": "Check for unauthenticated access. Brute force passwords (note: standard VNC truncates passwords to 8 characters).",
+    "security_team": "Block 5900-5910 at the perimeter. Monitor internal networks for unauthorized VNC servers."
+  },
+  "correlation_rules": {
+    "amplifies": [
+      "unauthenticated",
+      "internet_facing"
+    ],
+    "requires": [
+      "network_exposure"
+    ],
+    "mitigates": [
+      "tunneled_via_ssh"
+    ]
+  },
+  "learning_resources": [
+    "https://owasp.org/www-project-top-ten/"
+  ],
+  "related_findings": [
+    "unauthenticated_access"
+  ],
+  "mitre_attack": [
+    "T1021.005"
+  ],
+  "risk_weight": 8,
+  "version": "1.0",
+  "last_updated": "2026-07-05",
+  "reviewed_by": "argus-team"
+}

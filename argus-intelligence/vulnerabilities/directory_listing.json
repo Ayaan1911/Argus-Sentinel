@@ -1,0 +1,23 @@
+{
+  "vulnerability_class": "Directory Listing Enabled",
+  "description": "Web server is configured to list the contents of a directory when no index file is present.",
+  "severity": "Low",
+  "impact": "Information disclosure. Attackers can view hidden files, backups, configuration files, or source code.",
+  "remediation": [
+    "Disable directory browsing in web server configuration (e.g., Options -Indexes in Apache).",
+    "Ensure index files (index.html, index.php) are present."
+  ],
+  "audience_guidance": {
+    "student": "Directory listing shows all files in a folder like a file browser. It helps attackers find files they shouldn't see.",
+    "developer": "Configure your web server to deny directory listings. In Apache, remove the 'Indexes' directive.",
+    "bug_bounty_hunter": "Browse the listed files for sensitive data: .env files, backup archives (.zip, .bak), or source code.",
+    "pentester": "Automate downloading of all listed files. Search for hardcoded credentials or API keys.",
+    "security_team": "Enforce secure defaults in web server base images that explicitly disable directory listing."
+  },
+  "learning_resources": [
+    "https://cwe.mitre.org/data/definitions/548.html"
+  ],
+  "version": "1.0",
+  "last_updated": "2026-07-05",
+  "reviewed_by": "argus-team"
+}

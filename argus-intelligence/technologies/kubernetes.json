@@ -1,0 +1,31 @@
+{
+  "technology": "Kubernetes",
+  "type": "Orchestrator",
+  "purpose": "Container orchestration system.",
+  "description": "Kubernetes is an open-source container orchestration system for automating software deployment, scaling, and management.",
+  "common_risks": [
+    "unauthenticated API server",
+    "exposed Kubelet API",
+    "overly permissive RBAC",
+    "secrets in plaintext"
+  ],
+  "mitigations": [
+    "Enable RBAC",
+    "disable anonymous auth",
+    "use network policies",
+    "secure etcd"
+  ],
+  "audience_guidance": {
+    "student": "Kubernetes manages containers. If its control panel is exposed, attackers can take over all the apps running inside.",
+    "developer": "Do not hardcode secrets; use Kubernetes Secrets or Vault. Apply least privilege RBAC to ServiceAccounts.",
+    "bug_bounty_hunter": "Look for exposed kube-apiserver on port 6443 or Kubelet on 10250. Test anonymous access.",
+    "pentester": "Attempt unauthenticated Kubelet exec (port 10250). If you compromise a pod, check the mounted ServiceAccount token.",
+    "security_team": "Ensure the API server is not exposed to the internet. Implement strict NetworkPolicies. Audit RBAC regularly."
+  },
+  "learning_resources": [
+    "https://kubernetes.io/docs/concepts/security/"
+  ],
+  "version": "1.0",
+  "last_updated": "2026-07-05",
+  "reviewed_by": "argus-team"
+}

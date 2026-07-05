@@ -1,0 +1,72 @@
+{
+  "service": "SMB",
+  "port": 445,
+  "protocol": "TCP",
+  "purpose": "Server Message Block for file and printer sharing.",
+  "risk_level": "Critical",
+  "description": "SMB operates as an application-layer network protocol mainly used for providing shared access to files, printers, and serial ports.",
+  "common_risks": [
+    "EternalBlue",
+    "null sessions",
+    "SMB relay",
+    "ransomware propagation"
+  ],
+  "misconfigurations": [
+    "internet facing",
+    "SMBv1 enabled",
+    "null sessions allowed",
+    "message signing disabled"
+  ],
+  "attack_patterns": [
+    "EternalBlue (MS17-010)",
+    "SMB Relay",
+    "lateral movement",
+    "data exfiltration"
+  ],
+  "real_world_incidents": [
+    "WannaCry and NotPetya ransomware spread globally using the EternalBlue SMBv1 exploit."
+  ],
+  "recommended_actions": [
+    "Disable SMBv1 completely.",
+    "Block port 445 at edge firewalls.",
+    "Require SMB signing.",
+    "Disable null sessions.",
+    "Patch Windows systems."
+  ],
+  "audience_guidance": {
+    "student": "SMB shares files on Windows. If exposed, hackers can use exploits like EternalBlue to take over the computer instantly.",
+    "developer": "Ensure SMBv1 is disabled in the registry. Never expose port 445 to the WAN.",
+    "bug_bounty_hunter": "Check for null sessions using smbclient or CrackMapExec. Check if SMBv1 is enabled.",
+    "pentester": "Run MS17-010 checks. Attempt anonymous login to list shares. Perform SMB relay attacks if signing is disabled.",
+    "security_team": "Monitor for lateral movement on port 445. Ensure SMB signing is enforced via GPO. Continuously audit for SMBv1."
+  },
+  "correlation_rules": {
+    "amplifies": [
+      "smbv1_enabled",
+      "internet_facing",
+      "null_sessions"
+    ],
+    "requires": [
+      "network_exposure"
+    ],
+    "mitigates": [
+      "smb_signing",
+      "smbv3_only"
+    ]
+  },
+  "learning_resources": [
+    "https://techcommunity.microsoft.com/t5/storage-at-microsoft/stop-using-smb1/ba-p/425858"
+  ],
+  "related_findings": [
+    "eternalblue",
+    "null_session"
+  ],
+  "mitre_attack": [
+    "T1021.002",
+    "T1569.002"
+  ],
+  "risk_weight": 9,
+  "version": "1.0",
+  "last_updated": "2026-07-05",
+  "reviewed_by": "argus-team"
+}

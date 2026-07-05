@@ -1,0 +1,65 @@
+{
+  "service": "Elasticsearch",
+  "port": 9200,
+  "protocol": "TCP",
+  "purpose": "Distributed search and analytics engine.",
+  "risk_level": "Critical",
+  "description": "Elasticsearch is a distributed, RESTful search and analytics engine capable of addressing a growing number of use cases.",
+  "common_risks": [
+    "unauthenticated data access",
+    "data exfiltration",
+    "RCE via scripting"
+  ],
+  "misconfigurations": [
+    "no authentication (X-Pack disabled)",
+    "exposed to internet",
+    "dynamic scripting enabled"
+  ],
+  "attack_patterns": [
+    "data theft",
+    "ransom",
+    "RCE via MVEL/Groovy (older versions)"
+  ],
+  "real_world_incidents": [
+    "Massive data leaks involving PII exposed via unsecured Elasticsearch clusters."
+  ],
+  "recommended_actions": [
+    "Enable Elastic Security (X-Pack).",
+    "Require authentication for all REST endpoints.",
+    "Restrict network access via firewall."
+  ],
+  "audience_guidance": {
+    "student": "Elasticsearch stores massive amounts of logs and data. Like MongoDB, if exposed without auth, it's a goldmine for attackers.",
+    "developer": "Enable X-Pack security in elasticsearch.yml. Setup RBAC and require passwords for the elastic user.",
+    "bug_bounty_hunter": "Access /_cat/indices to see all data. Access /_search to dump contents.",
+    "pentester": "Check for unauthenticated access. On older versions (<1.2), check for RCE via dynamic scripting features.",
+    "security_team": "Ensure clusters are not internet-facing. Audit for X-Pack enablement. Alert on large data extraction queries."
+  },
+  "correlation_rules": {
+    "amplifies": [
+      "unauthenticated",
+      "internet_facing"
+    ],
+    "requires": [
+      "network_exposure"
+    ],
+    "mitigates": [
+      "xpack_enabled",
+      "ip_restricted"
+    ]
+  },
+  "learning_resources": [
+    "https://www.elastic.co/guide/en/elasticsearch/reference/current/security-minimal-setup.html"
+  ],
+  "related_findings": [
+    "unauthenticated_access",
+    "information_disclosure"
+  ],
+  "mitre_attack": [
+    "T1190"
+  ],
+  "risk_weight": 9,
+  "version": "1.0",
+  "last_updated": "2026-07-05",
+  "reviewed_by": "argus-team"
+}

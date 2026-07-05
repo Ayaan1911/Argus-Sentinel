@@ -1,0 +1,23 @@
+{
+  "vulnerability_class": "Exposed API Documentation",
+  "description": "API documentation (e.g., Swagger UI, OpenAPI JSON) is publicly accessible without authentication.",
+  "severity": "Informational",
+  "impact": "Provides attackers with a complete map of the API surface, making it easier to discover hidden endpoints and understand parameter structures.",
+  "remediation": [
+    "Require authentication to access API documentation in production.",
+    "Disable Swagger/OpenAPI endpoints in production environments."
+  ],
+  "audience_guidance": {
+    "student": "API docs are the manual for the app. Giving attackers the manual makes their job much easier.",
+    "developer": "Disable endpoints like /swagger-ui.html or /openapi.json in production, or place them behind authentication.",
+    "bug_bounty_hunter": "Use the exposed docs to find undocumented endpoints, test for BOLA/IDOR, and understand required parameters.",
+    "pentester": "Import the OpenAPI spec into Postman or Burp Suite to systematically test all API endpoints for vulnerabilities.",
+    "security_team": "Ensure API documentation generation is conditionally disabled for production builds."
+  },
+  "learning_resources": [
+    "https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html"
+  ],
+  "version": "1.0",
+  "last_updated": "2026-07-05",
+  "reviewed_by": "argus-team"
+}

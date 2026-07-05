@@ -1,0 +1,24 @@
+{
+  "vulnerability_class": "Exposed Admin Panel",
+  "description": "Administrative interfaces accessible to unauthorized users or the public internet.",
+  "severity": "High",
+  "impact": "Attackers can brute-force credentials, exploit unpatched flaws, or leverage default passwords to gain full control.",
+  "remediation": [
+    "Restrict access via IP allowlisting.",
+    "Place behind a VPN or Zero Trust proxy.",
+    "Require MFA."
+  ],
+  "audience_guidance": {
+    "student": "Admin panels are the keys to the kingdom. If they are on the internet, attackers will try to guess the password.",
+    "developer": "Move admin routes (e.g., /admin, /wp-admin) behind an authentication proxy or IP restriction. Enforce MFA.",
+    "bug_bounty_hunter": "Check for default credentials (admin/admin). Look for authorization bypasses (e.g., forced browsing).",
+    "pentester": "Attempt brute force. Exploit known vulnerabilities for the specific CMS/framework admin panel.",
+    "security_team": "Scan external perimeter for admin interfaces. Ensure they are protected by WAF and access policies."
+  },
+  "learning_resources": [
+    "https://cwe.mitre.org/data/definitions/284.html"
+  ],
+  "version": "1.0",
+  "last_updated": "2026-07-05",
+  "reviewed_by": "argus-team"
+}

@@ -1,0 +1,64 @@
+{
+  "service": "DNS",
+  "port": 53,
+  "protocol": "UDP/TCP",
+  "purpose": "Domain Name System resolution.",
+  "risk_level": "Medium",
+  "description": "The Domain Name System translates human-readable domain names to machine-readable IP addresses.",
+  "common_risks": [
+    "zone transfer",
+    "cache poisoning",
+    "DNS amplification"
+  ],
+  "misconfigurations": [
+    "AXFR enabled for anyone",
+    "open resolver",
+    "outdated BIND"
+  ],
+  "attack_patterns": [
+    "Zone Transfer (AXFR)",
+    "DDoS amplification",
+    "DNS spoofing"
+  ],
+  "real_world_incidents": [
+    "Open DNS resolvers abused for massive DDoS amplification attacks against internet infrastructure."
+  ],
+  "recommended_actions": [
+    "Restrict Zone Transfers (AXFR) to trusted IPs.",
+    "Disable recursive queries for external clients (close the open resolver).",
+    "Keep DNS software patched."
+  ],
+  "audience_guidance": {
+    "student": "DNS is the phonebook of the internet. If misconfigured, an attacker can ask for the 'whole phonebook' (zone transfer) and see all hidden servers.",
+    "developer": "Ensure your DNS server (e.g., BIND) only allows AXFR transfers to secondary nameservers. Disable recursion for untrusted IPs.",
+    "bug_bounty_hunter": "Attempt a zone transfer (dig axfr @server domain). Look for hidden subdomains and internal hostnames.",
+    "pentester": "Test for AXFR. Check if the server acts as an open resolver for DDoS amplification.",
+    "security_team": "Monitor for AXFR requests from untrusted IPs. Scan external footprint for open resolvers."
+  },
+  "correlation_rules": {
+    "amplifies": [
+      "axfr_enabled",
+      "open_resolver"
+    ],
+    "requires": [
+      "network_exposure"
+    ],
+    "mitigates": [
+      "recursion_disabled"
+    ]
+  },
+  "learning_resources": [
+    "https://owasp.org/www-community/attacks/DNS_Zone_Transfer"
+  ],
+  "related_findings": [
+    "zone_transfer_allowed"
+  ],
+  "mitre_attack": [
+    "T1590",
+    "T1498"
+  ],
+  "risk_weight": 5,
+  "version": "1.0",
+  "last_updated": "2026-07-05",
+  "reviewed_by": "argus-team"
+}

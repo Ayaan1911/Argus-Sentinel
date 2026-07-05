@@ -1,0 +1,29 @@
+{
+  "technology": "Django",
+  "type": "Framework",
+  "purpose": "High-level Python web framework.",
+  "description": "Django is a free and open-source web framework that follows the model-template-views architectural pattern.",
+  "common_risks": [
+    "DEBUG mode enabled",
+    "misconfigured ALLOWED_HOSTS",
+    "secret key exposure"
+  ],
+  "mitigations": [
+    "Set DEBUG=False in production",
+    "Secure SECRET_KEY",
+    "Configure ALLOWED_HOSTS"
+  ],
+  "audience_guidance": {
+    "student": "Django builds web apps quickly. If 'DEBUG' is left on, it shows attackers detailed error screens with sensitive info.",
+    "developer": "Ensure DEBUG=False in production settings. Keep SECRET_KEY out of version control. Set SECURE_SSL_REDIRECT=True.",
+    "bug_bounty_hunter": "Trigger a 404 or 500 error to see if Django's yellow debug page is enabled. This leaks settings and environment variables.",
+    "pentester": "Look for exposed /admin panels. If DEBUG is True, exploit information disclosure.",
+    "security_team": "Enforce automated checks that reject PRs with DEBUG=True in production settings."
+  },
+  "learning_resources": [
+    "https://docs.djangoproject.com/en/stable/howto/deployment/checklist/"
+  ],
+  "version": "1.0",
+  "last_updated": "2026-07-05",
+  "reviewed_by": "argus-team"
+}

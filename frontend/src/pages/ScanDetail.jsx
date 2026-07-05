@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Loader2, AlertTriangle, AlertCircle, Info, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Loader2, AlertTriangle, AlertCircle, Info, ArrowRight, ShieldAlert, ShieldCheck } from 'lucide-react';
 import client from '../api/client';
-import LoadingSpinner from '../components/LoadingSpinner';
 import SeverityBadge from '../components/SeverityBadge';
+import RiskScore from '../components/RiskScore';
+import ReasoningBreakdown from '../components/ReasoningBreakdown';
+import AudienceSelector from '../components/AudienceSelector';
 
 export default function ScanDetail() {
   const { scan_id } = useParams();
@@ -12,6 +14,9 @@ export default function ScanDetail() {
   const [status, setStatus] = useState('pending');
   const [loading, setLoading] = useState(true);
   const [isPollingDone, setIsPollingDone] = useState(false);
+  const [selectedFindingId, setSelectedFindingId] = useState(null);
+  const [audience, setAudience] = useState('');
+  const [rawOpen, setRawOpen] = useState(false);
 
   const fetchFullScanData = async () => {
     try {
@@ -19,6 +24,13 @@ export default function ScanDetail() {
       setSummary(sumRes.data);
       const findRes = await client.get(`/findings/scan/${scan_id}`);
       setFindings(findRes.data);
+      if (findRes.data.length > 0 && !selectedFindingId) {
+        setSelectedFindingId(findRes.data[0].id);
+        if (findRes.data[0].audience_guidance) {
+          const keys = Object.keys(findRes.data[0].audience_guidance);
+          if (keys.length > 0) setAudience(keys[0]);
+        }
+      }
     } catch (err) {
       console.error("Failed to fetch full scan data", err);
     } finally {
@@ -60,10 +72,51 @@ export default function ScanDetail() {
     };
   }, [scan_id, isPollingDone]);
 
-  if (loading && !summary) return <LoadingSpinner />;
+  if (loading && !summary) {
+    return (
+      <div className="max-w-6xl mx-auto space-y-6 animate-pulse">
+        <div className="flex items-center gap-4 border-b border-bordercolor pb-4">
+          <div className="w-8 h-8 bg-surface rounded"></div>
+          <div className="space-y-2">
+            <div className="h-7 w-64 bg-surface rounded"></div>
+            <div className="h-4 w-32 bg-surface/70 rounded"></div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+          {[...Array(5)].map((_, i) => <div key={i} className="h-20 bg-surface rounded-lg"></div>)}
+        </div>
+        <div className="h-2 w-full bg-surface rounded-full"></div>
+        <div className="flex gap-6">
+          <div className="w-1/3 flex flex-col gap-2">
+            {[...Array(4)].map((_, i) => <div key={i} className="h-20 bg-surface rounded-lg"></div>)}
+          </div>
+          <div className="w-2/3 h-96 bg-surface rounded-lg"></div>
+        </div>
+      </div>
+    );
+  }
   if (!summary) return <div className="text-danger">Scan not found</div>;
 
   const isRunning = status === 'pending' || status === 'running';
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!findings.length || !selectedFindingId) return;
+      const idx = findings.findIndex(f => f.id === selectedFindingId);
+      if (e.key === 'ArrowDown' && idx < findings.length - 1) {
+        e.preventDefault();
+        setSelectedFindingId(findings[idx + 1].id);
+      } else if (e.key === 'ArrowUp' && idx > 0) {
+        e.preventDefault();
+        setSelectedFindingId(findings[idx - 1].id);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [findings, selectedFindingId]);
+
+  const selectedFinding = findings.find(f => f.id === selectedFindingId);
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -93,65 +146,188 @@ export default function ScanDetail() {
             <SeverityBadge severity={summary.combined_risk_level} />
           </div>
         </div>
-        <div className="bg-card border border-danger/30 rounded-lg p-4">
-          <div className="text-danger text-xs uppercase font-bold tracking-wider mb-1">Critical</div>
-          <div className="text-2xl font-bold text-textpri">{summary.by_severity.critical}</div>
+        <div className="bg-card/60 backdrop-blur-md border border-sev-critical/30 rounded-lg p-4">
+          <div className="text-sev-critical text-xs uppercase font-bold tracking-wider mb-1">Critical</div>
+          <div className="text-2xl font-bold font-mono text-textpri">{summary.by_severity.critical}</div>
         </div>
-        <div className="bg-card border border-[#ff6b00]/30 rounded-lg p-4">
-          <div className="text-[#ff6b00] text-xs uppercase font-bold tracking-wider mb-1">High</div>
-          <div className="text-2xl font-bold text-textpri">{summary.by_severity.high}</div>
+        <div className="bg-card/60 backdrop-blur-md border border-sev-high/30 rounded-lg p-4">
+          <div className="text-sev-high text-xs uppercase font-bold tracking-wider mb-1">High</div>
+          <div className="text-2xl font-bold font-mono text-textpri">{summary.by_severity.high}</div>
         </div>
-        <div className="bg-card border border-warning/30 rounded-lg p-4">
-          <div className="text-warning text-xs uppercase font-bold tracking-wider mb-1">Medium</div>
-          <div className="text-2xl font-bold text-textpri">{summary.by_severity.medium}</div>
+        <div className="bg-card/60 backdrop-blur-md border border-sev-medium/30 rounded-lg p-4">
+          <div className="text-sev-medium text-xs uppercase font-bold tracking-wider mb-1">Medium</div>
+          <div className="text-2xl font-bold font-mono text-textpri">{summary.by_severity.medium}</div>
         </div>
-        <div className="bg-card border border-bordercolor rounded-lg p-4">
-          <div className="text-blue-400 text-xs uppercase font-bold tracking-wider mb-1">Low</div>
-          <div className="text-2xl font-bold text-textpri">{summary.by_severity.low}</div>
+        <div className="bg-card/60 backdrop-blur-md border border-sev-low/30 rounded-lg p-4">
+          <div className="text-sev-low text-xs uppercase font-bold tracking-wider mb-1">Low</div>
+          <div className="text-2xl font-bold font-mono text-textpri">{summary.by_severity.low}</div>
         </div>
       </div>
+
+      {/* Severity Distribution Bar */}
+      {findings.length > 0 && (
+        <div className="h-2 w-full flex rounded-full overflow-hidden bg-surface">
+          <div style={{ width: `${(summary.by_severity.critical / findings.length) * 100}%` }} className="bg-sev-critical"></div>
+          <div style={{ width: `${(summary.by_severity.high / findings.length) * 100}%` }} className="bg-sev-high"></div>
+          <div style={{ width: `${(summary.by_severity.medium / findings.length) * 100}%` }} className="bg-sev-medium"></div>
+          <div style={{ width: `${(summary.by_severity.low / findings.length) * 100}%` }} className="bg-sev-low"></div>
+          <div style={{ width: `${(summary.by_severity.info / findings.length) * 100}%` }} className="bg-sev-info"></div>
+        </div>
+      )}
 
       <div>
         <h3 className="text-xl font-bold text-textpri mb-4">Findings</h3>
         
         {isRunning && findings.length === 0 ? (
-          <div className="bg-card border border-bordercolor rounded-lg p-12 text-center flex flex-col items-center">
-            <Loader2 className="animate-spin text-accent mb-4" size={32} />
-            <h4 className="text-lg font-medium text-textpri">Scan in Progress</h4>
-            <p className="text-textmut mt-2 max-w-md">Argus Sentinel is actively reasoning over the attack surface. Findings will appear once the scan completes.</p>
+          <div className="bg-card/80 backdrop-blur-md border border-bordercolor rounded-lg p-12 text-center flex flex-col items-center">
+            <Loader2 className="animate-spin text-accent mb-6" size={32} />
+            <h4 className="text-lg font-medium text-textpri mb-4">Scan in Progress</h4>
+            
+            <div className="flex items-center justify-center gap-3 text-sm font-mono mt-4">
+              <span className="text-accent animate-pulse">Subfinder</span>
+              <ArrowRight size={14} className="text-textmut" />
+              <span className="text-accent animate-pulse" style={{animationDelay: '0.2s'}}>Httpx</span>
+              <ArrowRight size={14} className="text-textmut" />
+              <span className="text-accent animate-pulse" style={{animationDelay: '0.4s'}}>Nmap</span>
+              <ArrowRight size={14} className="text-textmut" />
+              <span className="text-accent animate-pulse" style={{animationDelay: '0.6s'}}>Nuclei</span>
+            </div>
+            
+            <p className="text-textmut mt-6 max-w-md">Argus Sentinel is actively discovering and reasoning over the attack surface. Findings will appear once the scan completes.</p>
           </div>
         ) : findings.length === 0 ? (
-          <div className="bg-card border border-bordercolor rounded-lg p-12 text-center">
-            <div className="text-textmut">No findings discovered.</div>
+          <div className="bg-card/80 backdrop-blur-md border border-bordercolor rounded-lg p-12 text-center">
+            {status === 'completed' ? (
+              <>
+                <div className="text-success mb-4 flex justify-center"><ShieldCheck size={40} /></div>
+                <div className="text-lg font-medium text-textpri">Target Appears Secure</div>
+                <div className="text-textmut mt-2">No vulnerabilities or exposures were detected on this target.</div>
+              </>
+            ) : status === 'failed' ? (
+              <>
+                <div className="text-sev-critical mb-2 flex justify-center"><AlertTriangle size={32} /></div>
+                <div className="text-lg font-medium text-textpri">Scan Failed</div>
+                <div className="text-textmut">The target may be unreachable or the scanners encountered an error.</div>
+              </>
+            ) : (
+              <div className="text-textmut">No findings discovered.</div>
+            )}
           </div>
         ) : (
-          <div className="bg-card border border-bordercolor rounded-lg overflow-hidden">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-surface text-textmut border-b border-bordercolor">
-                <tr>
-                  <th className="px-6 py-3 font-semibold">Severity</th>
-                  <th className="px-6 py-3 font-semibold">Type</th>
-                  <th className="px-6 py-3 font-semibold w-full">Finding</th>
-                  <th className="px-6 py-3 font-semibold">Risk Score</th>
-                  <th className="px-6 py-3 font-semibold"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-bordercolor">
-                {findings.map(f => (
-                  <tr key={f.id} className="hover:bg-surface/50 transition-colors">
-                    <td className="px-6 py-4"><SeverityBadge severity={f.severity} /></td>
-                    <td className="px-6 py-4 text-textmut uppercase tracking-wider text-xs font-bold">{f.type}</td>
-                    <td className="px-6 py-4 font-medium text-textpri">{f.title}</td>
-                    <td className="px-6 py-4 font-mono font-bold">{f.final_risk_score.toFixed(1)}</td>
-                    <td className="px-6 py-4 text-right">
-                      <Link to={`/scan/${scan_id}/finding/${f.id}`} className="text-accent hover:underline text-sm font-medium">
-                        Analyze
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* LEFT PANE: List */}
+            <div className="w-full lg:w-1/3 flex flex-col gap-2 max-h-[800px] overflow-y-auto pr-2">
+              {findings.map(f => {
+                const isSelected = selectedFindingId === f.id;
+                let sevBorder = 'border-l-bordercolor';
+                if (f.severity === 'critical') sevBorder = 'border-l-sev-critical shadow-sev-critical/10';
+                else if (f.severity === 'high') sevBorder = 'border-l-sev-high shadow-sev-high/10';
+                else if (f.severity === 'medium') sevBorder = 'border-l-sev-medium shadow-sev-medium/10';
+                else if (f.severity === 'low') sevBorder = 'border-l-sev-low shadow-sev-low/10';
+
+                return (
+                  <button 
+                    key={f.id}
+                    onClick={() => {
+                      setSelectedFindingId(f.id);
+                      if (f.audience_guidance) {
+                        const keys = Object.keys(f.audience_guidance);
+                        if (keys.length > 0 && !keys.includes(audience)) setAudience(keys[0]);
+                      }
+                    }}
+                    className={`text-left p-4 rounded-r-lg border-y border-r border-l-4 transition-all hover:-translate-y-0.5 hover:shadow-lg focus:outline-none
+                      ${isSelected ? 'bg-surface/80 border-y-bordercolor border-r-bordercolor shadow-md ' + sevBorder : 'bg-card border-bordercolor border-l-transparent hover:bg-surface/50'}
+                    `}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <SeverityBadge severity={f.severity} />
+                      <span className="text-textmut font-mono text-xs font-bold">{f.final_risk_score.toFixed(1)}</span>
+                    </div>
+                    <div className="font-semibold text-textpri mb-1 line-clamp-1">{f.title}</div>
+                    <div className="text-xs text-textmut uppercase tracking-wider font-bold">{f.type}</div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* RIGHT PANE: Details */}
+            {selectedFinding && (
+              <div className="w-full lg:w-2/3 bg-card border border-bordercolor rounded-lg p-6 space-y-6 overflow-y-auto max-h-[800px]">
+                <div className="flex flex-col md:flex-row gap-8 items-start border-b border-bordercolor pb-6">
+                  <div className="flex-1 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <SeverityBadge severity={selectedFinding.severity} />
+                      <span className="text-textmut uppercase tracking-wider text-xs font-bold border border-bordercolor px-2 py-0.5 rounded bg-surface">{selectedFinding.type}</span>
+                    </div>
+                    <h2 className="text-2xl font-bold text-textpri">{selectedFinding.title}</h2>
+                    <p className="text-textmut text-sm">{selectedFinding.technical_impact}</p>
+                  </div>
+                  <div className="shrink-0 bg-surface border border-bordercolor rounded-xl p-4 flex flex-col items-center gap-2">
+                    <div className="text-xs uppercase font-bold text-textmut tracking-wider">Risk Score</div>
+                    <RiskScore score={selectedFinding.final_risk_score} />
+                    <div className="text-xs text-textmut mt-1">Conf: {(selectedFinding.confidence * 100).toFixed(0)}%</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-6">
+                    <ReasoningBreakdown breakdown={selectedFinding.reasoning_breakdown} />
+                    
+                    {selectedFinding.business_impact && (
+                      <div className="bg-surface border border-bordercolor rounded-lg overflow-hidden">
+                        <div className="bg-background/50 px-4 py-3 border-b border-bordercolor font-semibold text-sm flex items-center gap-2">
+                          <AlertCircle size={16} className="text-warning" /> Business Impact
+                        </div>
+                        <div className="p-4 text-textpri text-sm">
+                          {selectedFinding.business_impact}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="bg-surface border border-bordercolor rounded-lg overflow-hidden flex flex-col h-full">
+                      <div className="bg-background/50 px-4 py-3 border-b border-bordercolor flex justify-between items-center text-sm">
+                        <div className="font-semibold flex items-center gap-2">
+                          <Info size={16} className="text-accent" /> Targeted Guidance
+                        </div>
+                      </div>
+                      <div className="p-3 border-b border-bordercolor bg-card">
+                        <AudienceSelector selected={audience} onChange={setAudience} />
+                      </div>
+                      <div className="p-4 text-textpri text-sm leading-relaxed whitespace-pre-wrap flex-1">
+                        {selectedFinding.audience_guidance?.[audience] || <span className="text-textmut italic">No guidance available for this persona.</span>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {(selectedFinding.recommended_actions?.length > 0 || selectedFinding.learning_resources?.length > 0) && (
+                  <div className="grid grid-cols-1 gap-6 mt-6">
+                    {selectedFinding.recommended_actions?.length > 0 && (
+                      <div className="bg-surface border border-bordercolor rounded-lg p-5">
+                        <h3 className="font-semibold text-textpri mb-3 text-sm flex items-center gap-2"><ShieldAlert size={16} className="text-success" /> Recommended Actions</h3>
+                        <ul className="space-y-2">
+                          {selectedFinding.recommended_actions.map((act, i) => (
+                            <li key={i} className="text-sm text-textmut flex gap-2"><span className="text-success">▹</span> {act}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {selectedFinding.learning_resources?.length > 0 && (
+                      <div className="bg-surface border border-bordercolor rounded-lg p-5">
+                        <h3 className="font-semibold text-textpri mb-3 text-sm flex items-center gap-2"><ArrowRight size={16} className="text-accent" /> Learning Resources</h3>
+                        <ul className="space-y-2">
+                          {selectedFinding.learning_resources.map((res, i) => (
+                            <li key={i} className="text-sm text-accent hover:underline flex gap-2"><span className="text-textmut">▹</span> <a href={res} target="_blank" rel="noreferrer">{res}</a></li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

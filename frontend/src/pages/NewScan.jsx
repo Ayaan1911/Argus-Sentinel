@@ -13,8 +13,8 @@ export default function NewScan() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!target) {
-      setError('Target is required');
+    if (!target || loading) {
+      if (!target) setError('Target is required');
       return;
     }
     

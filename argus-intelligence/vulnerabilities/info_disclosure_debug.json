@@ -1,0 +1,23 @@
+{
+  "vulnerability_class": "Information Disclosure (Debug Endpoint)",
+  "description": "Exposure of application debug, diagnostic, or status endpoints to unauthorized users.",
+  "severity": "Medium",
+  "impact": "Leaks sensitive environment variables, internal IP addresses, stack traces, and software versions.",
+  "remediation": [
+    "Disable debug mode in production.",
+    "Restrict access to diagnostic endpoints (e.g., /actuator/env) to internal IPs or authenticated admins."
+  ],
+  "audience_guidance": {
+    "student": "Debug pages show how the app works behind the scenes. This gives hackers a blueprint to find deeper flaws.",
+    "developer": "Turn off framework debug modes (e.g., Django DEBUG=False, Spring Boot Actuator security). Never expose /server-status.",
+    "bug_bounty_hunter": "Look for Spring Boot Actuators, Django yellow screens, or PHP debug outputs. Extract secrets and API keys from the output.",
+    "pentester": "Check if debug endpoints allow modification (e.g., Spring Boot /actuator/env allows changing properties leading to RCE).",
+    "security_team": "Monitor for external access to known debug paths. Audit production configurations for debugging flags."
+  },
+  "learning_resources": [
+    "https://cwe.mitre.org/data/definitions/200.html"
+  ],
+  "version": "1.0",
+  "last_updated": "2026-07-05",
+  "reviewed_by": "argus-team"
+}

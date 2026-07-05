@@ -1,0 +1,66 @@
+{
+  "service": "FTP",
+  "port": 21,
+  "protocol": "TCP",
+  "purpose": "File Transfer Protocol for moving files between systems.",
+  "risk_level": "Medium",
+  "description": "FTP is an unencrypted file transfer protocol. Credentials and data are sent in plaintext unless FTPS is used.",
+  "common_risks": [
+    "plaintext credentials",
+    "anonymous login",
+    "unencrypted data"
+  ],
+  "misconfigurations": [
+    "anonymous access enabled",
+    "weak passwords",
+    "outdated vsftpd/proftpd"
+  ],
+  "attack_patterns": [
+    "credential sniffing",
+    "brute force",
+    "anonymous file upload/RCE"
+  ],
+  "real_world_incidents": [
+    "Data exfiltration via anonymous FTP access on misconfigured servers."
+  ],
+  "recommended_actions": [
+    "Disable FTP and use SFTP instead.",
+    "Disable anonymous login.",
+    "Enforce strong credentials.",
+    "Restrict IP access."
+  ],
+  "audience_guidance": {
+    "student": "FTP sends passwords in clear text. Think of it like shouting a password across a crowded room.",
+    "developer": "Migrate from FTP to SFTP (SSH File Transfer Protocol). Ensure your FTP daemon (e.g., vsftpd) has anonymous_enable=NO.",
+    "bug_bounty_hunter": "Check for anonymous login using 'anonymous' / 'anonymous@example.com'. Look for sensitive files or write access.",
+    "pentester": "Attempt anonymous login. Sniff traffic if on the same network. Look for exploit modules for the specific FTP daemon version.",
+    "security_team": "Monitor for FTP cleartext authentications. Enforce SFTP globally. Restrict FTP ports at the firewall."
+  },
+  "correlation_rules": {
+    "amplifies": [
+      "anonymous_login",
+      "internet_facing"
+    ],
+    "requires": [
+      "network_exposure"
+    ],
+    "mitigates": [
+      "sftp_used",
+      "ip_restricted"
+    ]
+  },
+  "learning_resources": [
+    "https://owasp.org/www-community/vulnerabilities/Cleartext_Transmission_of_Sensitive_Information"
+  ],
+  "related_findings": [
+    "weak_credentials"
+  ],
+  "mitre_attack": [
+    "T1040",
+    "T1110"
+  ],
+  "risk_weight": 5,
+  "version": "1.0",
+  "last_updated": "2026-07-05",
+  "reviewed_by": "argus-team"
+}

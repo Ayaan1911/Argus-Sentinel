@@ -1,0 +1,62 @@
+{
+  "service": "SNMP",
+  "port": 161,
+  "protocol": "UDP",
+  "purpose": "Simple Network Management Protocol for monitoring.",
+  "risk_level": "High",
+  "description": "SNMP is used for collecting information from, and configuring, network devices, such as servers, printers, hubs, switches, and routers.",
+  "common_risks": [
+    "information disclosure",
+    "device configuration changes"
+  ],
+  "misconfigurations": [
+    "default community strings (public/private)",
+    "SNMPv1 or v2c enabled (unencrypted)"
+  ],
+  "attack_patterns": [
+    "SNMP walking to extract routing tables, running processes, and OS info",
+    "writing config changes via 'private' string"
+  ],
+  "real_world_incidents": [
+    "Attackers mapped internal networks and compromised routers by querying exposed SNMP services with default strings."
+  ],
+  "recommended_actions": [
+    "Use SNMPv3 with authentication and encryption.",
+    "Change default community strings.",
+    "Restrict SNMP access to management IPs via ACLs."
+  ],
+  "audience_guidance": {
+    "student": "SNMP manages devices. Older versions use a 'community string' like a password. If it's the default ('public'), attackers can read device info.",
+    "developer": "Upgrade to SNMPv3. If v2c must be used, change community strings from 'public' and 'private' to strong, unique values.",
+    "bug_bounty_hunter": "Use snmpwalk with community string 'public'. Look for sensitive internal IPs, running software versions, or usernames.",
+    "pentester": "Extract MIB data. If 'private' string is found, attempt to modify device configuration or routing tables.",
+    "security_team": "Audit network for SNMPv1/v2c. Enforce SNMPv3. Ensure SNMP traffic is isolated to management VLANs."
+  },
+  "correlation_rules": {
+    "amplifies": [
+      "default_community_string",
+      "internet_facing"
+    ],
+    "requires": [
+      "network_exposure"
+    ],
+    "mitigates": [
+      "snmpv3_used"
+    ]
+  },
+  "learning_resources": [
+    "https://csrc.nist.gov/glossary/term/simple_network_management_protocol"
+  ],
+  "related_findings": [
+    "default_credentials",
+    "information_disclosure"
+  ],
+  "mitre_attack": [
+    "T1046",
+    "T1082"
+  ],
+  "risk_weight": 7,
+  "version": "1.0",
+  "last_updated": "2026-07-05",
+  "reviewed_by": "argus-team"
+}

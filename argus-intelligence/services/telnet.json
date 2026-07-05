@@ -1,0 +1,59 @@
+{
+  "service": "Telnet",
+  "port": 23,
+  "protocol": "TCP",
+  "purpose": "Unencrypted remote administration.",
+  "risk_level": "Critical",
+  "description": "Telnet provides a bidirectional interactive text-oriented communication facility using a virtual terminal connection.",
+  "common_risks": [
+    "plaintext credentials",
+    "network sniffing"
+  ],
+  "misconfigurations": [
+    "exposed to internet",
+    "default credentials"
+  ],
+  "attack_patterns": [
+    "credential sniffing",
+    "brute force",
+    "Mirai botnet targeting"
+  ],
+  "real_world_incidents": [
+    "IoT devices commonly compromised via exposed Telnet with default credentials (e.g., Mirai botnet)."
+  ],
+  "recommended_actions": [
+    "Disable Telnet completely.",
+    "Replace with SSH.",
+    "Block port 23 at edge firewall."
+  ],
+  "audience_guidance": {
+    "student": "Telnet is an ancient, completely insecure way to log into servers. It should never be used today.",
+    "developer": "Disable the Telnet daemon immediately and configure SSH instead.",
+    "bug_bounty_hunter": "Check for default credentials (admin/admin, root/root) if you find this on an IoT or legacy device.",
+    "pentester": "Sniff traffic to capture cleartext passwords. Brute force default IoT credentials.",
+    "security_team": "Create an alert for any Telnet traffic crossing the network boundary. Isolate legacy devices requiring Telnet."
+  },
+  "correlation_rules": {
+    "amplifies": [
+      "internet_facing",
+      "default_credentials"
+    ],
+    "requires": [
+      "network_exposure"
+    ],
+    "mitigates": []
+  },
+  "learning_resources": [
+    "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-1999-0619"
+  ],
+  "related_findings": [
+    "weak_credentials"
+  ],
+  "mitre_attack": [
+    "T1040"
+  ],
+  "risk_weight": 9,
+  "version": "1.0",
+  "last_updated": "2026-07-05",
+  "reviewed_by": "argus-team"
+}
