@@ -1,0 +1,53 @@
+{
+  "service": "Live Host",
+  "port": 0,
+  "protocol": "HTTP/HTTPS",
+  "purpose": "Confirmation that a host is reachable and responding to HTTP/HTTPS requests.",
+  "risk_level": "Low",
+  "description": "A live host was detected — the target responded to an HTTP/HTTPS probe, confirming it is online, reachable, and serving web content. This is the baseline confirmation step before deeper analysis. The finding itself is informational, but it validates that the attack surface exists and further scanning is warranted.",
+  "common_risks": [
+    "Exposed web interface with no authentication",
+    "Default web server pages leaking version information",
+    "Unintended services running on non-standard ports"
+  ],
+  "misconfigurations": [
+    "Default server pages (e.g. Apache default, Nginx default) still live",
+    "Server version disclosed in response headers (Server: Apache/2.4.7)",
+    "No HTTPS redirect on HTTP endpoints"
+  ],
+  "attack_patterns": [
+    "Web server fingerprinting via response headers",
+    "Directory brute-forcing",
+    "Technology detection to identify exploit targets"
+  ],
+  "real_world_incidents": [
+    "Exposed default pages have been used to confirm server technology stacks, enabling targeted exploitation of known CVEs for that version."
+  ],
+  "recommended_actions": [
+    "Review response headers — suppress the Server: header or configure it to return a generic value.",
+    "Ensure no default server pages are accessible.",
+    "Confirm HTTPS is enforced with a valid certificate.",
+    "Run a full web application scan against confirmed live endpoints."
+  ],
+  "audience_guidance": {
+    "student": "This confirms the target is online and responding to web requests — the first step before deeper scanning. It means the server is reachable and we can now check what software it runs, whether it has login pages, and what it exposes to the public internet.",
+    "developer": "Your server responded to an HTTP probe. Check your response headers with 'curl -I https://yourdomain.com' — the Server: header should not expose your exact software version. Ensure HTTP redirects to HTTPS and no default index pages are live.",
+    "bug_bounty_hunter": "Confirmed live endpoint — start by fingerprinting the tech stack from response headers, check for default pages, enumerate directories, and look for interesting paths in robots.txt and sitemap.xml. This is your entry point.",
+    "pentester": "Live host confirmed. Proceed with full web application reconnaissance: HTTP verb enumeration, directory brute-forcing (gobuster/feroxbuster), header analysis for tech stack leakage, and content discovery. Check for WAF presence.",
+    "security_team": "A live web endpoint is part of your external attack surface. Ensure it is intentionally public, protected by HTTPS, and that response headers do not leak server software versions. All public endpoints should be in your asset inventory and covered by your vulnerability management program."
+  },
+  "correlation_rules": {
+    "amplifies": ["default_page_exposed", "server_version_disclosed", "no_https"],
+    "requires": [],
+    "mitigates": ["https_enforced", "waf_present"]
+  },
+  "learning_resources": [
+    "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/01-Information_Gathering/02-Fingerprint_Web_Server"
+  ],
+  "related_findings": ["http", "https"],
+  "mitre_attack": ["T1595.001", "T1590"],
+  "risk_weight": 1,
+  "version": "1.0",
+  "last_updated": "2026-07-06",
+  "reviewed_by": "argus-team"
+}

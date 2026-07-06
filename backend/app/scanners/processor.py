@@ -80,9 +80,17 @@ class FindingProcessor:
         if f_type in ["port", "service"]:
             service_name = raw_data.get("service", "")
             kb_entry = self.loader.get_service(service_name)
+            # Fallback: unidentified/tcpwrapped ports get generic port guidance
+            if kb_entry is None:
+                kb_entry = self.loader.get_service("generic_port")
         elif f_type == "technology":
             tech_name = raw_data.get("title", "")
             kb_entry = self.loader.get_technology(tech_name)
+            # Fallback: unmatched tech findings (e.g. Live Host) get generic live_host guidance
+            if kb_entry is None:
+                kb_entry = self.loader.get_technology("live_host")
+        elif f_type == "subdomain":
+            kb_entry = self.loader.get_service("subdomain")
         elif f_type == "vulnerability":
             # Primary: tag+keyword based vuln class match
             kb_entry = self._match_vuln_entry(raw_data, title)
@@ -106,7 +114,9 @@ class FindingProcessor:
             biz_impact = "Minimal business risk"
 
         audience_data = kb_entry.get("audience_guidance", {})
-        guidance = {audience: audience_data.get(audience, "")} if audience_data else {}
+        # Return the full guidance map so the UI can switch personas freely.
+        # Also include the scan-time audience as a convenience key.
+        guidance = dict(audience_data) if audience_data else {}
 
         return {
             "scan_id": scan_id,

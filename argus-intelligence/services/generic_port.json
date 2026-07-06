@@ -1,0 +1,52 @@
+{
+  "service": "Generic Port / Unidentified Service",
+  "port": 0,
+  "protocol": "TCP",
+  "purpose": "An open TCP port whose service could not be precisely identified by the scanner.",
+  "risk_level": "Low",
+  "description": "An open port was detected but the service running on it could not be conclusively identified. This may be due to a TCP wrapper, non-standard service, or limited probe response. The port represents an entry point that warrants further manual investigation.",
+  "common_risks": [
+    "Unknown or undocumented service exposed to the internet",
+    "Legacy or custom services with no known patch cycle",
+    "Misconfigured firewall rules allowing unintended access"
+  ],
+  "misconfigurations": [
+    "Port left open without a corresponding documented service",
+    "TCP wrapper blocking version detection but not access"
+  ],
+  "attack_patterns": [
+    "Service fingerprinting with alternate tools (nc, curl, openssl s_client)",
+    "Banner grabbing",
+    "Version-based exploit search once service is identified"
+  ],
+  "real_world_incidents": [
+    "Numerous breaches originate from forgotten or undocumented open ports that were not covered by vulnerability scanners."
+  ],
+  "recommended_actions": [
+    "Manually connect to the port (e.g. nc -zv <host> <port>) to grab the service banner.",
+    "Review firewall rules — if no known service should be on this port, close it.",
+    "Run nmap with -sV --version-intensity 9 for deeper service detection.",
+    "Cross-reference with the organization's asset inventory."
+  ],
+  "audience_guidance": {
+    "student": "An open port with an unidentified service means the system is listening for connections on that port but we don't yet know what software is running. Think of it as a door with no label — you need to look closer to find out what's behind it.",
+    "developer": "Audit your server's open ports with 'ss -tlnp' or 'netstat -tlnp'. Any port open to the internet should correspond to a deliberate, documented service. Close anything that shouldn't be public.",
+    "bug_bounty_hunter": "Unidentified ports are worth manual follow-up. Use 'nc -zv target port', 'curl -v target:port', and 'openssl s_client -connect target:port' to fingerprint the service. An obscure service on a non-standard port can yield interesting findings.",
+    "pentester": "Perform manual banner grabbing and protocol probing. Use nmap with --version-intensity 9 and --script=banner. Cross-reference with Shodan or Censys for historical service data on this host/port combination.",
+    "security_team": "Ensure all open ports are documented in your asset inventory and justified by business need. Any port not mapped to a known service should trigger a review. Implement network segmentation and egress filtering to reduce the blast radius of undocumented services."
+  },
+  "correlation_rules": {
+    "amplifies": ["internet_facing", "no_service_documentation"],
+    "requires": [],
+    "mitigates": ["firewall_restricted", "network_segmentation"]
+  },
+  "learning_resources": [
+    "https://nmap.org/book/man-version-detection.html"
+  ],
+  "related_findings": [],
+  "mitre_attack": ["T1046"],
+  "risk_weight": 2,
+  "version": "1.0",
+  "last_updated": "2026-07-06",
+  "reviewed_by": "argus-team"
+}

@@ -5,6 +5,7 @@ export default function AudienceSelector({ selected, onChange }) {
     { id: 'student', label: 'Student' },
     { id: 'developer', label: 'Developer' },
     { id: 'bug_bounty_hunter', label: 'Bug Bounty Hunter' },
+    { id: 'pentester', label: 'Pentester' },
     { id: 'security_team', label: 'Security Professional' },
   ];
 

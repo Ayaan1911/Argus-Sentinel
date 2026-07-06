@@ -1,0 +1,55 @@
+{
+  "service": "Subdomain",
+  "port": 0,
+  "protocol": "DNS",
+  "purpose": "A discovered subdomain that is part of the target's DNS namespace and represents an additional attack surface entry point.",
+  "risk_level": "Low",
+  "description": "Subdomain enumeration revealed an additional hostname under the target's domain. Each subdomain may host a separate application, admin panel, staging environment, or internal service inadvertently exposed to the internet. Subdomains significantly expand the attack surface and each should be individually assessed.",
+  "common_risks": [
+    "Forgotten staging or development environments with weaker security",
+    "Subdomain takeover if the DNS record points to an unclaimed resource",
+    "Internal admin panels exposed to the internet",
+    "Legacy applications with known CVEs running on subdomains"
+  ],
+  "misconfigurations": [
+    "DNS records pointing to decommissioned cloud resources (S3, GitHub Pages, Heroku)",
+    "No wildcard DNS restrictions",
+    "Subdomains running outdated software not included in the main patching cycle"
+  ],
+  "attack_patterns": [
+    "Subdomain takeover via dangling DNS CNAME records",
+    "Direct access to staging/dev environments",
+    "Cross-origin data leakage from misconfigured CORS on subdomains"
+  ],
+  "real_world_incidents": [
+    "Subdomain takeover vulnerabilities have been found on major companies including Microsoft, Uber, and Starbucks, where DNS records pointed to abandoned third-party services."
+  ],
+  "recommended_actions": [
+    "Probe each discovered subdomain for live services (httpx, curl).",
+    "Check DNS records for dangling CNAMEs pointing to unclaimed cloud resources.",
+    "Audit whether this subdomain should be publicly accessible.",
+    "Apply the same security controls to subdomains as to the primary domain."
+  ],
+  "audience_guidance": {
+    "student": "A subdomain is like a room inside a building — each one is a separate entry point that might have different security settings than the main site. Finding subdomains shows you the full size of the target's web presence, and some rooms might have weaker locks.",
+    "developer": "Review this subdomain — does it need to be publicly accessible? Staging, dev, and internal subdomains should be protected behind authentication or restricted by IP. Ensure any DNS records pointing to cloud services are cleaned up when those services are decommissioned.",
+    "bug_bounty_hunter": "Subdomains are high-value targets. Probe for live services with httpx, check CNAME records for subdomain takeover opportunities (dig <subdomain> CNAME), look for exposed admin panels or staging environments, and enumerate directories. A forgotten staging subdomain is often a goldmine.",
+    "pentester": "Enumerate all subdomains and resolve them to IPs. Check for subdomain takeover with tools like subjack or nuclei takeover templates. Probe each for live HTTP/HTTPS, authentication bypass, and different security posture from the main domain. Check for CORS misconfigurations.",
+    "security_team": "Maintain an inventory of all DNS subdomains and review it regularly. Decommission unused records promptly to prevent takeover. Ensure all subdomains are covered by your vulnerability management program — not just the primary domain. Implement monitoring for new subdomains appearing without authorization."
+  },
+  "correlation_rules": {
+    "amplifies": ["dns_misconfiguration", "legacy_application", "staging_environment"],
+    "requires": [],
+    "mitigates": ["dns_audit", "access_control"]
+  },
+  "learning_resources": [
+    "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/01-Information_Gathering/04-Enumerate_Applications_on_Webserver",
+    "https://github.com/EdOverflow/can-i-take-over-xyz"
+  ],
+  "related_findings": ["dns_takeover", "exposed_admin_panel"],
+  "mitre_attack": ["T1595.001", "T1590.001"],
+  "risk_weight": 2,
+  "version": "1.0",
+  "last_updated": "2026-07-06",
+  "reviewed_by": "argus-team"
+}
