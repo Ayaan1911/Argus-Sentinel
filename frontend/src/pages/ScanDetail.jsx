@@ -72,6 +72,23 @@ export default function ScanDetail() {
     };
   }, [scan_id, isPollingDone]);
 
+  // Keyboard navigation — must stay here (before any early returns) to satisfy Rules of Hooks
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!findings.length || !selectedFindingId) return;
+      const idx = findings.findIndex(f => f.id === selectedFindingId);
+      if (e.key === 'ArrowDown' && idx < findings.length - 1) {
+        e.preventDefault();
+        setSelectedFindingId(findings[idx + 1].id);
+      } else if (e.key === 'ArrowUp' && idx > 0) {
+        e.preventDefault();
+        setSelectedFindingId(findings[idx - 1].id);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [findings, selectedFindingId]);
+
   if (loading && !summary) {
     return (
       <div className="max-w-6xl mx-auto space-y-6 animate-pulse">
@@ -98,23 +115,6 @@ export default function ScanDetail() {
   if (!summary) return <div className="text-danger">Scan not found</div>;
 
   const isRunning = status === 'pending' || status === 'running';
-
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (!findings.length || !selectedFindingId) return;
-      const idx = findings.findIndex(f => f.id === selectedFindingId);
-      if (e.key === 'ArrowDown' && idx < findings.length - 1) {
-        e.preventDefault();
-        setSelectedFindingId(findings[idx + 1].id);
-      } else if (e.key === 'ArrowUp' && idx > 0) {
-        e.preventDefault();
-        setSelectedFindingId(findings[idx - 1].id);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [findings, selectedFindingId]);
 
   const selectedFinding = findings.find(f => f.id === selectedFindingId);
 
