@@ -4,7 +4,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload, noload
 from sqlalchemy import func
 from typing import List, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.database import get_db
 from app.models.scan import Scan
@@ -43,7 +43,12 @@ async def get_dashboard_stats(db: AsyncSession = Depends(get_db)):
             by_type[t] = 1
             
     # Scans over time (last 14 days)
-    fourteen_days_ago = datetime.utcnow() - timedelta(days=14)
+    # Must be timezone-aware: Scan.created_at is DateTime(timezone=True), and
+    # asyncpg interprets a *naive* datetime bound as a query parameter using
+    # the server's local system timezone rather than UTC — a naive
+    # datetime.utcnow() here would silently shift this cutoff on any host
+    # whose local timezone isn't UTC.
+    fourteen_days_ago = datetime.now(timezone.utc) - timedelta(days=14)
     stmt_scans = select(Scan.created_at).where(Scan.created_at >= fourteen_days_ago)
     res_scans = await db.execute(stmt_scans)
     scan_dates = [row[0] for row in res_scans.all()]
@@ -88,7 +93,9 @@ async def create_scan(request: Request, scan_in: ScanCreate, db: AsyncSession = 
     # Reuse a recent completed scan of the same target instead of silently
     # creating a duplicate — unless the caller explicitly wants a fresh one.
     if not scan_in.force_rescan:
-        recent_cutoff = datetime.utcnow() - RESCAN_WINDOW
+        # Timezone-aware for the same reason as fourteen_days_ago above —
+        # this is compared directly against Scan.created_at.
+        recent_cutoff = datetime.now(timezone.utc) - RESCAN_WINDOW
         stmt = (
             select(Scan)
             .where(

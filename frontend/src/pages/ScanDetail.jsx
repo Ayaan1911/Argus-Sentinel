@@ -41,7 +41,7 @@ const TERMINAL_STATUSES = ['completed', 'failed'];
 
 // Backoff schedule: fast while a scan is likely to finish soon, slower the
 // longer it runs, so a long scan doesn't keep hammering the status endpoint.
-function nextPollDelay(elapsedMs) {
+export function nextPollDelay(elapsedMs) {
   if (elapsedMs < 30000) return 3000;   // first 30s: every 3s
   if (elapsedMs < 120000) return 5000;  // 30s-2min: every 5s
   return 10000;                          // 2min+: every 10s
