@@ -149,16 +149,25 @@ async def get_scan(scan_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.get("/{scan_id}/status")
 async def get_scan_status(scan_id: str, db: AsyncSession = Depends(get_db)):
-    stmt = select(Scan).options(selectinload(Scan.findings)).where(Scan.id == scan_id)
+    # Deliberately lightweight: no findings are loaded, just a count, so this
+    # is cheap enough to poll every few seconds for the life of a scan.
+    stmt = select(Scan).where(Scan.id == scan_id)
     result = await db.execute(stmt)
     scan = result.scalar_one_or_none()
     if not scan:
         raise HTTPException(status_code=404, detail="Scan not found")
+
+    count_stmt = select(func.count(Finding.id)).where(Finding.scan_id == scan_id)
+    count_result = await db.execute(count_stmt)
+    finding_count = count_result.scalar_one()
+
     return {
         "scan_id": str(scan.id),
+        "target": scan.target,
+        "audience": scan.audience,
         "status": scan.status,
         "stage_status": scan.stage_status or {},
-        "finding_count": len(scan.findings)
+        "finding_count": finding_count
     }
 
 @router.delete("/{scan_id}")

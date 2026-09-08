@@ -23,19 +23,21 @@ async def get_scan_findings(
     severity: Optional[str] = None,
     type: Optional[str] = None,
     min_risk: Optional[float] = None,
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db)
 ):
     stmt = select(Finding).where(Finding.scan_id == scan_id)
-    
+
     if severity:
         stmt = stmt.where(Finding.severity == severity)
     if type:
         stmt = stmt.where(Finding.type == type)
     if min_risk is not None:
         stmt = stmt.where(Finding.final_risk_score >= min_risk)
-        
-    stmt = stmt.order_by(Finding.final_risk_score.desc())
-    
+
+    stmt = stmt.order_by(Finding.final_risk_score.desc()).limit(limit).offset(offset)
+
     result = await db.execute(stmt)
     findings = result.scalars().all()
     return findings

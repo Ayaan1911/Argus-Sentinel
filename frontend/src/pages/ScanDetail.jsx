@@ -37,14 +37,25 @@ function StageStatusBar({ stageStatus, findings }) {
   );
 }
 
+const TERMINAL_STATUSES = ['completed', 'failed'];
+
+// Backoff schedule: fast while a scan is likely to finish soon, slower the
+// longer it runs, so a long scan doesn't keep hammering the status endpoint.
+function nextPollDelay(elapsedMs) {
+  if (elapsedMs < 30000) return 3000;   // first 30s: every 3s
+  if (elapsedMs < 120000) return 5000;  // 30s-2min: every 5s
+  return 10000;                          // 2min+: every 10s
+}
+
 export default function ScanDetail() {
   const { scan_id } = useParams();
+  const [scanMeta, setScanMeta] = useState(null); // { target, audience } — from the lightweight status poll
   const [summary, setSummary] = useState(null);
   const [findings, setFindings] = useState([]);
   const [status, setStatus] = useState('pending');
   const [stageStatus, setStageStatus] = useState({});
   const [loading, setLoading] = useState(true);
-  const [isPollingDone, setIsPollingDone] = useState(false);
+  const [notFound, setNotFound] = useState(false);
   const [selectedFindingId, setSelectedFindingId] = useState(null);
   const [audience, setAudience] = useState('');
   const [rawOpen, setRawOpen] = useState(false);
@@ -64,45 +75,51 @@ export default function ScanDetail() {
       }
     } catch (err) {
       console.error("Failed to fetch full scan data", err);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    let intervalId = null;
+    let timeoutId = null;
+    let cancelled = false;
+    const pollStartTime = Date.now();
 
-    const checkStatus = async () => {
+    const poll = async () => {
       try {
         const statRes = await client.get(`/scans/${scan_id}/status`);
-        const currentStatus = statRes.data.status;
-        setStatus(currentStatus);
-        setStageStatus(statRes.data.stage_status || {});
+        if (cancelled) return;
 
-        if (currentStatus === 'completed' || currentStatus === 'failed') {
-          if (intervalId) clearInterval(intervalId);
-          setIsPollingDone(true);
-          
-          setTimeout(() => {
-            fetchFullScanData();
-          }, 500);
-        } else {
-          fetchFullScanData();
+        setScanMeta({ target: statRes.data.target, audience: statRes.data.audience });
+        setStatus(statRes.data.status);
+        setStageStatus(statRes.data.stage_status || {});
+        setLoading(false);
+
+        if (TERMINAL_STATUSES.includes(statRes.data.status)) {
+          await fetchFullScanData(); // fetch the full findings payload exactly once
+          return; // terminal — stop polling entirely
         }
       } catch (err) {
         console.error("Failed to check status", err);
+        if (err.response?.status === 404) {
+          setNotFound(true);
+          setLoading(false);
+          return; // scan doesn't exist — stop polling
+        }
+        // transient error (network blip, timeout) — keep polling
+      }
+
+      if (!cancelled) {
+        timeoutId = setTimeout(poll, nextPollDelay(Date.now() - pollStartTime));
       }
     };
 
-    if (!isPollingDone) {
-      checkStatus();
-      intervalId = setInterval(checkStatus, 3000);
-    }
+    poll();
 
     return () => {
-      if (intervalId) clearInterval(intervalId);
+      cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [scan_id, isPollingDone]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scan_id]);
 
   // Keyboard navigation — must stay here (before any early returns) to satisfy Rules of Hooks
   useEffect(() => {
@@ -121,7 +138,7 @@ export default function ScanDetail() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [findings, selectedFindingId]);
 
-  if (loading && !summary) {
+  if (loading) {
     return (
       <div className="max-w-6xl mx-auto space-y-6 animate-pulse">
         <div className="flex items-center gap-4 border-b border-bordercolor pb-4">
@@ -144,7 +161,7 @@ export default function ScanDetail() {
       </div>
     );
   }
-  if (!summary) return <div className="text-danger">Scan not found</div>;
+  if (notFound || !scanMeta) return <div className="text-danger">Scan not found</div>;
 
   const isRunning = status === 'pending' || status === 'running';
 
@@ -158,7 +175,7 @@ export default function ScanDetail() {
         </Link>
         <div>
           <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold text-textpri font-mono">{summary.target}</h2>
+            <h2 className="text-2xl font-bold text-textpri font-mono">{scanMeta.target}</h2>
             <span className={`px-2.5 py-1 rounded-full text-xs font-mono font-bold uppercase border
               ${isRunning ? 'bg-warning/20 text-warning border-warning/30 animate-pulse' : ''}
               ${status === 'failed' ? 'bg-danger/20 text-danger border-danger/30' : ''}
@@ -167,39 +184,43 @@ export default function ScanDetail() {
               {status}
             </span>
           </div>
-          <p className="text-sm text-textmut mt-1">Audience profile: <span className="text-textpri capitalize">{summary.audience.replace('_', ' ')}</span></p>
+          <p className="text-sm text-textmut mt-1">Audience profile: <span className="text-textpri capitalize">{(scanMeta.audience || '').replace('_', ' ')}</span></p>
         </div>
       </div>
 
       <StageStatusBar stageStatus={stageStatus} findings={findings} />
 
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <div className="col-span-2 bg-card border border-bordercolor rounded-lg p-4">
-          <div className="text-textmut text-xs uppercase font-bold tracking-wider mb-1">Combined Risk</div>
-          <div className="text-xl font-bold flex items-center gap-2">
-            <SeverityBadge severity={summary.combined_risk_level} />
+      {/* Combined risk / severity stats only exist once the scan is terminal
+          and the full findings payload has been fetched — see fetchFullScanData. */}
+      {summary && (
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+          <div className="col-span-2 bg-card border border-bordercolor rounded-lg p-4">
+            <div className="text-textmut text-xs uppercase font-bold tracking-wider mb-1">Combined Risk</div>
+            <div className="text-xl font-bold flex items-center gap-2">
+              <SeverityBadge severity={summary.combined_risk_level} />
+            </div>
+          </div>
+          <div className="bg-card/60 backdrop-blur-md border border-sev-critical/30 rounded-lg p-4">
+            <div className="text-sev-critical text-xs uppercase font-bold tracking-wider mb-1">Critical</div>
+            <div className="text-2xl font-bold font-mono text-textpri">{summary.by_severity.critical}</div>
+          </div>
+          <div className="bg-card/60 backdrop-blur-md border border-sev-high/30 rounded-lg p-4">
+            <div className="text-sev-high text-xs uppercase font-bold tracking-wider mb-1">High</div>
+            <div className="text-2xl font-bold font-mono text-textpri">{summary.by_severity.high}</div>
+          </div>
+          <div className="bg-card/60 backdrop-blur-md border border-sev-medium/30 rounded-lg p-4">
+            <div className="text-sev-medium text-xs uppercase font-bold tracking-wider mb-1">Medium</div>
+            <div className="text-2xl font-bold font-mono text-textpri">{summary.by_severity.medium}</div>
+          </div>
+          <div className="bg-card/60 backdrop-blur-md border border-sev-low/30 rounded-lg p-4">
+            <div className="text-sev-low text-xs uppercase font-bold tracking-wider mb-1">Low</div>
+            <div className="text-2xl font-bold font-mono text-textpri">{summary.by_severity.low}</div>
           </div>
         </div>
-        <div className="bg-card/60 backdrop-blur-md border border-sev-critical/30 rounded-lg p-4">
-          <div className="text-sev-critical text-xs uppercase font-bold tracking-wider mb-1">Critical</div>
-          <div className="text-2xl font-bold font-mono text-textpri">{summary.by_severity.critical}</div>
-        </div>
-        <div className="bg-card/60 backdrop-blur-md border border-sev-high/30 rounded-lg p-4">
-          <div className="text-sev-high text-xs uppercase font-bold tracking-wider mb-1">High</div>
-          <div className="text-2xl font-bold font-mono text-textpri">{summary.by_severity.high}</div>
-        </div>
-        <div className="bg-card/60 backdrop-blur-md border border-sev-medium/30 rounded-lg p-4">
-          <div className="text-sev-medium text-xs uppercase font-bold tracking-wider mb-1">Medium</div>
-          <div className="text-2xl font-bold font-mono text-textpri">{summary.by_severity.medium}</div>
-        </div>
-        <div className="bg-card/60 backdrop-blur-md border border-sev-low/30 rounded-lg p-4">
-          <div className="text-sev-low text-xs uppercase font-bold tracking-wider mb-1">Low</div>
-          <div className="text-2xl font-bold font-mono text-textpri">{summary.by_severity.low}</div>
-        </div>
-      </div>
+      )}
 
       {/* Severity Distribution Bar */}
-      {findings.length > 0 && (
+      {summary && findings.length > 0 && (
         <div className="h-2 w-full flex rounded-full overflow-hidden bg-surface">
           <div style={{ width: `${(summary.by_severity.critical / findings.length) * 100}%` }} className="bg-sev-critical"></div>
           <div style={{ width: `${(summary.by_severity.high / findings.length) * 100}%` }} className="bg-sev-high"></div>
