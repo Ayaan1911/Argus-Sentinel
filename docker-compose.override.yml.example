@@ -1,0 +1,13 @@
+version: '3.8'
+
+# Copy this file to docker-compose.override.yml (gitignored, auto-loaded by
+# `docker compose up`) to expose db/redis on the host for local debugging
+# with a client like psql or redis-cli. Never commit the copied file.
+services:
+  db:
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"

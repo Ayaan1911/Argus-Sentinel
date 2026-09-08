@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload, noload
@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from app.database import get_db
 from app.models.scan import Scan
 from app.models.finding import Finding
+from app.rate_limit import limiter
 from app.schemas.scan import ScanCreate, ScanRead
 from app.tasks.scan_tasks import run_scan
 
@@ -64,7 +65,8 @@ async def get_dashboard_stats(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/", response_model=ScanRead)
-async def create_scan(scan_in: ScanCreate, db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def create_scan(request: Request, scan_in: ScanCreate, db: AsyncSession = Depends(get_db)):
     # Check for existing scan in progress to prevent duplicates
     stmt = select(Scan).where(Scan.target == scan_in.target, Scan.status.in_(["pending", "running"]))
     result = await db.execute(stmt)

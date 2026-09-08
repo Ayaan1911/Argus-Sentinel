@@ -1,14 +1,18 @@
 import time
 import logging
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
 from redis.asyncio import Redis
 
 from app.config import settings
 from app.database import init_db, get_db
+from app.dependencies.auth import verify_api_key
+from app.rate_limit import limiter
 from app.tasks import celery_app
 
 from app.routers import scans, findings, intelligence
@@ -24,15 +28,25 @@ async def lifespan(app: FastAPI):
     get_intelligence_loader()
     yield
 
+_is_prod = settings.ENVIRONMENT == "production"
+
 app = FastAPI(
     title="Argus Sentinel API",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    docs_url=None if _is_prod else "/docs",
+    redoc_url=None if _is_prod else "/redoc",
+    openapi_url=None if _is_prod else "/openapi.json",
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+allowed_origins = [origin.strip() for origin in settings.ALLOWED_ORIGINS.split(",") if origin.strip()]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -57,12 +71,13 @@ async def not_found_exception_handler(request: Request, exc):
         content={"error": "not_found", "message": str(exc.detail)}
     )
 
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     return JSONResponse(
         status_code=422,
-        content={"error": "validation_error", "detail": exc.errors()}
+        content={"error": "validation_error", "detail": jsonable_encoder(exc.errors())}
     )
 
 @app.exception_handler(Exception)
@@ -73,9 +88,18 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"error": "internal_error", "message": "An unexpected error occurred"}
     )
 
-app.include_router(scans.router, prefix="/api/v1/scans", tags=["scans"])
-app.include_router(findings.router, prefix="/api/v1/findings", tags=["findings"])
-app.include_router(intelligence.router, prefix="/api/v1/intelligence", tags=["intelligence"])
+app.include_router(
+    scans.router, prefix="/api/v1/scans", tags=["scans"],
+    dependencies=[Depends(verify_api_key)],
+)
+app.include_router(
+    findings.router, prefix="/api/v1/findings", tags=["findings"],
+    dependencies=[Depends(verify_api_key)],
+)
+app.include_router(
+    intelligence.router, prefix="/api/v1/intelligence", tags=["intelligence"],
+    dependencies=[Depends(verify_api_key)],
+)
 
 @app.get("/health")
 async def health_check():

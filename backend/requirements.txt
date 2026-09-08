@@ -8,5 +8,6 @@ celery[redis]
 redis
 python-dotenv
 psycopg2-binary
+slowapi
 
 pytest==8.2.1

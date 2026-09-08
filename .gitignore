@@ -24,3 +24,8 @@ build/
 
 # Python cache
 *.pyc
+
+
+
+notes.md
+docker-compose.override.yml
