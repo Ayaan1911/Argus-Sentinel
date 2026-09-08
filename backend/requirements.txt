@@ -9,5 +9,6 @@ redis
 python-dotenv
 psycopg2-binary
 slowapi
+dnspython
 
 pytest==8.2.1

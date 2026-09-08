@@ -1,24 +1,61 @@
 import asyncio
+import ipaddress
 import re
 
 def strip_ansi(text: str) -> str:
     ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\\[[0-?]*[ -/]*[@-~])')
     return ansi_escape.sub('', text)
 
-async def run_cmd(cmd: str, timeout: int = 300):
+
+def is_internal_ip(ip_str: str) -> bool:
+    """True if the given IP is loopback, link-local, private, multicast,
+    reserved, or unspecified — i.e. not a routable public address."""
     try:
-        proc = await asyncio.create_subprocess_shell(
-            cmd,
+        ip = ipaddress.ip_address(ip_str)
+    except ValueError:
+        return False
+    return (
+        ip.is_loopback
+        or ip.is_link_local  # covers the 169.254.169.254 cloud metadata address
+        or ip.is_private
+        or ip.is_multicast
+        or ip.is_reserved
+        or ip.is_unspecified
+    )
+
+
+async def run_subprocess(command: list[str], timeout: int = 300, input_bytes: bytes | None = None):
+    """Run a subprocess and classify the outcome so callers can distinguish
+    binary-not-found, timeout, non-zero exit, and success as separate cases
+    instead of collapsing them all into an empty result list.
+
+    Returns (stdout: str, stderr: str, status: dict) where status is
+    {"status": "success" | "failed" | "timeout" | "no_binary", "detail": str | None}.
+    """
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *command,
+            stdin=asyncio.subprocess.PIPE if input_bytes is not None else None,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            stderr=asyncio.subprocess.PIPE,
         )
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-        return proc.returncode, strip_ansi(stdout.decode('utf-8', errors='replace')), strip_ansi(stderr.decode('utf-8', errors='replace'))
+    except FileNotFoundError:
+        return "", "", {"status": "no_binary", "detail": f"{command[0]} not found"}
+
+    try:
+        stdout_b, stderr_b = await asyncio.wait_for(proc.communicate(input=input_bytes), timeout=timeout)
     except asyncio.TimeoutError:
         try:
             proc.kill()
-        except:
+        except ProcessLookupError:
             pass
-        return -1, "", "Timeout exceeded"
-    except Exception as e:
-        return -1, "", str(e)
+        return "", "", {"status": "timeout", "detail": f"exceeded {timeout}s"}
+
+    stdout = strip_ansi(stdout_b.decode('utf-8', errors='replace'))
+    stderr = strip_ansi(stderr_b.decode('utf-8', errors='replace'))
+
+    if proc.returncode != 0:
+        detail = stderr.strip()[:500] or f"exit code {proc.returncode}"
+        return stdout, stderr, {"status": "failed", "detail": detail}
+
+    return stdout, stderr, {"status": "success", "detail": None}

@@ -1,78 +1,94 @@
 import json
 import logging
-import asyncio
+
+from app.intelligence.loader import get_intelligence_loader
+from app.scanners.utils import run_subprocess
 
 logger = logging.getLogger(__name__)
 
-async def run(target: str) -> list[dict]:
-    logger.info(f"Starting httpx scan for {target}")
-    # Fix 1: Hardened httpx command with user-agent, threads, timeout, retries, redirects, and explicit match-codes
+ADMIN_PATH_PATTERNS = ("/admin", "/login", "wp-admin", "phpmyadmin", "/dashboard", "/manage")
+ADMIN_TITLE_KEYWORDS = ("admin", "login", "dashboard", "phpmyadmin", "control panel")
+
+
+def _detect_admin_panel(data: dict) -> bool:
+    url = str(data.get("url", "")).lower()
+    title = str(data.get("title", "")).lower()
+    if any(p in url for p in ADMIN_PATH_PATTERNS):
+        return True
+    if any(k in title for k in ADMIN_TITLE_KEYWORDS):
+        return True
+    return False
+
+
+def _detect_known_vulnerabilities(tech_list: list) -> bool:
+    if not tech_list:
+        return False
+    # httpx's -tech-detect sometimes reports "Nginx:1.18.0" — match on the
+    # name only, not the embedded version.
+    detected = {str(t).split(":")[0].strip().lower() for t in tech_list}
+    loader = get_intelligence_loader()
+    for entry in loader.data.get("vulnerabilities", {}).values():
+        affected = {t.lower() for t in entry.get("affected_technologies", [])}
+        if affected & detected:
+            return True
+    return False
+
+
+async def run(targets: list[str]) -> tuple[list[dict], dict]:
+    logger.info(f"Starting httpx scan for {len(targets)} target(s)")
     command = [
-        "/usr/local/bin/httpx", 
-        "-u", target, 
-        "-json", 
-        "-silent", 
-        "-title", 
+        "/usr/local/bin/httpx",
+        "-json",
+        "-silent",
+        "-title",
         "-web-server",
+        "-tech-detect",
         "-H", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
         "-retries", "2",
         "-timeout", "10",
         "-follow-redirects",
-        "-mc", "200,201,301,302,303,307,308,401,403,404,500,502,503"
+        "-mc", "200,201,301,302,303,307,308,401,403,404,500,502,503",
     ]
     findings = []
-    try:
-        proc = await asyncio.create_subprocess_exec(
-            *command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
-        code = proc.returncode
-        stdout = stdout.decode('utf-8', errors='replace')
-        stderr = stderr.decode('utf-8', errors='replace')
-        
-        logger.info(f"httpx stdout length: {len(stdout)}")
-        if stderr:
-            logger.warning(f"httpx stderr: {stderr[:500]}")
-            
-        if code == -1 or not stdout:
-            logger.warning(f"HTTPX failed to run or timed out: {stderr}")
-            return findings
-    except asyncio.TimeoutError:
-        try:
-            proc.kill()
-        except:
-            pass
-        logger.warning("HTTPX timed out")
-        return findings
-    except Exception as e:
-        logger.warning(f"HTTPX failed to execute: {e}")
-        return findings
 
+    stdin_payload = ("\n".join(targets)).encode("utf-8")
+    stdout, stderr, status = await run_subprocess(command, timeout=300, input_bytes=stdin_payload)
+    if status["status"] != "success":
+        logger.warning(f"httpx {status['status']}: {status['detail']}")
+        return findings, status
+
+    parse_errors = 0
     for line in stdout.strip().split('\n'):
         if not line:
             continue
         try:
             data = json.loads(line)
-            # Fix 1.3: Tag WAF/CDN challenged hosts
-            status_code = data.get("status_code", 0)
-            waf_note = ""
-            if status_code in [401, 403, 503]:
-                waf_note = " (WAF/CDN protected - may require further evasion)"
-                data["waf_detected"] = True
+        except json.JSONDecodeError:
+            parse_errors += 1
+            continue
 
-            findings.append({
-                "source": "httpx",
-                "type": "technology",
-                "title": f"Live Host: {data.get('url', '')}{waf_note}",
-                "raw_data": data
-            })
-        except:
-            pass
-            
-    logger.info(f"httpx found {len(findings)} results for {target}")
+        status_code = data.get("status_code", 0)
+        waf_note = ""
+        if status_code in [401, 403, 503]:
+            waf_note = " (WAF/CDN protected - may require further evasion)"
+            data["waf_detected"] = True
+
+        tech_list = data.get("tech", []) or []
+        data["admin_panel_exposed"] = _detect_admin_panel(data)
+        data["known_vulnerabilities"] = _detect_known_vulnerabilities(tech_list)
+
+        findings.append({
+            "source": "httpx",
+            "type": "technology",
+            "title": f"Live Host: {data.get('url', '')}{waf_note}",
+            "raw_data": data,
+        })
+
+    if parse_errors:
+        logger.warning(f"httpx: {parse_errors} line(s) failed to parse as JSON")
+
+    logger.info(f"httpx found {len(findings)} results")
     if not findings:
-        logger.warning(f"httpx returned 0 results for {target}. stdout: {stdout[:200]}")
-        
-    return findings
+        logger.warning(f"httpx returned 0 results. stdout: {stdout[:200]}")
+
+    return findings, status

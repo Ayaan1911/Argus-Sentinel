@@ -19,6 +19,7 @@
   "learning_resources": [
     "https://owasp.org/www-project-secure-headers/"
   ],
+  "affected_technologies": ["apache", "nginx", "iis", "nodejs"],
   "version": "1.0",
   "last_updated": "2026-07-05",
   "reviewed_by": "argus-team"

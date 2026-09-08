@@ -17,6 +17,7 @@
   "learning_resources": [
     "https://cwe.mitre.org/data/definitions/200.html"
   ],
+  "affected_technologies": ["django", "php", "nodejs"],
   "version": "1.0",
   "last_updated": "2026-07-05",
   "reviewed_by": "argus-team"

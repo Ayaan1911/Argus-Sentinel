@@ -7,11 +7,42 @@ import RiskScore from '../components/RiskScore';
 import ReasoningBreakdown from '../components/ReasoningBreakdown';
 import AudienceSelector from '../components/AudienceSelector';
 
+const STAGE_ORDER = ['subfinder', 'httpx', 'nmap', 'nuclei'];
+const STAGE_LABELS = { subfinder: 'Subfinder', httpx: 'Httpx', nmap: 'Nmap', nuclei: 'Nuclei' };
+const STAGE_TYPE = { subfinder: 'subdomain', httpx: 'technology', nmap: 'port', nuclei: 'vulnerability' };
+
+function StageStatusBar({ stageStatus, findings }) {
+  if (!stageStatus || Object.keys(stageStatus).length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-3">
+      {STAGE_ORDER.filter(stage => stageStatus[stage]).map(stage => {
+        const s = stageStatus[stage];
+        const count = findings.filter(f => f.type === STAGE_TYPE[stage]).length;
+        const isOk = s.status === 'success';
+        return (
+          <div
+            key={stage}
+            className={`px-3 py-2 rounded-md border text-xs font-mono flex items-center gap-2
+              ${isOk ? 'bg-success/10 border-success/30 text-success' : 'bg-danger/10 border-danger/30 text-danger'}`}
+            title={s.detail || ''}
+          >
+            <span className="font-bold uppercase">{STAGE_LABELS[stage]}</span>
+            <span>
+              {isOk ? `succeeded, ${count} found` : `${s.status}${s.detail ? ` (${s.detail})` : ''}`}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function ScanDetail() {
   const { scan_id } = useParams();
   const [summary, setSummary] = useState(null);
   const [findings, setFindings] = useState([]);
   const [status, setStatus] = useState('pending');
+  const [stageStatus, setStageStatus] = useState({});
   const [loading, setLoading] = useState(true);
   const [isPollingDone, setIsPollingDone] = useState(false);
   const [selectedFindingId, setSelectedFindingId] = useState(null);
@@ -46,6 +77,7 @@ export default function ScanDetail() {
         const statRes = await client.get(`/scans/${scan_id}/status`);
         const currentStatus = statRes.data.status;
         setStatus(currentStatus);
+        setStageStatus(statRes.data.stage_status || {});
 
         if (currentStatus === 'completed' || currentStatus === 'failed') {
           if (intervalId) clearInterval(intervalId);
@@ -138,6 +170,8 @@ export default function ScanDetail() {
           <p className="text-sm text-textmut mt-1">Audience profile: <span className="text-textpri capitalize">{summary.audience.replace('_', ' ')}</span></p>
         </div>
       </div>
+
+      <StageStatusBar stageStatus={stageStatus} findings={findings} />
 
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <div className="col-span-2 bg-card border border-bordercolor rounded-lg p-4">

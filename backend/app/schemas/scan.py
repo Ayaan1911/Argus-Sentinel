@@ -3,9 +3,10 @@ import socket
 import urllib.parse
 
 from pydantic import BaseModel, UUID4, field_validator
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 from .finding import FindingRead
+from app.scanners.utils import is_internal_ip
 
 # The bundled juice-shop container is the intended default authorized local
 # test target (see docker-compose.yml) and is explicitly exempt from the
@@ -25,17 +26,6 @@ def _extract_hostname(raw_target: str) -> str:
     return host
 
 
-def _is_disallowed_ip(ip: ipaddress._BaseAddress) -> bool:
-    return (
-        ip.is_loopback
-        or ip.is_link_local  # covers the 169.254.169.254 cloud metadata address
-        or ip.is_private
-        or ip.is_multicast
-        or ip.is_reserved
-        or ip.is_unspecified
-    )
-
-
 def validate_scan_target(raw_target: str) -> str:
     hostname = _extract_hostname(raw_target)
     if not hostname:
@@ -45,7 +35,8 @@ def validate_scan_target(raw_target: str) -> str:
         return raw_target.strip()
 
     try:
-        resolved_ips = [ipaddress.ip_address(hostname)]
+        resolved_ips = [hostname]
+        ipaddress.ip_address(hostname)  # raises ValueError if not a literal IP
     except ValueError:
         # ponytail: DNS-resolve-time check only, vulnerable to DNS rebinding
         # between this validation and actual scanner dispatch — add
@@ -54,12 +45,12 @@ def validate_scan_target(raw_target: str) -> str:
             infos = socket.getaddrinfo(hostname, None)
         except socket.gaierror as e:
             raise ValueError(f"Could not resolve target hostname: {hostname}") from e
-        resolved_ips = [ipaddress.ip_address(info[4][0]) for info in infos]
+        resolved_ips = [info[4][0] for info in infos]
 
-    for ip in resolved_ips:
-        if _is_disallowed_ip(ip):
+    for ip_str in resolved_ips:
+        if is_internal_ip(ip_str):
             raise ValueError(
-                f"Target '{hostname}' resolves to a disallowed address ({ip}); "
+                f"Target '{hostname}' resolves to a disallowed address ({ip_str}); "
                 "loopback, link-local, private, and multicast ranges are not permitted"
             )
 
@@ -87,6 +78,7 @@ class ScanStatusUpdate(BaseModel):
 class ScanRead(ScanBase):
     id: UUID4
     status: str
+    stage_status: Dict[str, Any] = {}
     created_at: datetime
     updated_at: Optional[datetime] = None
     findings: List[FindingRead] = []

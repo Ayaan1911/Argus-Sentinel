@@ -56,6 +56,7 @@
     "T1059.007"
   ],
   "risk_weight": 7,
+  "affected_technologies": ["php", "wordpress", "nodejs", "react"],
   "version": "1.0",
   "last_updated": "2026-06-08",
   "reviewed_by": "argus-team"

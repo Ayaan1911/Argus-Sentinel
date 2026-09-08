@@ -1,14 +1,18 @@
 import json
 import logging
-import asyncio
+
+from app.scanners.utils import run_subprocess
 
 logger = logging.getLogger(__name__)
 
-async def run(target: str) -> list[dict]:
-    logger.info(f"Starting nuclei scan for {target}")
 
-    command = [
-        "/usr/local/bin/nuclei", "-u", target,
+async def run(targets: list[str]) -> tuple[list[dict], dict]:
+    logger.info(f"Starting nuclei scan for {len(targets)} target(s)")
+
+    command = ["/usr/local/bin/nuclei"]
+    for t in targets:
+        command += ["-u", t]
+    command += [
         "-jsonl", "-silent",
         "-severity", "info,low,medium,high,critical",
         "-tags", "exposure,misconfig,tech",
@@ -28,54 +32,37 @@ async def run(target: str) -> list[dict]:
     ]
     logger.info(f"nuclei command: {' '.join(command)}")
     findings = []
-    try:
-        proc = await asyncio.create_subprocess_exec(
-            *command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        stdout_bytes, stderr_bytes = await asyncio.wait_for(proc.communicate(), timeout=600)
-        code = proc.returncode
-        stdout = stdout_bytes.decode('utf-8', errors='replace')
-        stderr = stderr_bytes.decode('utf-8', errors='replace')
 
-        logger.info(f"nuclei stdout length: {len(stdout)} bytes, returncode: {code}")
-        if stderr:
-            # Log more stderr so we can see actual 403/429 counts in worker logs
-            logger.warning(f"nuclei stderr: {stderr[:2000]}")
+    stdout, stderr, status = await run_subprocess(command, timeout=600)
+    if status["status"] != "success":
+        logger.warning(f"nuclei {status['status']}: {status['detail']}")
+        return findings, status
 
-    except asyncio.TimeoutError:
-        try:
-            proc.kill()
-        except Exception:
-            pass
-        logger.warning(f"Nuclei timed out after 600s for {target}")
-        return findings
-    except Exception as e:
-        logger.warning(f"Nuclei failed to execute: {e}")
-        return findings
-
+    parse_errors = 0
     for line in stdout.strip().split('\n'):
         if not line:
             continue
         try:
             data = json.loads(line)
-            template_name = data.get("info", {}).get("name", "Unknown")
-            matched_at = data.get("matched-at", "")
-            severity = data.get("info", {}).get("severity", "info")
-            # Tag WAF-blocked responses so UI can surface them
-            status_code = data.get("response", {}) if isinstance(data.get("response"), dict) else {}
-            findings.append({
-                "source": "nuclei",
-                "type": "vulnerability",
-                "title": f"{template_name}: {matched_at}",
-                "raw_data": data
-            })
-        except Exception:
-            pass
+        except json.JSONDecodeError:
+            parse_errors += 1
+            continue
 
-    logger.info(f"nuclei found {len(findings)} results for {target}")
+        template_name = data.get("info", {}).get("name", "Unknown")
+        matched_at = data.get("matched-at", "")
+
+        findings.append({
+            "source": "nuclei",
+            "type": "vulnerability",
+            "title": f"{template_name}: {matched_at}",
+            "raw_data": data,
+        })
+
+    if parse_errors:
+        logger.warning(f"nuclei: {parse_errors} line(s) failed to parse as JSON")
+
+    logger.info(f"nuclei found {len(findings)} results")
     if not findings:
-        logger.warning(f"nuclei returned 0 results for {target}. stdout snippet: {stdout[:500]!r}")
+        logger.warning(f"nuclei returned 0 results. stdout snippet: {stdout[:500]!r}")
 
-    return findings
+    return findings, status

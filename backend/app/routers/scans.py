@@ -128,6 +128,7 @@ async def get_scan_status(scan_id: str, db: AsyncSession = Depends(get_db)):
     return {
         "scan_id": str(scan.id),
         "status": scan.status,
+        "stage_status": scan.stage_status or {},
         "finding_count": len(scan.findings)
     }
 

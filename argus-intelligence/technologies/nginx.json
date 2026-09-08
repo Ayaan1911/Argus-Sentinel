@@ -51,6 +51,7 @@
     "T1190"
   ],
   "risk_weight": 5,
+  "min_secure_version": "1.20.0",
   "version": "1.0",
   "last_updated": "2026-06-08",
   "reviewed_by": "argus-team"

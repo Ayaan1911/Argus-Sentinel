@@ -58,6 +58,7 @@
     "T1486"
   ],
   "risk_weight": 9,
+  "min_secure_version": "4.4",
   "version": "1.0",
   "last_updated": "2026-07-05",
   "reviewed_by": "argus-team"

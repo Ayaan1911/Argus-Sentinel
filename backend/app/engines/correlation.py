@@ -152,12 +152,10 @@ class CorrelationEngine:
         result.amplified_findings = list(amplified)
         result.mitigated_findings = list(mitigated)
 
-        # Calc combined risk
-        max_base = max([f.get("risk_score", 0.0) for f in findings], default=0.0)
-        # However, to be fully accurate on max_base, we should see what the max final_risk_score is AFTER modifiers.
-        # The prompt says: "Take the highest individual final_risk_score across all findings after modifiers... Apply any combined risk modifiers... Map to risk level"
-        # We will do this carefully by simulating apply_modifiers logic.
-        
+        # Combined risk = the highest per-finding score after each finding's own
+        # correlation modifiers are applied, plus the scan-wide bonus from rules
+        # like "multiple_high_severity" that apply_modifiers deliberately excludes
+        # from any single finding's own final_risk_score.
         simulated_findings = self.apply_modifiers(findings, result, mutate=False)
         max_final = max([f.get("final_risk_score", 0.0) for f in simulated_findings], default=0.0)
         

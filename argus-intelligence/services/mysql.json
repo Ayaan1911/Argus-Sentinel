@@ -61,6 +61,7 @@
     "T1059"
   ],
   "risk_weight": 8,
+  "min_secure_version": "8.0",
   "version": "1.0",
   "last_updated": "2026-06-08",
   "reviewed_by": "argus-team"

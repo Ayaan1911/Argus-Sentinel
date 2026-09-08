@@ -23,6 +23,7 @@
   "learning_resources": [
     "https://phptherightway.com/#security"
   ],
+  "min_secure_version": "7.4.0",
   "version": "1.0",
   "last_updated": "2026-07-05",
   "reviewed_by": "argus-team"
