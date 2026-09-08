@@ -1,3 +1,7 @@
+# One-time cleanup tool for duplicate Scan rows created before the target
+# normalization + recent-completed-scan reuse fix in routers/scans.py
+# create_scan(). New scans no longer produce these duplicates — this script
+# is kept only to clean up rows from before that fix.
 import asyncio
 import os
 import sys

@@ -1,10 +1,22 @@
 import asyncio
 import ipaddress
 import re
+import urllib.parse
 
 def strip_ansi(text: str) -> str:
     ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\\[[0-?]*[ -/]*[@-~])')
     return ansi_escape.sub('', text)
+
+
+def normalize_target(raw: str) -> str:
+    """Normalize a target to a bare lowercase hostname/IP — strips scheme,
+    port, path, and a trailing dot — so "example.com", "EXAMPLE.com:8080",
+    "example.com/path", and "example.com." all resolve to the same literal
+    value across every scanner instead of being treated as different targets."""
+    raw = raw.strip()
+    parsed = urllib.parse.urlparse(raw if "//" in raw else f"http://{raw}")
+    host = parsed.hostname or raw.split("/", 1)[0].split(":", 1)[0]
+    return host.rstrip(".").lower()
 
 
 def is_internal_ip(ip_str: str) -> bool:

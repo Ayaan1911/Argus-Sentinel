@@ -1,12 +1,11 @@
 import ipaddress
 import socket
-import urllib.parse
 
 from pydantic import BaseModel, UUID4, field_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from .finding import FindingRead
-from app.scanners.utils import is_internal_ip
+from app.scanners.utils import is_internal_ip, normalize_target
 
 # The bundled juice-shop container is the intended default authorized local
 # test target (see docker-compose.yml) and is explicitly exempt from the
@@ -15,24 +14,13 @@ from app.scanners.utils import is_internal_ip
 ALLOWED_INTERNAL_HOSTNAMES = {"juice-shop"}
 
 
-def _extract_hostname(raw_target: str) -> str:
-    host = raw_target.strip()
-    if "//" in host:
-        host = urllib.parse.urlparse(host).hostname or host
-    # Strip a trailing path and/or port so "example.com:8080/x" -> "example.com"
-    host = host.split("/", 1)[0]
-    if not host.startswith("["):  # not a bracketed IPv6 literal
-        host = host.split(":", 1)[0]
-    return host
-
-
 def validate_scan_target(raw_target: str) -> str:
-    hostname = _extract_hostname(raw_target)
+    hostname = normalize_target(raw_target)
     if not hostname:
         raise ValueError("target is required")
 
-    if hostname.lower() in ALLOWED_INTERNAL_HOSTNAMES:
-        return raw_target.strip()
+    if hostname in ALLOWED_INTERNAL_HOSTNAMES:
+        return hostname
 
     try:
         resolved_ips = [hostname]
@@ -54,7 +42,10 @@ def validate_scan_target(raw_target: str) -> str:
                 "loopback, link-local, private, and multicast ranges are not permitted"
             )
 
-    return raw_target.strip()
+    # Store (and dedup against) the normalized form so "example.com",
+    # "EXAMPLE.com:8080", and "example.com/path" are all the same target
+    # across the DB, the dedup check, and every scanner.
+    return hostname
 
 
 class ScanBase(BaseModel):
@@ -70,7 +61,9 @@ class ScanBase(BaseModel):
             raise ValueError(str(e)) from e
 
 class ScanCreate(ScanBase):
-    pass
+    # Bypasses reuse of a recent completed scan for the same target
+    # (see routers/scans.py's create_scan) and forces a fresh one.
+    force_rescan: bool = False
 
 class ScanStatusUpdate(BaseModel):
     status: str

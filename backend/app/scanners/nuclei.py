@@ -1,12 +1,13 @@
 import json
 import logging
 
-from app.scanners.utils import run_subprocess
+from app.scanners.utils import normalize_target, run_subprocess
 
 logger = logging.getLogger(__name__)
 
 
 async def run(targets: list[str]) -> tuple[list[dict], dict]:
+    targets = [normalize_target(t) for t in targets]
     logger.info(f"Starting nuclei scan for {len(targets)} target(s)")
 
     command = ["/usr/local/bin/nuclei"]
@@ -38,10 +39,9 @@ async def run(targets: list[str]) -> tuple[list[dict], dict]:
         logger.warning(f"nuclei {status['status']}: {status['detail']}")
         return findings, status
 
+    lines = [line for line in stdout.strip().split('\n') if line]
     parse_errors = 0
-    for line in stdout.strip().split('\n'):
-        if not line:
-            continue
+    for line in lines:
         try:
             data = json.loads(line)
         except json.JSONDecodeError:
@@ -60,6 +60,11 @@ async def run(targets: list[str]) -> tuple[list[dict], dict]:
 
     if parse_errors:
         logger.warning(f"nuclei: {parse_errors} line(s) failed to parse as JSON")
+
+    if lines and not findings:
+        detail = f"could not parse any of {len(lines)} output line(s) as JSON"
+        logger.warning(f"nuclei: {detail}")
+        return findings, {"status": "failed", "detail": detail}
 
     logger.info(f"nuclei found {len(findings)} results")
     if not findings:

@@ -2,7 +2,7 @@ import json
 import logging
 
 from app.intelligence.loader import get_intelligence_loader
-from app.scanners.utils import run_subprocess
+from app.scanners.utils import normalize_target, run_subprocess
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +35,7 @@ def _detect_known_vulnerabilities(tech_list: list) -> bool:
 
 
 async def run(targets: list[str]) -> tuple[list[dict], dict]:
+    targets = [normalize_target(t) for t in targets]
     logger.info(f"Starting httpx scan for {len(targets)} target(s)")
     command = [
         "/usr/local/bin/httpx",
@@ -57,10 +58,9 @@ async def run(targets: list[str]) -> tuple[list[dict], dict]:
         logger.warning(f"httpx {status['status']}: {status['detail']}")
         return findings, status
 
+    lines = [line for line in stdout.strip().split('\n') if line]
     parse_errors = 0
-    for line in stdout.strip().split('\n'):
-        if not line:
-            continue
+    for line in lines:
         try:
             data = json.loads(line)
         except json.JSONDecodeError:
@@ -86,6 +86,13 @@ async def run(targets: list[str]) -> tuple[list[dict], dict]:
 
     if parse_errors:
         logger.warning(f"httpx: {parse_errors} line(s) failed to parse as JSON")
+
+    # Every line was output but none of it was usable JSON — that's a distinct
+    # failure from "ran fine, found nothing" (empty stdout).
+    if lines and not findings:
+        detail = f"could not parse any of {len(lines)} output line(s) as JSON"
+        logger.warning(f"httpx: {detail}")
+        return findings, {"status": "failed", "detail": detail}
 
     logger.info(f"httpx found {len(findings)} results")
     if not findings:

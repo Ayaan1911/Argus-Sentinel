@@ -1,10 +1,9 @@
 import logging
 import re
-import urllib.parse
 import xml.etree.ElementTree as ET
 
 from app.intelligence.loader import get_intelligence_loader
-from app.scanners.utils import is_internal_ip, run_subprocess
+from app.scanners.utils import is_internal_ip, normalize_target, run_subprocess
 
 logger = logging.getLogger(__name__)
 
@@ -28,11 +27,6 @@ PRODUCT_KB_MAP = {
     "redis": ("services", "redis"),
     "mongodb": ("services", "mongodb"),
 }
-
-
-def _normalize_host(target: str) -> str:
-    parsed = urllib.parse.urlparse(target if "//" in target else f"http://{target}")
-    return parsed.hostname or target
 
 
 def _parse_version_tuple(v: str):
@@ -86,7 +80,7 @@ def _parse_auth_signals(scripts: dict) -> dict:
 
 
 async def run(targets: list[str]) -> tuple[list[dict], dict]:
-    hostnames = [_normalize_host(t) for t in targets]
+    hostnames = [normalize_target(t) for t in targets]
     logger.info(f"Starting nmap scan for {len(hostnames)} target(s)")
     command = [
         "/usr/bin/nmap", "-sV", "--script=default,ssh-auth-methods,banner",

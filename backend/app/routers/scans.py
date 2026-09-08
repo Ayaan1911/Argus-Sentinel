@@ -15,6 +15,10 @@ from app.tasks.scan_tasks import run_scan
 
 router = APIRouter()
 
+# How long a completed scan of the same (normalized) target is considered
+# fresh enough to hand back instead of launching a new one.
+RESCAN_WINDOW = timedelta(hours=24)
+
 @router.get("/dashboard-stats")
 async def get_dashboard_stats(db: AsyncSession = Depends(get_db)):
     # Get all findings
@@ -67,15 +71,40 @@ async def get_dashboard_stats(db: AsyncSession = Depends(get_db)):
 @router.post("/", response_model=ScanRead)
 @limiter.limit("5/minute")
 async def create_scan(request: Request, scan_in: ScanCreate, db: AsyncSession = Depends(get_db)):
-    # Check for existing scan in progress to prevent duplicates
+    # scan_in.target is already normalized by the ScanCreate validator, so this
+    # is a plain equality check — no need to re-normalize here.
+
+    # Check for an already in-flight scan of this target to avoid duplicating
+    # active work, regardless of force_rescan.
     stmt = select(Scan).where(Scan.target == scan_in.target, Scan.status.in_(["pending", "running"]))
     result = await db.execute(stmt)
     existing_scan = result.scalars().first()
-    
+
     if existing_scan:
         stmt = select(Scan).options(selectinload(Scan.findings)).where(Scan.id == existing_scan.id)
         res = await db.execute(stmt)
         return res.scalar_one()
+
+    # Reuse a recent completed scan of the same target instead of silently
+    # creating a duplicate — unless the caller explicitly wants a fresh one.
+    if not scan_in.force_rescan:
+        recent_cutoff = datetime.utcnow() - RESCAN_WINDOW
+        stmt = (
+            select(Scan)
+            .where(
+                Scan.target == scan_in.target,
+                Scan.status == "completed",
+                Scan.created_at >= recent_cutoff,
+            )
+            .order_by(Scan.created_at.desc())
+        )
+        result = await db.execute(stmt)
+        recent_completed = result.scalars().first()
+
+        if recent_completed:
+            stmt = select(Scan).options(selectinload(Scan.findings)).where(Scan.id == recent_completed.id)
+            res = await db.execute(stmt)
+            return res.scalar_one()
 
     db_scan = Scan(target=scan_in.target, audience=scan_in.audience, status="pending")
     db.add(db_scan)

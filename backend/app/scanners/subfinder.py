@@ -5,7 +5,7 @@ import string
 import dns.exception
 import dns.resolver
 
-from app.scanners.utils import is_internal_ip, run_subprocess
+from app.scanners.utils import is_internal_ip, normalize_target, run_subprocess
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +56,7 @@ def _is_takeover_candidate(hostname: str) -> bool:
 
 
 async def run(target: str) -> tuple[list[dict], dict]:
+    target = normalize_target(target)
     logger.info(f"Starting subfinder scan for {target}")
     command = ["/usr/local/bin/subfinder", "-d", target, "-silent", "-all"]
 
