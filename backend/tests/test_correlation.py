@@ -85,14 +85,39 @@ def test_subdomain_takeover_critical():
     assert updated[0]["final_risk_score"] == 8.0
 
 def test_outdated_stack_with_vuln_triggers():
-    # outdated_version is only ever set by nmap.py on type="port" findings —
-    # this reflects real scanner output shape, not the technology type.
+    # outdated_version is set by nmap.py on type="port" findings (server
+    # products) — this reflects real scanner output shape.
     engine = CorrelationEngine()
     findings = [
         {
             "type": "port",
             "title": "Port 22/tcp: ssh",
             "raw_data": {"port": 22, "outdated_version": True},
+            "risk_score": 3.0,
+            "reasoning_breakdown": []
+        },
+        {
+            "type": "vulnerability",
+            "title": "CVE-2023-1234",
+            "raw_data": {},
+            "risk_score": 5.0,
+            "reasoning_breakdown": []
+        }
+    ]
+    result = engine.correlate(findings)
+    assert any(c.rule_name == "outdated_stack_with_vuln" for c in result.correlations_found)
+
+
+def test_outdated_stack_with_vuln_triggers_for_technology_findings_too():
+    # outdated_version is also set by httpx.py on type="technology" findings
+    # (client-side libraries like jQuery detected via tech-detect) — the
+    # rule must catch this source too, not just nmap's.
+    engine = CorrelationEngine()
+    findings = [
+        {
+            "type": "technology",
+            "title": "Live Host: http://example.com",
+            "raw_data": {"outdated_version": True},
             "risk_score": 3.0,
             "reasoning_breakdown": []
         },

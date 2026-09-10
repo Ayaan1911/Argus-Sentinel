@@ -53,7 +53,7 @@ async def search_intelligence(q: str = Query(..., min_length=1)):
     for category in ["services", "technologies", "vulnerabilities"]:
         items = loader.data.get(category, {})
         for name, data in items.items():
-            if query in name.lower() or query in str(data.get("description", "")).lower() or query in str(data.get("service", "")).lower() or query in str(data.get("technology", "")).lower():
+            if query in name.lower() or query in str(data.get("description", "")).lower() or query in str(data.get("service", "")).lower() or query in str(data.get("technology", "")).lower() or query in str(data.get("vulnerability_class", "")).lower():
                 results.append({
                     "type": category.rstrip("ies").rstrip("s") if category != "technologies" else "technology",
                     "entry": data

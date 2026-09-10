@@ -1,0 +1,28 @@
+{
+  "vulnerability_class": "Exposed .env File",
+  "description": "An application's .env configuration file (used by many frameworks — Laravel, Node.js/dotenv, Django via django-environ, and others — to hold environment-specific secrets) is directly reachable over HTTP.",
+  "severity": "Critical",
+  "impact": "Direct disclosure of the application's secret configuration — typically database credentials, third-party API keys, mail service credentials, and framework secret/signing keys — often granting an attacker immediate access to backend systems without needing to exploit any other vulnerability.",
+  "remediation": [
+    "Ensure .env is never placed inside, or reachable from, the public web root.",
+    "Add an explicit deny rule for dotfiles (or specifically .env) at the web server/reverse-proxy level as defense in depth.",
+    "Exclude .env from version control and deployment artifacts; use a secrets manager or environment-injected variables instead where possible.",
+    "If a .env file was ever exposed, rotate every credential and key it contained immediately."
+  ],
+  "audience_guidance": {
+    "student": "A .env file holds an app's secret settings — database passwords, API keys, and similar. It's meant to stay on the server only, never served to visitors. If it's reachable by URL, an attacker can read all of it directly.",
+    "developer": "Keep .env outside the web root, exclude it from deployment artifacts, and add a server-level deny rule for it as a second layer of protection — never rely on 'it's not linked from anywhere' as your only defense.",
+    "bug_bounty_hunter": "Always check /.env directly on any target — it's a fast, low-effort check and, when it hits, is almost always a critical-severity finding worth reporting immediately.",
+    "pentester": "If reachable, use the disclosed credentials to demonstrate concrete impact (database access, third-party service access) as part of the report, then confirm whether the exposure is isolated or affects multiple environments.",
+    "security_team": "Scan externally-facing hosts for exposed .env files as a routine, high-priority check, and have an incident process ready for full credential rotation if one is ever found live."
+  },
+  "learning_resources": [
+    "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/02-Configuration_and_Deployment_Management_Testing/11-Test_File_Permission"
+  ],
+  "affected_technologies": [],
+  "nuclei_tags": ["exposure", "config", "env"],
+  "title_keywords": [".env", "environment file", "dotenv"],
+  "version": "1.0",
+  "last_updated": "2026-09-11",
+  "reviewed_by": "argus-team"
+}

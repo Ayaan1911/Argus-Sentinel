@@ -10,5 +10,6 @@ python-dotenv
 psycopg2-binary
 slowapi
 dnspython
+jsonschema
 
 pytest==8.2.1

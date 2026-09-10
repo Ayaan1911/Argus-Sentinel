@@ -1,0 +1,53 @@
+{
+  "service": "GitLab",
+  "port": 0,
+  "protocol": "",
+  "purpose": "Self-hosted Git repository management, CI/CD, and DevOps platform.",
+  "risk_level": "High",
+  "description": "Self-hosted GitLab instances are high-value targets holding source code, CI/CD secrets, and deployment access. GitLab has had a substantial number of disclosed CVEs over the years — including several pre-authentication RCE issues — and instances left unpatched or with open registration/public project creation enabled significantly broaden the attack surface.",
+  "common_risks": [
+    "outdated, unpatched instance vulnerable to disclosed CVEs (several are pre-auth RCE)",
+    "open self-registration allowing arbitrary account creation",
+    "CI/CD variables or secrets exposed to project members who shouldn't have them"
+  ],
+  "misconfigurations": [
+    "public sign-up enabled on an instance intended to be private",
+    "overly broad project/group visibility settings (public instead of private)",
+    "CI/CD variables not marked protected/masked"
+  ],
+  "attack_patterns": [
+    "Register an account (if sign-up is open) and explore accessible public/internal projects for secrets committed to source",
+    "Exploit a known pre-auth CVE on an outdated version for remote code execution",
+    "Extract CI/CD pipeline secrets from misconfigured variable settings"
+  ],
+  "real_world_incidents": [
+    "GitLab has disclosed multiple critical pre-authentication RCE vulnerabilities over time (tracked under various CVE IDs across releases); unpatched self-hosted instances remain a recurring target in both research and real attacks."
+  ],
+  "recommended_actions": [
+    "Keep GitLab patched — subscribe to GitLab's security release announcements and apply updates promptly.",
+    "Disable public sign-up unless the instance is genuinely intended to be open.",
+    "Review project/group visibility defaults and audit for anything unintentionally public.",
+    "Mark sensitive CI/CD variables as protected and masked, and restrict who can view pipeline logs."
+  ],
+  "audience_guidance": {
+    "student": "GitLab is like a self-hosted GitHub — it stores your code and automates building/deploying it. Because it holds both source code and deployment secrets, an outdated or misconfigured instance is a very attractive target.",
+    "developer": "Keep GitLab patched on a regular schedule, disable open sign-up unless intentional, and mark CI/CD secrets as protected/masked so they aren't visible in logs.",
+    "bug_bounty_hunter": "Fingerprint the GitLab version from the login page or API, then check it against known disclosed CVEs for that version — GitLab's release notes are very specific about what's fixed where.",
+    "pentester": "Check for open registration and public projects containing secrets, and test the fingerprinted version against known pre-auth exploits if authorized to do so.",
+    "security_team": "Track your GitLab version against GitLab's security advisories continuously, and audit project visibility and CI/CD variable protection settings as a standing process."
+  },
+  "correlation_rules": {
+    "amplifies": ["known_vulnerabilities", "internet_facing"],
+    "requires": [],
+    "mitigates": ["firewall_restricted"]
+  },
+  "learning_resources": [
+    "https://about.gitlab.com/releases/categories/releases/"
+  ],
+  "related_findings": ["rce", "exposed_admin_panel"],
+  "mitre_attack": ["T1190", "T1213"],
+  "risk_weight": 7,
+  "version": "1.0",
+  "last_updated": "2026-09-11",
+  "reviewed_by": "argus-team"
+}

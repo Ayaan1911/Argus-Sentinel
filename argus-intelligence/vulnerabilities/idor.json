@@ -48,6 +48,13 @@
     "T1190"
   ],
   "risk_weight": 8,
+  "nuclei_tags": [
+    "idor"
+  ],
+  "title_keywords": [
+    "idor",
+    "insecure direct object"
+  ],
   "version": "1.0",
   "last_updated": "2026-06-08",
   "reviewed_by": "argus-team"

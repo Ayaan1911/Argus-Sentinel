@@ -1,0 +1,50 @@
+{
+  "service": "Express",
+  "port": 0,
+  "protocol": "",
+  "purpose": "Widely-used minimal web application framework for Node.js.",
+  "risk_level": "Low",
+  "description": "Express's default configuration sends an 'X-Powered-By: Express' header, disclosing the framework to any observer and making automated framework-specific attacks easier to target. In development mode (NODE_ENV=development), Express's default error handler also renders a full stack trace to the client on any unhandled error, revealing internal file paths, dependency versions, and application internals.",
+  "common_risks": [
+    "framework fingerprinting via the X-Powered-By header",
+    "stack traces and internal paths leaked to clients when NODE_ENV isn't set to production"
+  ],
+  "misconfigurations": [
+    "X-Powered-By header never disabled (app.disable('x-powered-by'))",
+    "NODE_ENV left unset or set to 'development' in a deployed environment",
+    "no centralized error-handling middleware to control what's returned to clients"
+  ],
+  "attack_patterns": [
+    "Fingerprint the framework via the X-Powered-By header to target Express/Node-specific known issues",
+    "Trigger an unhandled error to read the stack trace and learn internal file structure, dependency versions, and logic"
+  ],
+  "real_world_incidents": [
+    "Stack-trace and internal-path disclosure via a non-production Express error handler is a routine, low-to-medium severity finding surfaced by nuclei-style exposure scans across production Node.js deployments that were never explicitly set to NODE_ENV=production."
+  ],
+  "recommended_actions": [
+    "Call app.disable('x-powered-by') to stop advertising the framework.",
+    "Always set NODE_ENV=production in deployed environments — this also improves Express's own performance and disables the verbose default error handler.",
+    "Implement centralized error-handling middleware that returns a generic message to clients and logs the full detail server-side instead."
+  ],
+  "audience_guidance": {
+    "student": "Express is a popular framework for building web servers in Node.js. By default it tells visitors it's Express (a small information leak), and if the app isn't explicitly told it's running in production, errors can show visitors the full technical stack trace instead of a friendly error page.",
+    "developer": "Add app.disable('x-powered-by') and always set NODE_ENV=production for deployed environments — both are one-line fixes with real security value.",
+    "bug_bounty_hunter": "Check the X-Powered-By header and try to trigger an unhandled error (malformed input, invalid route param) to see if a stack trace comes back.",
+    "pentester": "Use any leaked stack trace to map internal file structure and dependency versions, which can inform further targeted testing.",
+    "security_team": "Confirm NODE_ENV=production is set across all deployed Node.js services as a standing deployment checklist item, not something left to individual developers to remember."
+  },
+  "correlation_rules": {
+    "amplifies": ["info_disclosure_debug"],
+    "requires": [],
+    "mitigates": []
+  },
+  "learning_resources": [
+    "https://expressjs.com/en/advanced/best-practice-security.html"
+  ],
+  "related_findings": ["info_disclosure_debug", "missing_security_headers"],
+  "mitre_attack": ["T1592"],
+  "risk_weight": 3,
+  "version": "1.0",
+  "last_updated": "2026-09-11",
+  "reviewed_by": "argus-team"
+}

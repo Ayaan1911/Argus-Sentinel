@@ -8,6 +8,11 @@
     "Place behind a VPN or Zero Trust proxy.",
     "Require MFA."
   ],
+  "recommended_actions": [
+    "Restrict access via IP allowlisting.",
+    "Place behind a VPN or Zero Trust proxy.",
+    "Require MFA."
+  ],
   "audience_guidance": {
     "student": "Admin panels are the keys to the kingdom. If they are on the internet, attackers will try to guess the password.",
     "developer": "Move admin routes (e.g., /admin, /wp-admin) behind an authentication proxy or IP restriction. Enforce MFA.",
@@ -18,7 +23,23 @@
   "learning_resources": [
     "https://cwe.mitre.org/data/definitions/284.html"
   ],
-  "affected_technologies": ["wordpress", "phpmyadmin", "tomcat", "django", "iis"],
+  "affected_technologies": [
+    "wordpress",
+    "phpmyadmin",
+    "tomcat",
+    "django",
+    "iis"
+  ],
+  "nuclei_tags": [
+    "panel",
+    "admin-panel",
+    "exposure"
+  ],
+  "title_keywords": [
+    "admin panel",
+    "login panel",
+    "admin login"
+  ],
   "version": "1.0",
   "last_updated": "2026-07-05",
   "reviewed_by": "argus-team"

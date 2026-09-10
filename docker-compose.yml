@@ -35,6 +35,7 @@ services:
     volumes:
       - ./backend:/app
       - ./argus-intelligence:/argus-intelligence
+      - ./scripts:/scripts
       - nuclei_templates:/root/nuclei-templates
     env_file:
       - .env
@@ -51,6 +52,7 @@ services:
     volumes:
       - ./backend:/app
       - ./argus-intelligence:/argus-intelligence
+      - ./scripts:/scripts
       - nuclei_templates:/root/nuclei-templates
     env_file:
       - .env

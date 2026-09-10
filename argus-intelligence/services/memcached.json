@@ -1,0 +1,54 @@
+{
+  "service": "Memcached",
+  "port": 11211,
+  "protocol": "TCP/UDP",
+  "purpose": "In-memory key-value caching service, used to reduce database load by caching frequently-read data.",
+  "risk_level": "High",
+  "description": "Memcached has no built-in authentication by default and was designed to be used only on a trusted internal network. An instance reachable from the internet allows anyone to read, write, or flush cached data, and — if UDP is enabled — can be abused as a massive DDoS amplification vector (amplification factors over 50,000x have been observed).",
+  "common_risks": [
+    "no authentication by design",
+    "UDP-based DDoS amplification",
+    "cache poisoning or sensitive-data exposure"
+  ],
+  "misconfigurations": [
+    "bound to 0.0.0.0 instead of localhost/private interface",
+    "UDP protocol left enabled when only TCP is needed",
+    "no firewall rule restricting access to application servers"
+  ],
+  "attack_patterns": [
+    "Send crafted UDP requests to reflect and amplify traffic at a victim (DDoS amplification)",
+    "Read cached data directly with `get` commands to recover session tokens or query results",
+    "Flush or poison the cache to degrade application availability or integrity"
+  ],
+  "real_world_incidents": [
+    "Memcached UDP amplification was used in some of the largest recorded DDoS attacks (including a 1.3+ Tbps attack in 2018), all originating from publicly reachable memcached servers with UDP enabled."
+  ],
+  "recommended_actions": [
+    "Bind memcached to localhost or a private/internal interface only — never 0.0.0.0.",
+    "Disable UDP support entirely (-U 0) unless a specific feature requires it.",
+    "Firewall the port to only the application servers that need it.",
+    "Do not cache sensitive data (session tokens, PII) without considering that the cache itself has no access control."
+  ],
+  "audience_guidance": {
+    "student": "Memcached is a fast temporary storage shelf for data an app doesn't want to keep re-fetching from a database. It was built for trusted internal networks only — it has no lock on the door — so exposing it to the internet lets anyone read what's on the shelf, or use it to blast huge amounts of traffic at someone else (DDoS amplification).",
+    "developer": "Never bind memcached to a public interface. Set `-l 127.0.0.1` (or your private subnet) and pass `-U 0` to disable UDP unless you specifically need it.",
+    "bug_bounty_hunter": "An open memcached port is almost always an immediate high-severity finding — confirm with a raw `stats` command and check whether UDP is also open (amplification risk).",
+    "pentester": "Demonstrate impact by reading live cached keys, and if UDP is open, document the amplification factor as a DDoS risk in addition to the direct data-exposure risk.",
+    "security_team": "Any memcached instance reachable from outside the application's own VPC/subnet should be treated as a critical misconfiguration — audit firewall rules across all caching infrastructure."
+  },
+  "correlation_rules": {
+    "amplifies": ["no_authentication", "internet_facing"],
+    "requires": [],
+    "mitigates": ["firewall_restricted"]
+  },
+  "learning_resources": [
+    "https://github.com/memcached/memcached/wiki/ConfiguringServer#authentication",
+    "https://www.cloudflare.com/learning/ddos/memcached-ddos-attack/"
+  ],
+  "related_findings": ["no_authentication", "open_database_no_auth"],
+  "mitre_attack": ["T1498.001", "T1213"],
+  "risk_weight": 7,
+  "version": "1.0",
+  "last_updated": "2026-09-11",
+  "reviewed_by": "argus-team"
+}

@@ -1,0 +1,53 @@
+{
+  "service": "SMTP",
+  "port": 25,
+  "protocol": "TCP",
+  "purpose": "Simple Mail Transfer Protocol, used for sending and relaying email between mail servers.",
+  "risk_level": "Medium",
+  "description": "SMTP servers left as open relays allow any third party to send mail through them, which is quickly abused for spam and phishing campaigns and gets the host's IP blacklisted. Older SMTP configurations may also support unauthenticated or plaintext-only authentication, and can leak internal usernames via VRFY/EXPN commands.",
+  "common_risks": [
+    "open mail relay abuse",
+    "username enumeration via VRFY/EXPN",
+    "plaintext credential transmission without STARTTLS"
+  ],
+  "misconfigurations": [
+    "relay permitted for any source address, not just authenticated/internal senders",
+    "VRFY or EXPN commands enabled",
+    "STARTTLS not enforced, allowing plaintext AUTH"
+  ],
+  "attack_patterns": [
+    "Test for open relay by attempting to send mail to an external address through the target with no authentication",
+    "Enumerate valid usernames with VRFY/EXPN to build a phishing target list",
+    "Intercept plaintext credentials on networks without STARTTLS enforcement"
+  ],
+  "real_world_incidents": [
+    "Open SMTP relays remain a common source of large-scale spam and phishing campaigns; mail providers routinely blacklist hosts found relaying unauthenticated mail."
+  ],
+  "recommended_actions": [
+    "Restrict relaying to authenticated users or explicitly trusted internal networks only.",
+    "Disable VRFY and EXPN, or require authentication before they respond.",
+    "Enforce STARTTLS (or require SMTPS on 465) so credentials are never sent in plaintext.",
+    "Monitor outbound mail volume for spikes indicating relay abuse."
+  ],
+  "audience_guidance": {
+    "student": "SMTP is the protocol mail servers use to pass email to each other. If a server is configured as an 'open relay,' it will forward mail from anyone to anyone — spammers love this because it hides where the spam really came from.",
+    "developer": "Make sure your mail server's relay configuration only accepts mail from authenticated users or a defined internal network — never 'relay for anyone.'",
+    "bug_bounty_hunter": "Test for open relay behavior and try VRFY/EXPN for username enumeration — both are quick, low-risk checks worth including in any SMTP recon.",
+    "pentester": "Confirm relay restrictions, test STARTTLS enforcement, and use VRFY/EXPN results to build a target list for a phishing simulation.",
+    "security_team": "Monitor outbound mail servers for relay abuse and blacklist status, and periodically re-test relay configuration after any mail server change."
+  },
+  "correlation_rules": {
+    "amplifies": ["no_authentication"],
+    "requires": [],
+    "mitigates": []
+  },
+  "learning_resources": [
+    "https://www.rfc-editor.org/rfc/rfc5321"
+  ],
+  "related_findings": ["info_disclosure_debug"],
+  "mitre_attack": ["T1114", "T1595"],
+  "risk_weight": 4,
+  "version": "1.0",
+  "last_updated": "2026-09-11",
+  "reviewed_by": "argus-team"
+}

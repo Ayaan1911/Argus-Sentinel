@@ -2,7 +2,7 @@ import json
 import logging
 
 from app.intelligence.loader import get_intelligence_loader
-from app.scanners.utils import normalize_target, run_subprocess
+from app.scanners.utils import is_outdated, normalize_target, run_subprocess
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,27 @@ def _detect_known_vulnerabilities(tech_list: list) -> bool:
     for entry in loader.data.get("vulnerabilities", {}).values():
         affected = {t.lower() for t in entry.get("affected_technologies", [])}
         if affected & detected:
+            return True
+    return False
+
+
+def _detect_outdated_tech(tech_list: list) -> bool:
+    """Checks each detected tech's own embedded version (e.g. "jQuery:3.4.1")
+    against that technology's min_secure_version on file, if any. This is the
+    client-side-library equivalent of nmap.py's server-product version check
+    — same "min_secure_version" field, different detection source."""
+    if not tech_list:
+        return False
+    loader = get_intelligence_loader()
+    for t in tech_list:
+        parts = str(t).split(":", 1)
+        if len(parts) != 2:
+            continue
+        name, version = parts[0].strip().lower(), parts[1].strip()
+        entry = loader.data.get("technologies", {}).get(name)
+        if not entry:
+            continue
+        if is_outdated(version, entry.get("min_secure_version")):
             return True
     return False
 
@@ -87,6 +108,7 @@ async def run(targets: list[str]) -> tuple[list[dict], dict]:
         tech_list = data.get("tech", []) or []
         data["admin_panel_exposed"] = _detect_admin_panel(data)
         data["known_vulnerabilities"] = _detect_known_vulnerabilities(tech_list)
+        data["outdated_version"] = _detect_outdated_tech(tech_list)
 
         findings.append({
             "source": "httpx",

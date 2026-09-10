@@ -1,0 +1,47 @@
+{
+  "service": "Bootstrap",
+  "port": 0,
+  "protocol": "",
+  "purpose": "Widely-used client-side CSS/JavaScript framework for building responsive web UI components.",
+  "risk_level": "Low",
+  "description": "Bootstrap versions before 4.3.1 are affected by a documented cross-site scripting issue (CVE-2019-8331) in the tooltip and popover components, where the 'title' or 'data-content' options accept HTML and don't sanitize it before rendering when a template/config allows HTML content.",
+  "common_risks": [
+    "XSS via tooltip/popover HTML content options"
+  ],
+  "misconfigurations": [
+    "tooltip/popover initialized with `html: true` and a user-controlled title/content value"
+  ],
+  "attack_patterns": [
+    "Inject script via a tooltip or popover whose content is built from unsanitized user input"
+  ],
+  "real_world_incidents": [
+    "CVE-2019-8331 was disclosed and fixed in Bootstrap 4.3.1; outdated bundled copies of Bootstrap remain a routine finding in dependency and JS-library version scans."
+  ],
+  "recommended_actions": [
+    "Upgrade to Bootstrap 4.3.1 or later (or the current 5.x line, which addressed this class of issue in its rewrite).",
+    "Avoid enabling `html: true` on tooltips/popovers whose content includes any user-controlled data; sanitize first if HTML content is genuinely required."
+  ],
+  "audience_guidance": {
+    "student": "Bootstrap is a popular toolkit for styling web pages and building UI components like tooltips and popups. An older version had a bug where those popups could be tricked into running attacker-supplied script if their content wasn't handled carefully.",
+    "developer": "Upgrade to Bootstrap 4.3.1+, and avoid passing unsanitized user input into tooltip/popover content when `html: true` is set.",
+    "bug_bounty_hunter": "Fingerprint the Bootstrap version from the bundled CSS/JS file, then check for tooltips/popovers whose content is built from user input.",
+    "pentester": "Confirm the Bootstrap version and test any tooltip/popover component that renders user-influenced content for injected markup.",
+    "security_team": "Include client-side framework versions like Bootstrap in routine dependency audits — an outdated bundled copy is easy to overlook since it isn't managed the same way as server-side packages."
+  },
+  "correlation_rules": {
+    "amplifies": ["known_vulnerabilities"],
+    "requires": [],
+    "mitigates": []
+  },
+  "learning_resources": [
+    "https://blog.getbootstrap.com/2019/02/13/bootstrap-4-3-1-and-3-4-1/",
+    "https://nvd.nist.gov/vuln/detail/CVE-2019-8331"
+  ],
+  "related_findings": ["xss"],
+  "mitre_attack": ["T1190"],
+  "risk_weight": 3,
+  "min_secure_version": "4.3.1",
+  "version": "1.0",
+  "last_updated": "2026-09-11",
+  "reviewed_by": "argus-team"
+}

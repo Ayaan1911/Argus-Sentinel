@@ -1,0 +1,51 @@
+{
+  "service": "jQuery",
+  "port": 0,
+  "protocol": "",
+  "purpose": "Widely-used client-side JavaScript library for DOM manipulation, AJAX, and event handling.",
+  "risk_level": "Medium",
+  "description": "jQuery versions before 3.5.0 are affected by a documented cross-site scripting issue (CVE-2020-11022, CVE-2020-11023) in how jQuery.htmlPrefilter() handles HTML passed to methods like .html(), .append(), and .before() — untrusted HTML containing <option> or style attributes can execute injected script. Versions before 3.4.0 also carry a separate prototype-pollution issue (CVE-2019-11358) in jQuery.extend(true, ...).",
+  "common_risks": [
+    "DOM-based XSS via .html()/.append() on untrusted input",
+    "prototype pollution via $.extend(true, ...)"
+  ],
+  "misconfigurations": [
+    "bundling an outdated jQuery version copied into the project years ago and never updated",
+    "passing user-controlled strings directly into .html()/.append() regardless of jQuery version"
+  ],
+  "attack_patterns": [
+    "Inject HTML/script via any input reflected through a vulnerable jQuery DOM-manipulation call",
+    "Pollute Object.prototype via a crafted payload passed to a vulnerable $.extend(true, ...) call, affecting application logic that reads those polluted properties"
+  ],
+  "real_world_incidents": [
+    "CVE-2020-11022/11023 and CVE-2019-11358 were widely tracked findings in dependency and third-party-library scans across the industry following jQuery's own disclosure and version bump."
+  ],
+  "recommended_actions": [
+    "Upgrade to jQuery 3.5.0 or later.",
+    "Regardless of version, never pass unsanitized user input into .html(), .append(), .prepend(), or .before() — use .text() when inserting untrusted strings.",
+    "Audit any use of $.extend(true, ...) with user-controlled objects for prototype pollution risk."
+  ],
+  "audience_guidance": {
+    "student": "jQuery is a very popular helper library for writing JavaScript. Old versions had bugs where feeding certain HTML into jQuery's page-building functions could let an attacker sneak in their own script — this is called cross-site scripting (XSS).",
+    "developer": "Upgrade to jQuery 3.5.0+, and treat .html()/.append() the same way you'd treat innerHTML — never pass untrusted input to them without sanitizing first, no matter which jQuery version you're on.",
+    "bug_bounty_hunter": "Fingerprint the exact jQuery version from the loaded script, then look for any place user input reaches .html()/.append()/.before() — that's the concrete exploitation path, the version alone is just a lead.",
+    "pentester": "Confirm the jQuery version via the library file or a global `$.fn.jquery` check, then trace any DOM sinks that pass user-controlled data through vulnerable jQuery methods.",
+    "security_team": "Track third-party JS library versions the same way you'd track server-side dependencies — a stale bundled jQuery copy is a common, easily-missed finding in dependency audits."
+  },
+  "correlation_rules": {
+    "amplifies": ["known_vulnerabilities"],
+    "requires": [],
+    "mitigates": []
+  },
+  "learning_resources": [
+    "https://blog.jquery.com/2020/04/10/jquery-3-5-0-released/",
+    "https://nvd.nist.gov/vuln/detail/CVE-2020-11022"
+  ],
+  "related_findings": ["xss"],
+  "mitre_attack": ["T1190"],
+  "risk_weight": 5,
+  "min_secure_version": "3.5.0",
+  "version": "1.0",
+  "last_updated": "2026-09-11",
+  "reviewed_by": "argus-team"
+}

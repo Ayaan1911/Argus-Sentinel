@@ -1,0 +1,54 @@
+{
+  "service": "IMAP",
+  "port": 143,
+  "protocol": "TCP",
+  "purpose": "Internet Message Access Protocol, used by mail clients to retrieve and manage email stored on a mail server.",
+  "risk_level": "Medium",
+  "description": "IMAP on the plaintext port 143 (as opposed to IMAPS on 993) can transmit login credentials and full email content unencrypted unless STARTTLS is negotiated and enforced. Weak or missing brute-force protection also makes password-guessing attacks practical.",
+  "common_risks": [
+    "plaintext credential and mail content exposure",
+    "brute-force login attempts with no lockout",
+    "STARTTLS stripping / downgrade attacks"
+  ],
+  "misconfigurations": [
+    "STARTTLS offered but not enforced (plaintext AUTH still accepted)",
+    "no rate limiting or account lockout on failed logins",
+    "weak password policy on mail accounts"
+  ],
+  "attack_patterns": [
+    "Intercept plaintext credentials on the network when STARTTLS isn't enforced",
+    "Brute-force or credential-stuff mail accounts with no lockout in place",
+    "Strip the STARTTLS response on-path to force a plaintext session"
+  ],
+  "real_world_incidents": [
+    "Plaintext IMAP interception and STARTTLS-stripping attacks have been documented against misconfigured mail providers, exposing user credentials and mail content on shared or untrusted networks."
+  ],
+  "recommended_actions": [
+    "Require STARTTLS for all connections on port 143, or disable it in favor of IMAPS (993) entirely.",
+    "Implement account lockout or rate limiting after repeated failed login attempts.",
+    "Enforce strong password policies and offer MFA where the mail client supports it.",
+    "Monitor for anomalous login patterns (many accounts, single source IP)."
+  ],
+  "audience_guidance": {
+    "student": "IMAP is how your email app downloads and syncs mail from the server. On the unencrypted port, your password and messages can travel in plain text unless the connection is upgraded to an encrypted one (STARTTLS) — and not every mail client checks that this actually happened.",
+    "developer": "Enforce STARTTLS server-side (reject plaintext AUTH before TLS) rather than just offering it, and consider disabling port 143 in favor of implicit TLS on 993.",
+    "bug_bounty_hunter": "Check whether STARTTLS is enforced or optional, and test for account lockout behavior on repeated failed logins.",
+    "pentester": "Attempt a STARTTLS-stripping on-path attack if positioned on the network, and brute-force test a known account to confirm lockout is in place.",
+    "security_team": "Audit all mail infrastructure for STARTTLS enforcement and lockout policy, and prefer disabling plaintext IMAP where client compatibility allows."
+  },
+  "correlation_rules": {
+    "amplifies": ["no_authentication", "password_auth_enabled"],
+    "requires": [],
+    "mitigates": []
+  },
+  "learning_resources": [
+    "https://www.rfc-editor.org/rfc/rfc3501",
+    "https://www.rfc-editor.org/rfc/rfc2595"
+  ],
+  "related_findings": ["info_disclosure_debug"],
+  "mitre_attack": ["T1110", "T1040"],
+  "risk_weight": 4,
+  "version": "1.0",
+  "last_updated": "2026-09-11",
+  "reviewed_by": "argus-team"
+}

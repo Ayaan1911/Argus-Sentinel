@@ -1,0 +1,53 @@
+{
+  "service": "rsync",
+  "port": 873,
+  "protocol": "TCP",
+  "purpose": "File synchronization service, used to efficiently mirror or back up directories between hosts.",
+  "risk_level": "High",
+  "description": "The rsync daemon (rsyncd) can be configured with named 'modules' that map to filesystem paths. Modules left without a password, or configured with read/write access for anonymous connections, allow any network client to list, download, or upload arbitrary files under that path.",
+  "common_risks": [
+    "anonymous access to rsync modules",
+    "writable modules allowing file upload/overwrite",
+    "sensitive backups exposed via a listable module"
+  ],
+  "misconfigurations": [
+    "rsyncd.conf module with no auth users / secrets file configured",
+    "read only = false on a module that doesn't need write access",
+    "daemon bound to a public interface instead of an internal one"
+  ],
+  "attack_patterns": [
+    "List available modules with `rsync rsync://target/` and download anything unauthenticated",
+    "Upload a malicious file into a writable module (e.g. a web root or cron-executed path)",
+    "Pull full backup archives left exposed in a module, exposing credentials or PII"
+  ],
+  "real_world_incidents": [
+    "Exposed rsync daemons with unauthenticated, writable modules have been used to plant malicious files into web roots and cron-executed directories, leading to remote code execution on the exporting host."
+  ],
+  "recommended_actions": [
+    "Require authentication (auth users + secrets file) on every rsyncd module.",
+    "Set `read only = true` on any module that doesn't specifically need write access.",
+    "Bind rsyncd to an internal interface only, or tunnel over SSH instead of running the standalone daemon.",
+    "Firewall port 873 to trusted hosts only."
+  ],
+  "audience_guidance": {
+    "student": "rsync is a tool for efficiently copying files between computers, and it can run as a background service (a 'daemon') that other computers connect to. If that daemon has no password, anyone can list, download — or in the worst case, upload — files in whatever folder it's sharing.",
+    "developer": "Always configure `auth users` and a secrets file for any rsyncd module, and default every module to `read only = true` unless write access is explicitly required.",
+    "bug_bounty_hunter": "Run `rsync rsync://target/` with no credentials to list modules — an anonymous listable or writable module is a quick, high-value finding.",
+    "pentester": "Download exposed module contents for sensitive data, and if a module is writable, test planting a file into a path that gets executed (web root, cron directory) for RCE.",
+    "security_team": "Audit every rsyncd.conf for modules missing authentication or unnecessarily set to writable, and confirm the daemon isn't bound to a public interface."
+  },
+  "correlation_rules": {
+    "amplifies": ["no_authentication", "internet_facing"],
+    "requires": [],
+    "mitigates": ["firewall_restricted"]
+  },
+  "learning_resources": [
+    "https://download.samba.org/pub/rsync/rsyncd.conf.html"
+  ],
+  "related_findings": ["no_authentication", "directory_listing"],
+  "mitre_attack": ["T1078", "T1105"],
+  "risk_weight": 7,
+  "version": "1.0",
+  "last_updated": "2026-09-11",
+  "reviewed_by": "argus-team"
+}

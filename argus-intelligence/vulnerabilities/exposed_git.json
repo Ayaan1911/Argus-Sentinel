@@ -1,0 +1,27 @@
+{
+  "vulnerability_class": "Exposed .git Directory",
+  "description": "The web server serves the .git directory (source control metadata) directly, allowing the entire repository — including full commit history — to be reconstructed and downloaded by anyone who can reach the site.",
+  "severity": "High",
+  "impact": "Full source code disclosure, including any credentials, API keys, or internal comments ever committed to the repository, even if later removed in a subsequent commit — git history retains everything unless the repository was rewritten.",
+  "remediation": [
+    "Remove or block web-server access to the .git directory entirely (deny access at the web server/reverse-proxy config level).",
+    "Never deploy by copying a working directory that includes .git into the web root — use a proper build/deploy pipeline that excludes it.",
+    "If a .git directory was ever exposed, treat every credential and secret that ever appeared in the repository's history as compromised and rotate it."
+  ],
+  "audience_guidance": {
+    "student": ".git is the hidden folder Git uses to track a project's full history. If a web server accidentally serves that folder, tools can reconstruct the entire codebase — including old versions that might still contain a password someone forgot to remove.",
+    "developer": "Deploy from a build artifact that never includes .git, and add an explicit deny rule for .git at the web server config level as defense in depth.",
+    "bug_bounty_hunter": "Check for /.git/HEAD or /.git/config directly; if reachable, tools like git-dumper can pull the full repository for offline analysis — always worth a look for hardcoded secrets in history.",
+    "pentester": "Dump the exposed repository and search its full commit history (not just the latest commit) for credentials, internal hostnames, and comments revealing further attack surface.",
+    "security_team": "Scan externally-facing hosts for exposed .git directories as a routine check, and treat any find as an immediate incident requiring full secret rotation, not just removing the folder."
+  },
+  "learning_resources": [
+    "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/02-Configuration_and_Deployment_Management_Testing/04-Review_Old_Backup_and_Unreferenced_Files_for_Sensitive_Information"
+  ],
+  "affected_technologies": [],
+  "nuclei_tags": ["git", "exposure", "config"],
+  "title_keywords": ["git config", ".git", "git directory", "git detect"],
+  "version": "1.0",
+  "last_updated": "2026-09-11",
+  "reviewed_by": "argus-team"
+}

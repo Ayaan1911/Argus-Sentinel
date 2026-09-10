@@ -54,6 +54,8 @@
   ],
   "risk_weight": 10,
   "affected_technologies": ["php", "wordpress", "mysql"],
+  "nuclei_tags": ["sqli", "sql", "time-based-sqli"],
+  "title_keywords": ["sql injection", "sqli"],
   "version": "1.0",
   "last_updated": "2026-06-08",
   "reviewed_by": "argus-team"

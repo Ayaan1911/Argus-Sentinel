@@ -58,10 +58,12 @@ class CorrelationEngine:
             if port == 22 or "ssh" in title.lower():
                 ssh_findings.append(f)
 
-            # outdated_version is only ever set by nmap.py, and nmap findings
-            # are always type "port" — never "technology" (httpx's technology
-            # findings use "known_vulnerabilities" instead, checked below).
-            if f_type == "port" and raw.get("outdated_version"):
+            # outdated_version is set by nmap.py (server products, on type
+            # "port" findings) and by httpx.py (client-side libraries like
+            # jQuery/Bootstrap detected via tech-detect, on type "technology"
+            # findings) — both compare a detected version against that
+            # product's min_secure_version on file.
+            if f_type in ("port", "technology") and raw.get("outdated_version"):
                 tech_outdated_findings.append(f)
                 
             if f_type == "vulnerability":

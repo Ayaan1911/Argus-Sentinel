@@ -1,0 +1,53 @@
+{
+  "service": "Jenkins",
+  "port": 8080,
+  "protocol": "TCP",
+  "purpose": "Widely-used CI/CD automation server for building, testing, and deploying software.",
+  "risk_level": "Critical",
+  "description": "Jenkins is a high-value target because it typically holds deployment credentials, source code access, and the ability to execute arbitrary code via build jobs and its Script Console. Instances left with 'anonymous can do anything' authorization, default admin credentials, or an accessible Script Console give an attacker a direct path to code execution and often to every system Jenkins deploys to.",
+  "common_risks": [
+    "anonymous/unauthenticated access left enabled",
+    "exposed Groovy Script Console allowing arbitrary code execution",
+    "credentials store readable by low-privileged or anonymous users"
+  ],
+  "misconfigurations": [
+    "security realm left disabled after initial setup",
+    "'Anyone can do anything' authorization strategy in production",
+    "Script Console accessible without admin authentication"
+  ],
+  "attack_patterns": [
+    "Use the Script Console (if reachable) to run arbitrary Groovy/OS commands on the Jenkins host",
+    "Read stored credentials (deployment keys, cloud secrets) via an exposed Credentials view",
+    "Create or modify a build job to execute an attacker-controlled build step"
+  ],
+  "real_world_incidents": [
+    "Exposed Jenkins Script Consoles are a well-documented, recurring finding leading to full CI/CD server compromise and, from there, to the systems and repositories Jenkins has deployment access to."
+  ],
+  "recommended_actions": [
+    "Enable a real security realm (not 'anyone can do anything') and require authentication for all access.",
+    "Restrict or disable the Script Console for non-admin users.",
+    "Store secrets in the Credentials plugin with scoped access, not in plaintext build configuration.",
+    "Keep Jenkins core and plugins patched — many disclosed CVEs target specific plugins as much as core."
+  ],
+  "audience_guidance": {
+    "student": "Jenkins automates building and deploying software, which means it often holds the keys to deploy code to production. If it's left open, an attacker doesn't just get into Jenkins — they can often use it as a stepping stone into everything Jenkins is allowed to touch.",
+    "developer": "Never leave the default 'Anyone can do anything' authorization strategy in place past initial setup, and restrict the Script Console to admins only.",
+    "bug_bounty_hunter": "Check whether the instance requires login; if not, the Script Console (/script) is the fastest path to demonstrating code execution impact.",
+    "pentester": "If Script Console access is available, use it to demonstrate RCE and pivot to any stored deployment credentials; if not, look for anonymous job-creation rights as an alternative execution path.",
+    "security_team": "Audit every Jenkins instance's authorization strategy and Script Console access, and treat any CI/CD server as equivalent in sensitivity to the production systems it deploys to."
+  },
+  "correlation_rules": {
+    "amplifies": ["no_authentication", "internet_facing"],
+    "requires": [],
+    "mitigates": ["firewall_restricted"]
+  },
+  "learning_resources": [
+    "https://www.jenkins.io/doc/book/security/securing-jenkins/"
+  ],
+  "related_findings": ["exposed_admin_panel", "rce", "no_authentication"],
+  "mitre_attack": ["T1190", "T1059"],
+  "risk_weight": 10,
+  "version": "1.0",
+  "last_updated": "2026-09-11",
+  "reviewed_by": "argus-team"
+}

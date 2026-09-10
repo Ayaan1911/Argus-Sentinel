@@ -1,0 +1,53 @@
+{
+  "service": "NFS",
+  "port": 2049,
+  "protocol": "TCP/UDP",
+  "purpose": "Network File System, used to share directories/files between Unix-like systems over the network.",
+  "risk_level": "High",
+  "description": "NFS traditionally authenticates by trusting the client-supplied UID/GID rather than a real credential, and exports are frequently misconfigured to allow access from any host. A world-exported share (no_root_squash + wide-open export) lets a remote attacker read or write arbitrary files, including planting SUID binaries for local privilege escalation on the exporting host.",
+  "common_risks": [
+    "exports readable/writable by any host",
+    "no_root_squash allowing remote root to act as local root",
+    "no authentication beyond client-claimed UID/GID"
+  ],
+  "misconfigurations": [
+    "/etc/exports entries using * or overly broad CIDR ranges",
+    "no_root_squash left enabled on exports that don't require it",
+    "NFSv3 used without any Kerberos/sec= restriction"
+  ],
+  "attack_patterns": [
+    "Mount an export with `showmount -e` reconnaissance followed by a direct mount from an untrusted host",
+    "Spoof a UID matching a privileged local user to read/write their files",
+    "Plant a SUID root binary via a no_root_squash export for local privilege escalation"
+  ],
+  "real_world_incidents": [
+    "Misconfigured NFS exports are a long-standing, recurring finding in internal penetration tests, routinely leading to sensitive file disclosure or privilege escalation via no_root_squash exports."
+  ],
+  "recommended_actions": [
+    "Restrict exports to specific trusted host IPs, never wildcard.",
+    "Enable root_squash (the default) unless there is a specific, documented reason not to.",
+    "Prefer NFSv4 with Kerberos authentication (sec=krb5p) over NFSv3's UID-trust model where possible.",
+    "Firewall port 2049 (and the rpcbind portmapper on 111) to only the hosts that need access."
+  ],
+  "audience_guidance": {
+    "student": "NFS lets one computer's folders show up on another computer over the network. It traditionally trusts whatever user ID the connecting computer claims to be — so if the door is left open to anyone, an attacker can just claim to be an admin user and read or write files as them.",
+    "developer": "Never export a directory to '*' — always list specific trusted host IPs, and leave root_squash enabled unless you have a specific, reviewed reason to disable it.",
+    "bug_bounty_hunter": "Run `showmount -e target` to enumerate exports, then test whether any are mountable without restriction — an open, writable export is a strong finding.",
+    "pentester": "Mount any accessible export and check for readable sensitive files or writable paths; test no_root_squash exports for a local-privilege-escalation path via a planted SUID binary.",
+    "security_team": "Audit /etc/exports across all NFS servers for wildcard or overly broad host ranges, and confirm root_squash is enabled by default across the fleet."
+  },
+  "correlation_rules": {
+    "amplifies": ["no_authentication", "internet_facing"],
+    "requires": [],
+    "mitigates": ["firewall_restricted"]
+  },
+  "learning_resources": [
+    "https://man7.org/linux/man-pages/man5/exports.5.html"
+  ],
+  "related_findings": ["no_authentication", "directory_listing"],
+  "mitre_attack": ["T1039", "T1078"],
+  "risk_weight": 7,
+  "version": "1.0",
+  "last_updated": "2026-09-11",
+  "reviewed_by": "argus-team"
+}

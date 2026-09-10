@@ -1,0 +1,53 @@
+{
+  "service": "Kibana",
+  "port": 5601,
+  "protocol": "TCP",
+  "purpose": "Web UI for visualizing and querying data stored in Elasticsearch.",
+  "risk_level": "High",
+  "description": "Kibana is a full read/query interface into whatever Elasticsearch cluster it's connected to. Left exposed without authentication (its default configuration has none — auth is only enforced when X-Pack/Elastic security features are explicitly enabled), it gives anyone who can reach it the ability to browse, query, and often export every index the cluster holds.",
+  "common_risks": [
+    "no authentication on the Kibana UI or its underlying Elasticsearch cluster",
+    "full data exposure via Dev Tools / Discover",
+    "outdated Kibana versions with known RCE issues"
+  ],
+  "misconfigurations": [
+    "xpack.security.enabled left false (or the free security features never turned on)",
+    "Kibana exposed directly to the internet instead of behind a VPN/auth proxy",
+    "Elasticsearch backing Kibana also unauthenticated"
+  ],
+  "attack_patterns": [
+    "Browse indices directly through Discover or Dev Tools with no login required",
+    "Use Dev Tools to run arbitrary Elasticsearch queries against every index the cluster holds",
+    "Exploit known Kibana RCE vulnerabilities on outdated, internet-facing instances"
+  ],
+  "real_world_incidents": [
+    "Unauthenticated Kibana/Elasticsearch pairs are a recurring source of large-scale data exposure incidents in cloud misconfiguration research, frequently surfacing logs, PII, or application data indexed for analytics."
+  ],
+  "recommended_actions": [
+    "Enable Elastic's security features (authentication) on both Elasticsearch and Kibana — this has been free since the 7.1 default distribution.",
+    "Never expose Kibana directly to the internet; put it behind a VPN, SSO proxy, or at minimum an authenticating reverse proxy.",
+    "Keep Kibana patched — several versions have had disclosed RCE vulnerabilities reachable pre-authentication.",
+    "Restrict which indices each authenticated role can query, rather than granting blanket access."
+  ],
+  "audience_guidance": {
+    "student": "Kibana is a dashboard for exploring data stored in Elasticsearch — think of it as a window into a big searchable database. If that window has no lock on it, anyone who finds the URL can browse everything behind it.",
+    "developer": "Turn on Elastic's built-in security features (they're free) so Kibana and Elasticsearch both require authentication, and never expose Kibana directly to the public internet.",
+    "bug_bounty_hunter": "An unauthenticated Kibana is almost always a serious finding — confirm access via Discover or Dev Tools and note the scope of indices visible.",
+    "pentester": "Use Dev Tools to enumerate indices and extract representative sensitive data as impact evidence; check the Kibana version against known pre-auth RCE advisories.",
+    "security_team": "Treat any internet-facing Kibana without authentication as a critical incident — audit your Elastic Stack deployments for security-feature status and network exposure."
+  },
+  "correlation_rules": {
+    "amplifies": ["no_authentication", "internet_facing"],
+    "requires": [],
+    "mitigates": ["firewall_restricted"]
+  },
+  "learning_resources": [
+    "https://www.elastic.co/guide/en/kibana/current/using-kibana-with-security.html"
+  ],
+  "related_findings": ["exposed_admin_panel", "no_authentication"],
+  "mitre_attack": ["T1530", "T1078"],
+  "risk_weight": 8,
+  "version": "1.0",
+  "last_updated": "2026-09-11",
+  "reviewed_by": "argus-team"
+}

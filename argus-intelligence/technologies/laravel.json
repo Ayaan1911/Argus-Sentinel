@@ -1,0 +1,53 @@
+{
+  "service": "Laravel",
+  "port": 0,
+  "protocol": "",
+  "purpose": "Widely-used PHP web application framework.",
+  "risk_level": "High",
+  "description": "Laravel applications left in debug mode (APP_DEBUG=true) expose Symfony's Ignition/Whoops debug page on any unhandled exception, which can reveal the full application .env file contents — including database credentials, mail credentials, and the APP_KEY. A leaked APP_KEY is itself directly dangerous, since Laravel uses it to sign/encrypt cookies and sessions; a known APP_KEY has previously enabled deserialization-based remote code execution.",
+  "common_risks": [
+    "debug mode enabled in production, leaking .env contents on error",
+    "leaked APP_KEY enabling cookie/session forgery or deserialization RCE",
+    "exposed .env file directly reachable over HTTP"
+  ],
+  "misconfigurations": [
+    "APP_DEBUG=true left set in a production .env file",
+    ".env file placed inside or reachable from the public web root",
+    "default or weak APP_KEY never regenerated per deployment"
+  ],
+  "attack_patterns": [
+    "Trigger any unhandled exception to view the debug page and extract .env contents",
+    "Request .env directly if it's reachable under the web root",
+    "Use a leaked APP_KEY to forge a signed cookie or craft a malicious serialized payload for deserialization RCE"
+  ],
+  "real_world_incidents": [
+    "Leaked Laravel APP_KEYs combined with known deserialization gadget chains have been used for remote code execution against real-world Laravel applications; debug-mode .env disclosure is one of the most common Laravel misconfiguration findings in the wild."
+  ],
+  "recommended_actions": [
+    "Set APP_DEBUG=false in every production environment — no exceptions.",
+    "Ensure .env is never placed inside the public web root and is excluded from version control.",
+    "Rotate APP_KEY if it's ever suspected of being exposed, which invalidates existing signed cookies/sessions.",
+    "Keep Laravel and its dependencies patched against known deserialization gadget chains."
+  ],
+  "audience_guidance": {
+    "student": "Laravel is a popular framework for building PHP web apps. It has a 'debug mode' meant only for local development — if it's accidentally left on in production, any error on the site can show visitors a detailed page containing your app's secret configuration, including database passwords.",
+    "developer": "Always set APP_DEBUG=false in production, keep .env out of the web root and out of version control, and rotate APP_KEY immediately if you suspect it leaked.",
+    "bug_bounty_hunter": "Try triggering an error (an invalid route parameter often works) to see if the debug page appears, and separately check whether /.env is directly reachable.",
+    "pentester": "If debug mode or a direct .env leak yields an APP_KEY, test for cookie/session forgery and known deserialization gadget chains for that Laravel version as a path to RCE.",
+    "security_team": "Audit production deployments for APP_DEBUG status and .env placement as a standing check, and have a rotation plan ready for any suspected APP_KEY exposure."
+  },
+  "correlation_rules": {
+    "amplifies": ["known_vulnerabilities"],
+    "requires": [],
+    "mitigates": []
+  },
+  "learning_resources": [
+    "https://laravel.com/docs/deployment#debug-mode"
+  ],
+  "related_findings": ["exposed_env", "info_disclosure_debug", "rce"],
+  "mitre_attack": ["T1552.001", "T1190"],
+  "risk_weight": 7,
+  "version": "1.0",
+  "last_updated": "2026-09-11",
+  "reviewed_by": "argus-team"
+}

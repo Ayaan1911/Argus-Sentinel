@@ -1,9 +1,8 @@
 import logging
-import re
 import xml.etree.ElementTree as ET
 
 from app.intelligence.loader import get_intelligence_loader
-from app.scanners.utils import is_internal_ip, normalize_target, run_subprocess
+from app.scanners.utils import is_internal_ip, is_outdated, normalize_target, run_subprocess
 
 logger = logging.getLogger(__name__)
 
@@ -29,15 +28,6 @@ PRODUCT_KB_MAP = {
 }
 
 
-def _parse_version_tuple(v: str):
-    if not v:
-        return None
-    m = re.match(r"(\d+)(?:\.(\d+))?(?:\.(\d+))?", v)
-    if not m:
-        return None
-    return tuple(int(g) for g in m.groups() if g is not None)
-
-
 def _is_outdated(product: str, version: str) -> bool | None:
     """Returns True/False when a comparison could be made, None when there's
     not enough information (unknown product, unparseable version, or no
@@ -51,13 +41,7 @@ def _is_outdated(product: str, version: str) -> bool | None:
             continue
         entry = loader.data.get(category, {}).get(kb_key)
         min_secure = entry.get("min_secure_version") if entry else None
-        if not min_secure:
-            return None
-        observed = _parse_version_tuple(version)
-        floor = _parse_version_tuple(min_secure)
-        if observed is None or floor is None:
-            return None
-        return observed < floor
+        return is_outdated(version, min_secure)
     return None
 
 

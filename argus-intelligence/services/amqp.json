@@ -1,0 +1,54 @@
+{
+  "service": "AMQP",
+  "port": 5672,
+  "protocol": "TCP",
+  "purpose": "Advanced Message Queuing Protocol, used by message brokers such as RabbitMQ for asynchronous messaging between services.",
+  "risk_level": "High",
+  "description": "AMQP message brokers (most commonly RabbitMQ) often ship with well-known default credentials (guest/guest) and, by default, RabbitMQ's guest account is only permitted to connect from localhost — but this protection is frequently disabled or the broker is placed directly behind a load balancer, exposing it. An exposed broker with default or no authentication allows reading, injecting, and deleting messages across every queue.",
+  "common_risks": [
+    "default guest/guest credentials",
+    "unauthenticated management API",
+    "message queue tampering or data exfiltration"
+  ],
+  "misconfigurations": [
+    "guest account's loopback-only restriction disabled",
+    "management plugin (port 15672) exposed without a reverse-proxy auth layer",
+    "no TLS on inter-service AMQP traffic"
+  ],
+  "attack_patterns": [
+    "Connect with default guest/guest credentials and enumerate queues/exchanges",
+    "Publish forged messages into queues consumed by trusted internal services",
+    "Read sensitive data (tokens, PII) sitting unconsumed in queues"
+  ],
+  "real_world_incidents": [
+    "Exposed RabbitMQ instances with default credentials are a recurring finding in cloud misconfiguration scans, frequently surfacing customer data and internal task payloads sitting in unconsumed queues."
+  ],
+  "recommended_actions": [
+    "Change default guest credentials immediately in any environment where the loopback restriction might not apply.",
+    "Do not expose the broker port or the management UI (15672) directly to the internet — place both behind a VPN or authenticated proxy.",
+    "Enable TLS for AMQP connections between services.",
+    "Apply least-privilege permissions per vhost/queue rather than using a single admin account for all services."
+  ],
+  "audience_guidance": {
+    "student": "AMQP brokers are like a shared mailroom where different parts of an application drop off and pick up messages. If the mailroom door is unlocked (default credentials, no auth), anyone can read other people's mail or drop off forged messages.",
+    "developer": "Never leave RabbitMQ's default guest/guest credentials active outside a fully isolated environment. Use per-service credentials with scoped vhost permissions instead of one shared admin account.",
+    "bug_bounty_hunter": "Try guest/guest against the AMQP port and the 15672 management UI — this is a very common finding on internal tools exposed by accident.",
+    "pentester": "Enumerate exchanges and queues after authenticating; look for sensitive payloads sitting in queues and test whether forged messages are accepted by consumers.",
+    "security_team": "Inventory every message broker and confirm none use default credentials or expose the management UI publicly. Monitor for anomalous queue consumption patterns."
+  },
+  "correlation_rules": {
+    "amplifies": ["no_authentication", "internet_facing"],
+    "requires": [],
+    "mitigates": ["firewall_restricted"]
+  },
+  "learning_resources": [
+    "https://www.rabbitmq.com/docs/access-control",
+    "https://www.rabbitmq.com/docs/production-checklist"
+  ],
+  "related_findings": ["default_credentials", "open_database_no_auth"],
+  "mitre_attack": ["T1078", "T1557"],
+  "risk_weight": 8,
+  "version": "1.0",
+  "last_updated": "2026-09-11",
+  "reviewed_by": "argus-team"
+}

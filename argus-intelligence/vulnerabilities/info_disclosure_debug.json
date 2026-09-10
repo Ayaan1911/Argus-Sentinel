@@ -7,6 +7,10 @@
     "Disable debug mode in production.",
     "Restrict access to diagnostic endpoints (e.g., /actuator/env) to internal IPs or authenticated admins."
   ],
+  "recommended_actions": [
+    "Disable debug mode in production.",
+    "Restrict access to diagnostic endpoints (e.g., /actuator/env) to internal IPs or authenticated admins."
+  ],
   "audience_guidance": {
     "student": "Debug pages show how the app works behind the scenes. This gives hackers a blueprint to find deeper flaws.",
     "developer": "Turn off framework debug modes (e.g., Django DEBUG=False, Spring Boot Actuator security). Never expose /server-status.",
@@ -17,7 +21,20 @@
   "learning_resources": [
     "https://cwe.mitre.org/data/definitions/200.html"
   ],
-  "affected_technologies": ["django", "php", "nodejs"],
+  "affected_technologies": [
+    "django",
+    "php",
+    "nodejs"
+  ],
+  "nuclei_tags": [
+    "exposure",
+    "debug"
+  ],
+  "title_keywords": [
+    "debug",
+    "stack trace",
+    "information disclosure"
+  ],
   "version": "1.0",
   "last_updated": "2026-07-05",
   "reviewed_by": "argus-team"

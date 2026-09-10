@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Ayaan1911/Argus-Sentinel/argus-intelligence/schema.json",
+  "title": "Argus Sentinel Intelligence Library Entry",
+  "description": "Structural schema for any single JSON file under argus-intelligence/{services,technologies,vulnerabilities}/. One schema covers all three categories since they share most of their vocabulary — see SCHEMA.md for which fields are actually read by which engine (reasoning.py, correlation.py, confidence.py, processor.py) versus which are documentation-only for humans browsing the Intelligence Library UI.",
+  "type": "object",
+  "required": [
+    "description",
+    "audience_guidance",
+    "learning_resources",
+    "version",
+    "last_updated",
+    "reviewed_by"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "service": { "type": "string", "minLength": 1 },
+    "technology": { "type": "string", "minLength": 1 },
+    "vulnerability_class": { "type": "string", "minLength": 1 },
+    "type": { "type": "string", "minLength": 1 },
+
+    "port": { "type": "integer", "minimum": 0, "maximum": 65535 },
+    "protocol": { "type": "string" },
+    "purpose": { "type": "string" },
+
+    "risk_level": { "$ref": "#/$defs/riskLevel" },
+    "severity": { "$ref": "#/$defs/riskLevel" },
+
+    "description": { "type": "string", "minLength": 1 },
+    "impact": { "type": "string" },
+
+    "common_risks": { "$ref": "#/$defs/stringArray" },
+    "misconfigurations": { "$ref": "#/$defs/stringArray" },
+    "mitigations": { "$ref": "#/$defs/stringArray" },
+    "remediation": { "$ref": "#/$defs/stringArray" },
+    "attack_patterns": { "$ref": "#/$defs/stringArray" },
+    "real_world_incidents": { "$ref": "#/$defs/stringArray" },
+    "recommended_actions": { "$ref": "#/$defs/stringArray" },
+    "related_findings": { "$ref": "#/$defs/stringArray" },
+    "affected_technologies": { "$ref": "#/$defs/stringArray" },
+    "nuclei_tags": { "$ref": "#/$defs/stringArray" },
+    "title_keywords": { "$ref": "#/$defs/stringArray" },
+
+    "learning_resources": {
+      "type": "array",
+      "items": { "type": "string", "format": "uri" }
+    },
+
+    "mitre_attack": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^T[0-9]{4}(\\.[0-9]{3})?$" }
+    },
+
+    "risk_weight": { "type": "number", "minimum": 0, "maximum": 10 },
+    "min_secure_version": { "type": "string", "minLength": 1 },
+
+    "audience_guidance": {
+      "type": "object",
+      "required": ["student", "developer", "bug_bounty_hunter", "pentester", "security_team"],
+      "additionalProperties": false,
+      "properties": {
+        "student": { "type": "string", "minLength": 1 },
+        "developer": { "type": "string", "minLength": 1 },
+        "bug_bounty_hunter": { "type": "string", "minLength": 1 },
+        "pentester": { "type": "string", "minLength": 1 },
+        "security_team": { "type": "string", "minLength": 1 }
+      }
+    },
+
+    "correlation_rules": {
+      "type": "object",
+      "required": ["amplifies", "requires", "mitigates"],
+      "additionalProperties": false,
+      "properties": {
+        "amplifies": { "$ref": "#/$defs/stringArray" },
+        "requires": { "$ref": "#/$defs/stringArray" },
+        "mitigates": { "$ref": "#/$defs/stringArray" }
+      }
+    },
+
+    "version": { "type": "string", "minLength": 1 },
+    "last_updated": { "type": "string", "format": "date" },
+    "reviewed_by": { "type": "string", "minLength": 1 }
+  },
+  "$defs": {
+    "riskLevel": { "type": "string", "enum": ["Informational", "Low", "Medium", "High", "Critical"] },
+    "stringArray": { "type": "array", "items": { "type": "string" } }
+  }
+}

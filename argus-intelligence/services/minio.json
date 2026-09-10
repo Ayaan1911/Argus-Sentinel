@@ -1,0 +1,53 @@
+{
+  "service": "MinIO",
+  "port": 9000,
+  "protocol": "TCP",
+  "purpose": "S3-compatible object storage server, commonly self-hosted as a local/on-prem alternative to AWS S3.",
+  "risk_level": "High",
+  "description": "MinIO exposes an S3-compatible API and (on port 9001) a web console. Deployments that keep default credentials (minioadmin/minioadmin), disable access-key auth for 'public' testing, or expose the console without a reverse-proxy auth layer allow full read/write/delete access to every bucket.",
+  "common_risks": [
+    "default minioadmin/minioadmin credentials left active",
+    "publicly readable/writable buckets",
+    "exposed admin console without additional authentication"
+  ],
+  "misconfigurations": [
+    "default access key / secret key never rotated",
+    "bucket policies set to public read or public write",
+    "console (9001) reachable from the internet"
+  ],
+  "attack_patterns": [
+    "Authenticate with default credentials and list/download every bucket",
+    "Upload malicious files to a publicly writable bucket for later serving/exploitation",
+    "Enumerate bucket contents for leaked credentials, backups, or PII"
+  ],
+  "real_world_incidents": [
+    "Self-hosted MinIO instances with default or leaked credentials are a common source of large-scale data exposure incidents, similar in impact to misconfigured public S3 buckets."
+  ],
+  "recommended_actions": [
+    "Change the default minioadmin credentials before the first deployment, not after.",
+    "Never expose the admin console (9001) to the public internet — restrict it to a VPN or bastion.",
+    "Review every bucket policy for accidental public read/write access.",
+    "Enable and monitor MinIO's audit logging for unusual access patterns."
+  ],
+  "audience_guidance": {
+    "student": "MinIO is self-hosted cloud storage, similar to Amazon S3. If it's left with the default admin/admin-style password, or a storage bucket is marked 'public', anyone on the internet can read or even overwrite the files inside.",
+    "developer": "Rotate MinIO's default access/secret keys immediately, and treat bucket policies with the same care as AWS S3 bucket policies — default to private, grant public access only when explicitly required.",
+    "bug_bounty_hunter": "Check for default minioadmin/minioadmin credentials and probe whether buckets are listable/downloadable without authentication.",
+    "pentester": "Enumerate buckets, test read/write permissions per bucket, and check the admin console for exposure. Look for credentials or backups stored inside accessible buckets.",
+    "security_team": "Track every self-hosted object storage instance in asset inventory and audit bucket policies on a recurring basis, the same way you would audit cloud-provider S3 buckets."
+  },
+  "correlation_rules": {
+    "amplifies": ["no_authentication", "internet_facing"],
+    "requires": [],
+    "mitigates": ["firewall_restricted"]
+  },
+  "learning_resources": [
+    "https://min.io/docs/minio/linux/administration/identity-access-management.html"
+  ],
+  "related_findings": ["default_credentials", "exposed_admin_panel"],
+  "mitre_attack": ["T1530", "T1078"],
+  "risk_weight": 8,
+  "version": "1.0",
+  "last_updated": "2026-09-11",
+  "reviewed_by": "argus-team"
+}

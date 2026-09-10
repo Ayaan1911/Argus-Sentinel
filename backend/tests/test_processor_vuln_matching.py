@@ -113,6 +113,117 @@ def test_ssrf_finding_matches_intelligence_library():
     print(f"  ✓ risk_score: {result['final_risk_score']} ({result['severity']})")
 
 
+# --- Previously-orphaned entries (added nuclei_tags/title_keywords this
+# session — before that, these entries had rich JSON but nothing in
+# processor.py ever routed a real finding to them) ---
+def test_missing_security_headers_now_matches():
+    raw = {
+        "source": "nuclei",
+        "type": "vulnerability",
+        "title": "HTTP Missing Security Headers: http://juice-shop:3000",
+        "raw_data": {
+            "info": {"name": "HTTP Missing Security Headers", "severity": "info",
+                      "tags": ["misconfig", "headers", "generic"]},
+            "severity": "info",
+        }
+    }
+    result = processor.process(raw, scan_id="test-scan-headers", audience="developer")
+    assert result["technical_impact"] != "Unknown"
+    assert result["audience_guidance"].get("developer")
+
+
+def test_exposed_api_docs_now_matches():
+    raw = {
+        "source": "nuclei",
+        "type": "vulnerability",
+        "title": "Public Swagger API - Detect: http://juice-shop:3000/api-docs/swagger.yaml",
+        "raw_data": {
+            "info": {"name": "Public Swagger API - Detect", "severity": "info",
+                      "tags": ["swagger", "exposure"]},
+            "severity": "info",
+        }
+    }
+    result = processor.process(raw, scan_id="test-scan-swagger", audience="developer")
+    assert result["technical_impact"] != "Unknown"
+    assert "api" in result["technical_impact"].lower() or "swagger" in result["technical_impact"].lower() or "documentation" in result["technical_impact"].lower()
+
+
+# --- New vulnerability entries added this session ---
+def test_exposed_git_matches():
+    raw = {
+        "source": "nuclei",
+        "type": "vulnerability",
+        "title": "Git Config File - Detect: http://example.com/.git/config",
+        "raw_data": {
+            "info": {"name": "Git Config File", "severity": "medium", "tags": ["git", "exposure"]},
+            "severity": "medium",
+        }
+    }
+    result = processor.process(raw, scan_id="test-scan-git", audience="pentester")
+    assert result["technical_impact"] != "Unknown"
+    assert result["audience_guidance"].get("pentester")
+
+
+def test_exposed_env_matches():
+    raw = {
+        "source": "nuclei",
+        "type": "vulnerability",
+        "title": "Environment File Exposure: http://example.com/.env",
+        "raw_data": {
+            "info": {"name": "Environment File Exposure", "severity": "critical", "tags": ["exposure", "env"]},
+            "severity": "critical",
+        }
+    }
+    result = processor.process(raw, scan_id="test-scan-env", audience="security_team")
+    assert result["technical_impact"] != "Unknown"
+    assert result["severity"] in ("critical", "high")  # severity comes from finding_data, not the KB entry
+
+
+def test_default_credentials_matches():
+    raw = {
+        "source": "nuclei",
+        "type": "vulnerability",
+        "title": "Generic Default Login",
+        "raw_data": {
+            "info": {"name": "Generic Default Login", "severity": "critical", "tags": ["default-login"]},
+            "severity": "critical",
+        }
+    }
+    result = processor.process(raw, scan_id="test-scan-creds", audience="student")
+    assert result["technical_impact"] != "Unknown"
+
+
+def test_exposed_cicd_config_matches():
+    raw = {
+        "source": "nuclei",
+        "type": "vulnerability",
+        "title": "Exposed GitLab CI Config: http://example.com/.gitlab-ci.yml",
+        "raw_data": {
+            "info": {"name": "Exposed GitLab CI Config", "severity": "low", "tags": ["exposure", "ci"]},
+            "severity": "low",
+        }
+    }
+    result = processor.process(raw, scan_id="test-scan-cicd", audience="developer")
+    assert result["technical_impact"] != "Unknown"
+
+
+def test_ambiguous_generic_tag_prefers_more_specific_entry():
+    # A finding tagged only with the generic "exposure" tag (shared by 7+
+    # entries) should still resolve to the entry with the most specific
+    # overlapping tag once a distinguishing tag is present.
+    raw = {
+        "source": "nuclei",
+        "type": "vulnerability",
+        "title": "Some Config Exposure",
+        "raw_data": {
+            "info": {"name": "Some Config Exposure", "severity": "low", "tags": ["exposure", "git", "config"]},
+            "severity": "low",
+        }
+    }
+    result = processor.process(raw, scan_id="test-scan-ambiguous", audience="student")
+    assert "git" in result["technical_impact"].lower()
+
+
 # --- Unmatched finding — should not crash ---
 def test_unmatched_finding_returns_base_result():
     raw = {

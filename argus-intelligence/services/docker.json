@@ -1,0 +1,53 @@
+{
+  "service": "Docker",
+  "port": 2375,
+  "protocol": "TCP",
+  "purpose": "Docker Engine remote API, used to manage containers, images, networks, and volumes on the host.",
+  "risk_level": "Critical",
+  "description": "The Docker Engine API allows full control over the container runtime — creating, starting, and inspecting containers. When exposed over TCP without TLS client authentication (the default on port 2375, versus the TLS-only 2376), anyone who can reach the port has unauthenticated root-equivalent control of the host.",
+  "common_risks": [
+    "unauthenticated remote API access",
+    "container escape to host root",
+    "cryptomining via malicious containers"
+  ],
+  "misconfigurations": [
+    "dockerd started with -H tcp://0.0.0.0:2375 (no TLS)",
+    "Docker socket exposed via a reverse proxy without auth",
+    "TLS enabled but client certificate verification skipped"
+  ],
+  "attack_patterns": [
+    "Mount the host filesystem into a new privileged container for full read/write host access",
+    "Deploy a container that reads host secrets or SSH keys",
+    "Use the API to pull and run cryptomining images at scale"
+  ],
+  "real_world_incidents": [
+    "Mass-scanning campaigns (e.g. the 2019-2020 Docker API worm activity) routinely find and exploit open 2375/2376 ports within minutes of exposure, deploying cryptominers."
+  ],
+  "recommended_actions": [
+    "Never bind the Docker daemon to a TCP port reachable from outside localhost without mutual TLS.",
+    "If remote access is required, enable TLS with client certificate verification (dockerd --tlsverify).",
+    "Prefer the Unix socket plus SSH tunneling over exposing the API on the network at all.",
+    "Restrict access with a firewall/security group even when TLS is enabled, as defense in depth."
+  ],
+  "audience_guidance": {
+    "student": "Docker's API is like a remote control for creating and running programs in isolated boxes (containers). If that remote control is left unlocked on the network, anyone can use it to run their own programs — including ones that break out of the box and take over the whole computer.",
+    "developer": "Never start dockerd with -H tcp://0.0.0.0:2375. If you need remote Docker access, use --tlsverify with client certificates, or tunnel over SSH instead of exposing the API directly.",
+    "bug_bounty_hunter": "An open 2375 is often an instant critical: `docker -H tcp://target:2375 info` confirms access, then a privileged container with the host filesystem mounted gives full host compromise.",
+    "pentester": "Confirm unauthenticated access, then run a container with `-v /:/host --privileged` to chroot into the host filesystem and demonstrate full compromise.",
+    "security_team": "Treat any host with 2375 reachable from outside localhost as a critical incident — it is equivalent to an exposed root shell. Audit all Docker hosts for TLS enforcement."
+  },
+  "correlation_rules": {
+    "amplifies": ["no_authentication", "internet_facing"],
+    "requires": [],
+    "mitigates": ["firewall_restricted"]
+  },
+  "learning_resources": [
+    "https://docs.docker.com/engine/security/protect-access/"
+  ],
+  "related_findings": ["exposed_admin_panel", "no_authentication"],
+  "mitre_attack": ["T1611", "T1190"],
+  "risk_weight": 10,
+  "version": "1.0",
+  "last_updated": "2026-09-11",
+  "reviewed_by": "argus-team"
+}

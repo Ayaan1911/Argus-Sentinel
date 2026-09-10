@@ -6,7 +6,10 @@ import SeverityBadge from '../components/SeverityBadge';
 
 const EntryCard = ({ entry, type }) => {
   const [expanded, setExpanded] = useState(false);
-  const name = entry.service || entry.technology || entry.vulnerability;
+  // vulnerabilities/*.json entries use "vulnerability_class" as their name
+  // field, not "vulnerability" — without this fallback, half the library's
+  // vulnerability entries render with a blank title.
+  const name = entry.service || entry.technology || entry.vulnerability_class || entry.vulnerability;
   
   return (
     <div className="bg-card border border-bordercolor rounded-lg overflow-hidden transition-all">

@@ -7,6 +7,10 @@
     "Require authentication to access API documentation in production.",
     "Disable Swagger/OpenAPI endpoints in production environments."
   ],
+  "recommended_actions": [
+    "Require authentication to access API documentation in production.",
+    "Disable Swagger/OpenAPI endpoints in production environments."
+  ],
   "audience_guidance": {
     "student": "API docs are the manual for the app. Giving attackers the manual makes their job much easier.",
     "developer": "Disable endpoints like /swagger-ui.html or /openapi.json in production, or place them behind authentication.",
@@ -17,7 +21,22 @@
   "learning_resources": [
     "https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html"
   ],
-  "affected_technologies": ["django", "nodejs", "php"],
+  "affected_technologies": [
+    "django",
+    "nodejs",
+    "php"
+  ],
+  "nuclei_tags": [
+    "swagger",
+    "openapi",
+    "exposure"
+  ],
+  "title_keywords": [
+    "swagger",
+    "api docs",
+    "openapi",
+    "api documentation"
+  ],
   "version": "1.0",
   "last_updated": "2026-07-05",
   "reviewed_by": "argus-team"

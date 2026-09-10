@@ -5,54 +5,41 @@ class FindingProcessor:
     def __init__(self):
         self.loader = get_intelligence_loader()
 
-    # Map nuclei template tags → Intelligence Library vulnerability filenames
-    TAG_TO_VULN_KEY = {
-        "sqli": "sql_injection",
-        "sql": "sql_injection",
-        "time-based-sqli": "sql_injection",
-        "xss": "xss",
-        "rxss": "xss",
-        "ssrf": "ssrf",
-        "rce": "rce",
-        "idor": "idor",
-    }
-
     def _match_vuln_entry(self, raw_data: dict, title: str):
         """Match a nuclei finding to an Intelligence Library vulnerability entry.
 
+        Data-driven — reads each vulnerabilities/*.json entry's own
+        "nuclei_tags"/"title_keywords" fields rather than a hardcoded
+        tag->entry map, so a new vulnerability entry becomes matchable just
+        by adding the JSON file (see argus-intelligence/CONTRIBUTING.md) —
+        no code change needed here.
+
         Strategy:
-        1. Tag-based match — nuclei tags are normalized (xss, sqli, ssrf, rce, idor)
-        2. Title keyword fallback
-        3. Returns None if no match found
+        1. Tag-based match — the entry with the MOST overlapping tags wins,
+           so a finding carrying both a generic tag (e.g. "exposure") and a
+           specific one (e.g. "git") doesn't ambiguously match every entry
+           that happens to also share the generic tag.
+        2. Title keyword fallback.
+        3. Returns None if no match found.
         """
         info = raw_data.get("info", {})
         tags = {str(tag).lower() for tag in info.get("tags", [])}
         title_l = title.lower()
+        vulns = self.loader.data.get("vulnerabilities", {})
 
-        for tag in tags:
-            key = self.TAG_TO_VULN_KEY.get(tag)
-            if key:
-                entry = self.loader.get_vulnerability(key)
-                if entry:
-                    return entry
+        best_entry, best_score = None, 0
+        for entry in vulns.values():
+            entry_tags = {str(t).lower() for t in entry.get("nuclei_tags", [])}
+            score = len(tags & entry_tags)
+            if score > best_score:
+                best_entry, best_score = entry, score
+        if best_entry:
+            return best_entry
 
-        keyword_map = {
-            "sql injection": "sql_injection",
-            "sqli": "sql_injection",
-            "xss": "xss",
-            "cross-site scripting": "xss",
-            "ssrf": "ssrf",
-            "server-side request forgery": "ssrf",
-            "rce": "rce",
-            "remote code execution": "rce",
-            "idor": "idor",
-            "insecure direct object": "idor",
-        }
-        for keyword, key in keyword_map.items():
-            if keyword in title_l:
-                entry = self.loader.get_vulnerability(key)
-                if entry:
-                    return entry
+        for entry in vulns.values():
+            keywords = entry.get("title_keywords", [])
+            if any(str(kw).lower() in title_l for kw in keywords):
+                return entry
 
         return None
 
@@ -84,8 +71,18 @@ class FindingProcessor:
             if kb_entry is None:
                 kb_entry = self.loader.get_service("generic_port")
         elif f_type == "technology":
-            tech_name = raw_data.get("title", "")
-            kb_entry = self.loader.get_technology(tech_name)
+            kb_entry = None
+            # httpx's tech-detect list (e.g. "jQuery:3.4.1") is a more
+            # reliable signal for known frameworks/libraries than the page's
+            # own <title>, which is usually the site's own branding rather
+            # than the software name.
+            for t in raw_data.get("tech", []) or []:
+                tech_name = str(t).split(":")[0].strip()
+                kb_entry = self.loader.get_technology(tech_name)
+                if kb_entry:
+                    break
+            if kb_entry is None:
+                kb_entry = self.loader.get_technology(raw_data.get("title", ""))
             # Fallback: unmatched tech findings (e.g. Live Host) get generic live_host guidance
             if kb_entry is None:
                 kb_entry = self.loader.get_technology("live_host")

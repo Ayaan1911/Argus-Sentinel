@@ -7,6 +7,10 @@
     "Disable directory browsing in web server configuration (e.g., Options -Indexes in Apache).",
     "Ensure index files (index.html, index.php) are present."
   ],
+  "recommended_actions": [
+    "Disable directory browsing in web server configuration (e.g., Options -Indexes in Apache).",
+    "Ensure index files (index.html, index.php) are present."
+  ],
   "audience_guidance": {
     "student": "Directory listing shows all files in a folder like a file browser. It helps attackers find files they shouldn't see.",
     "developer": "Configure your web server to deny directory listings. In Apache, remove the 'Indexes' directive.",
@@ -17,7 +21,19 @@
   "learning_resources": [
     "https://cwe.mitre.org/data/definitions/548.html"
   ],
-  "affected_technologies": ["apache", "nginx", "iis"],
+  "affected_technologies": [
+    "apache",
+    "nginx",
+    "iis"
+  ],
+  "nuclei_tags": [
+    "exposure",
+    "listing"
+  ],
+  "title_keywords": [
+    "directory listing",
+    "index of /"
+  ],
   "version": "1.0",
   "last_updated": "2026-07-05",
   "reviewed_by": "argus-team"

@@ -56,6 +56,13 @@
     "T1059"
   ],
   "risk_weight": 10,
+  "nuclei_tags": [
+    "rce"
+  ],
+  "title_keywords": [
+    "rce",
+    "remote code execution"
+  ],
   "version": "1.0",
   "last_updated": "2026-06-08",
   "reviewed_by": "argus-team"

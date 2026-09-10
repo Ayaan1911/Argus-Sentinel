@@ -9,6 +9,12 @@
     "Set Strict-Transport-Security (HSTS).",
     "Set X-Content-Type-Options to nosniff."
   ],
+  "recommended_actions": [
+    "Implement Content-Security-Policy (CSP).",
+    "Set X-Frame-Options to DENY or SAMEORIGIN.",
+    "Set Strict-Transport-Security (HSTS).",
+    "Set X-Content-Type-Options to nosniff."
+  ],
   "audience_guidance": {
     "student": "Security headers are instructions to the browser to protect the user from certain types of attacks, like being tricked into clicking a hidden button.",
     "developer": "Add CSP, HSTS, X-Frame-Options, and X-Content-Type-Options headers to your web server or application middleware.",
@@ -19,7 +25,20 @@
   "learning_resources": [
     "https://owasp.org/www-project-secure-headers/"
   ],
-  "affected_technologies": ["apache", "nginx", "iis", "nodejs"],
+  "affected_technologies": [
+    "apache",
+    "nginx",
+    "iis",
+    "nodejs"
+  ],
+  "nuclei_tags": [
+    "misconfig",
+    "headers"
+  ],
+  "title_keywords": [
+    "missing security headers",
+    "security headers"
+  ],
   "version": "1.0",
   "last_updated": "2026-07-05",
   "reviewed_by": "argus-team"

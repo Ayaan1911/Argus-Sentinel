@@ -120,6 +120,29 @@ def test_httpx_argv_and_stdin():
     assert "http://sub.example.com:3000" in stdin_urls
 
 
+# --- outdated client-side tech detection (min_secure_version vs. httpx's tech-detect) ---
+
+def test_detect_outdated_tech_flags_old_jquery():
+    import app.scanners.httpx as httpx_mod
+    # jquery.json's min_secure_version is "3.5.0" — real library data, not a mock.
+    assert httpx_mod._detect_outdated_tech(["jQuery:3.4.1"]) is True
+
+
+def test_detect_outdated_tech_does_not_flag_current_jquery():
+    import app.scanners.httpx as httpx_mod
+    assert httpx_mod._detect_outdated_tech(["jQuery:3.6.0"]) is False
+
+
+def test_detect_outdated_tech_ignores_unknown_tech():
+    import app.scanners.httpx as httpx_mod
+    assert httpx_mod._detect_outdated_tech(["SomeObscureLib:1.0.0"]) is False
+
+
+def test_detect_outdated_tech_handles_empty_list():
+    import app.scanners.httpx as httpx_mod
+    assert httpx_mod._detect_outdated_tech([]) is False
+
+
 def test_nmap_argv():
     import app.scanners.nmap as nmap_mod
 

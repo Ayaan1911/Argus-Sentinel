@@ -36,6 +36,29 @@ def is_internal_ip(ip_str: str) -> bool:
     )
 
 
+def parse_version_tuple(v: str):
+    """Parses a leading "N", "N.N", or "N.N.N" from a version string into a
+    comparable tuple. Returns None if nothing numeric could be parsed."""
+    if not v:
+        return None
+    m = re.match(r"(\d+)(?:\.(\d+))?(?:\.(\d+))?", v)
+    if not m:
+        return None
+    return tuple(int(g) for g in m.groups() if g is not None)
+
+
+def is_outdated(version: str, min_secure_version: str) -> bool | None:
+    """True/False when both versions could be parsed and compared, None when
+    there's not enough information — never guessed."""
+    if not version or not min_secure_version:
+        return None
+    observed = parse_version_tuple(version)
+    floor = parse_version_tuple(min_secure_version)
+    if observed is None or floor is None:
+        return None
+    return observed < floor
+
+
 async def run_subprocess(command: list[str], timeout: int = 300, input_bytes: bytes | None = None):
     """Run a subprocess and classify the outcome so callers can distinguish
     binary-not-found, timeout, non-zero exit, and success as separate cases
