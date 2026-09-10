@@ -34,9 +34,20 @@ def _detect_known_vulnerabilities(tech_list: list) -> bool:
     return False
 
 
+# Web apps commonly run on these non-standard ports too (juice-shop's default
+# is 3000). httpx's own "-ports" flag is broken in the pinned v1.6.5 binary
+# (it mis-parses bare hostnames into a malformed URL), so the candidate
+# host:port URLs are built here instead and fed to httpx directly via stdin.
+EXTRA_PORTS = (3000, 8000, 8080, 8888)
+
+
 async def run(targets: list[str]) -> tuple[list[dict], dict]:
     targets = [normalize_target(t) for t in targets]
     logger.info(f"Starting httpx scan for {len(targets)} target(s)")
+    probe_urls = []
+    for t in targets:
+        probe_urls += [f"http://{t}", f"https://{t}"]
+        probe_urls += [f"http://{t}:{p}" for p in EXTRA_PORTS]
     command = [
         "/usr/local/bin/httpx",
         "-json",
@@ -52,7 +63,7 @@ async def run(targets: list[str]) -> tuple[list[dict], dict]:
     ]
     findings = []
 
-    stdin_payload = ("\n".join(targets)).encode("utf-8")
+    stdin_payload = ("\n".join(probe_urls)).encode("utf-8")
     stdout, stderr, status = await run_subprocess(command, timeout=300, input_bytes=stdin_payload)
     if status["status"] != "success":
         logger.warning(f"httpx {status['status']}: {status['detail']}")

@@ -58,7 +58,10 @@ class CorrelationEngine:
             if port == 22 or "ssh" in title.lower():
                 ssh_findings.append(f)
 
-            if f_type == "technology" and raw.get("outdated_version"):
+            # outdated_version is only ever set by nmap.py, and nmap findings
+            # are always type "port" — never "technology" (httpx's technology
+            # findings use "known_vulnerabilities" instead, checked below).
+            if f_type == "port" and raw.get("outdated_version"):
                 tech_outdated_findings.append(f)
                 
             if f_type == "vulnerability":

@@ -35,6 +35,19 @@ def _live_hostnames(httpx_results: list[dict]) -> set:
     return hosts
 
 
+def _live_urls_by_host(httpx_results: list[dict]) -> dict:
+    """host -> the full URL (with real port) httpx confirmed live on it, so
+    downstream stages hit the actual working endpoint instead of re-guessing
+    default ports 80/443."""
+    urls = {}
+    for f in httpx_results:
+        url = f.get("raw_data", {}).get("url", "")
+        host = urllib.parse.urlparse(url).hostname
+        if host:
+            urls.setdefault(host, url)
+    return urls
+
+
 async def _run_pipeline(target: str):
     """Sequential recon pipeline: subfinder discovers subdomains -> httpx
     confirms which of (target + discovered subdomains) are actually live ->
@@ -62,7 +75,9 @@ async def _run_pipeline(target: str):
     nmap_results, nmap_status = await nmap.run(scan_targets)
     stage_status["nmap"] = nmap_status
 
-    nuclei_results, nuclei_status = await nuclei.run(scan_targets)
+    live_urls = _live_urls_by_host(httpx_results)
+    nuclei_targets = [live_urls.get(t, t) for t in scan_targets]
+    nuclei_results, nuclei_status = await nuclei.run(nuclei_targets)
     stage_status["nuclei"] = nuclei_status
 
     all_findings = subfinder_results + httpx_results + nmap_results + nuclei_results
@@ -118,6 +133,14 @@ def run_scan(scan_id: str, target: str, audience: str):
 
             correlation_result = correlation_engine.correlate(findings_dicts)
             updated_dicts = correlation_engine.apply_modifiers(findings_dicts, correlation_result)
+            # Zero correlations is often the correct answer (this scan's findings
+            # genuinely don't match any rule), but logged explicitly so it's never
+            # silently indistinguishable from a rule/data-shape mismatch bug.
+            if correlation_result.correlations_found:
+                rule_names = [c.rule_name for c in correlation_result.correlations_found]
+                logger.info(f"Correlation engine: {len(rule_names)} rule(s) matched: {rule_names}")
+            else:
+                logger.info("Correlation engine: no rules matched this scan's findings — all correlation_modifier values are 0.0")
 
             # Update DB with final scores
             for ud in updated_dicts:

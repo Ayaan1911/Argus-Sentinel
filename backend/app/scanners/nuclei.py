@@ -7,7 +7,10 @@ logger = logging.getLogger(__name__)
 
 
 async def run(targets: list[str]) -> tuple[list[dict], dict]:
-    targets = [normalize_target(t) for t in targets]
+    # A target already carrying a scheme is a confirmed-live URL (with the
+    # real port) handed down from httpx — keep it as-is rather than
+    # normalizing it back down to a bare hostname and losing that port.
+    targets = [t if "://" in t else normalize_target(t) for t in targets]
     logger.info(f"Starting nuclei scan for {len(targets)} target(s)")
 
     command = ["/usr/local/bin/nuclei"]

@@ -43,8 +43,7 @@ def _is_wildcard_domain(domain: str) -> bool:
     return _resolve_a(f"{probe_label}.{domain}") is not None
 
 
-def _is_takeover_candidate(hostname: str) -> bool:
-    cname = _resolve_cname(hostname)
+def _is_takeover_candidate(cname: str | None) -> bool:
     if not cname:
         return False
     if not any(fp in cname.lower() for fp in TAKEOVER_CNAME_FINGERPRINTS):
@@ -79,15 +78,28 @@ async def run(target: str) -> tuple[list[dict], dict]:
         logger.warning(f"{target} appears to have wildcard DNS — subdomain results may be unreliable")
 
     findings = []
+    skipped_nxdomain = 0
     for host in hosts:
-        raw_data = {"host": host, "wildcard_subdomain": wildcard}
-
         resolved_ip = _resolve_a(host)
+        cname = _resolve_cname(host)
+
+        # Passive sources (e.g. rapiddns) occasionally fabricate "subdomains"
+        # for targets they have no real data on — including DNS SOA-record
+        # admin-contact artifacts like "hostmaster.hostmaster.<target>". A
+        # host with neither an A nor a CNAME record doesn't exist in DNS at
+        # all, so it's not a real discovery — unlike a genuine dangling
+        # takeover candidate, which always has a CNAME (just to a dead
+        # target), this has nothing.
+        if resolved_ip is None and cname is None:
+            skipped_nxdomain += 1
+            continue
+
+        raw_data = {"host": host, "wildcard_subdomain": wildcard}
         if resolved_ip is not None:
             raw_data["resolved_ip"] = resolved_ip
             raw_data["resolves_to_internal_ip"] = is_internal_ip(resolved_ip)
 
-        raw_data["takeover_possible"] = _is_takeover_candidate(host)
+        raw_data["takeover_possible"] = _is_takeover_candidate(cname)
 
         findings.append({
             "source": "subfinder",
@@ -95,6 +107,9 @@ async def run(target: str) -> tuple[list[dict], dict]:
             "title": f"Subdomain: {host}",
             "raw_data": raw_data,
         })
+
+    if skipped_nxdomain:
+        logger.info(f"subfinder: discarded {skipped_nxdomain} result(s) with no DNS record at all (A or CNAME) — likely source-fabricated for {target}")
 
     logger.info(f"subfinder found {len(findings)} results for {target}")
     return findings, status

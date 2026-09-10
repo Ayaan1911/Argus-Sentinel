@@ -110,7 +110,14 @@ def test_httpx_argv_and_stdin():
     assert isinstance(captured["command"], list)
     assert captured["command"][0] == "/usr/local/bin/httpx"
     assert "-tech-detect" in captured["command"]
-    assert captured["input_bytes"] == b"example.com\nsub.example.com"
+    stdin_urls = captured["input_bytes"].decode().split("\n")
+    # Each normalized target expands to its default scheme URLs plus the
+    # common non-standard web ports (httpx's own "-ports" flag is broken in
+    # the pinned binary, see httpx.py's EXTRA_PORTS comment).
+    assert "http://example.com" in stdin_urls
+    assert "https://example.com" in stdin_urls
+    assert "http://example.com:3000" in stdin_urls
+    assert "http://sub.example.com:3000" in stdin_urls
 
 
 def test_nmap_argv():
