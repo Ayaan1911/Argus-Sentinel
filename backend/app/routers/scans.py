@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload, noload
 from sqlalchemy import func
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta, timezone
 
 from app.database import get_db
@@ -11,6 +11,9 @@ from app.models.scan import Scan
 from app.models.finding import Finding
 from app.rate_limit import limiter
 from app.schemas.scan import ScanCreate, ScanRead
+from app.schemas.finding import FindingRead
+from app.scanners.utils import normalize_target
+from app.engines.diff import diff_findings
 from app.tasks.scan_tasks import run_scan
 
 router = APIRouter()
@@ -145,6 +148,45 @@ async def list_scans(db: AsyncSession = Depends(get_db)):
         })
     return out
 
+@router.get("/target/{normalized_target}/history")
+async def get_scan_history_for_target(normalized_target: str, db: AsyncSession = Depends(get_db)):
+    # Normalize defensively even though callers are expected to already pass
+    # a normalized value — same reasoning as every other target entry point.
+    target = normalize_target(normalized_target)
+
+    stmt = (
+        select(Scan)
+        .options(noload(Scan.findings))
+        .where(Scan.target == target, Scan.status == "completed")
+        .order_by(Scan.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    scans = result.scalars().all()
+
+    if not scans:
+        return []
+
+    # One grouped query for all finding counts instead of one query per scan.
+    scan_ids = [s.id for s in scans]
+    count_stmt = (
+        select(Finding.scan_id, func.count(Finding.id))
+        .where(Finding.scan_id.in_(scan_ids))
+        .group_by(Finding.scan_id)
+    )
+    count_result = await db.execute(count_stmt)
+    counts_by_scan_id = {row[0]: row[1] for row in count_result.all()}
+
+    return [
+        {
+            "id": str(s.id),
+            "created_at": s.created_at,
+            "status": s.status,
+            "finding_count": counts_by_scan_id.get(s.id, 0),
+        }
+        for s in scans
+    ]
+
+
 @router.get("/{scan_id}", response_model=ScanRead)
 async def get_scan(scan_id: str, db: AsyncSession = Depends(get_db)):
     stmt = select(Scan).options(selectinload(Scan.findings)).where(Scan.id == scan_id)
@@ -176,6 +218,78 @@ async def get_scan_status(scan_id: str, db: AsyncSession = Depends(get_db)):
         "stage_status": scan.stage_status or {},
         "finding_count": finding_count
     }
+
+@router.get("/{scan_id}/diff")
+async def get_scan_diff(
+    scan_id: str,
+    compare_to: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = select(Scan).where(Scan.id == scan_id)
+    result = await db.execute(stmt)
+    scan = result.scalar_one_or_none()
+    if not scan:
+        raise HTTPException(status_code=400, detail="Scan not found")
+    if scan.status != "completed":
+        raise HTTPException(status_code=400, detail=f"Scan is not completed (status: {scan.status})")
+
+    target = normalize_target(scan.target)
+
+    if compare_to:
+        stmt = select(Scan).where(Scan.id == compare_to)
+        result = await db.execute(stmt)
+        compare_scan = result.scalar_one_or_none()
+        if not compare_scan:
+            raise HTTPException(status_code=400, detail="Comparison scan not found")
+        if normalize_target(compare_scan.target) != target:
+            raise HTTPException(status_code=400, detail="Scans belong to different targets")
+        if compare_scan.status != "completed":
+            raise HTTPException(
+                status_code=400,
+                detail=f"Comparison scan is not completed (status: {compare_scan.status})",
+            )
+    else:
+        # "prior" means chronologically before scan_id — not just "some other
+        # scan, preferring the newest overall" — otherwise diffing an old
+        # scan with no compare_to would pick a scan from after it in time.
+        stmt = (
+            select(Scan)
+            .where(
+                Scan.target == target,
+                Scan.status == "completed",
+                Scan.id != scan_id,
+                Scan.created_at < scan.created_at,
+            )
+            .order_by(Scan.created_at.desc())
+        )
+        result = await db.execute(stmt)
+        compare_scan = result.scalars().first()
+        if not compare_scan:
+            raise HTTPException(status_code=404, detail="No prior completed scan of this target to compare against")
+
+    cur_stmt = select(Finding).where(Finding.scan_id == scan.id)
+    cur_result = await db.execute(cur_stmt)
+    current_findings = [FindingRead.model_validate(f).model_dump(mode="json") for f in cur_result.scalars().all()]
+
+    prev_stmt = select(Finding).where(Finding.scan_id == compare_scan.id)
+    prev_result = await db.execute(prev_stmt)
+    previous_findings = [FindingRead.model_validate(f).model_dump(mode="json") for f in prev_result.scalars().all()]
+
+    diff = diff_findings(current_findings, previous_findings)
+
+    return {
+        "scan_id": str(scan.id),
+        "compared_to_scan_id": str(compare_scan.id),
+        "target": target,
+        "scan_date": scan.created_at,
+        "compared_scan_date": compare_scan.created_at,
+        "summary": diff["summary"],
+        "new_findings": diff["new_findings"],
+        "resolved_findings": diff["resolved_findings"],
+        "changed_findings": diff["changed_findings"],
+        "unchanged_findings": diff["unchanged_findings"],
+    }
+
 
 @router.delete("/{scan_id}")
 async def delete_scan(scan_id: str, db: AsyncSession = Depends(get_db)):

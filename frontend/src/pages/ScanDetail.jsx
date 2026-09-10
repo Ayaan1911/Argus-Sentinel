@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Loader2, AlertTriangle, AlertCircle, Info, ArrowRight, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Loader2, AlertTriangle, AlertCircle, Info, ArrowRight, ShieldAlert, ShieldCheck, GitCompare, ChevronDown, ChevronUp } from 'lucide-react';
 import client from '../api/client';
 import SeverityBadge from '../components/SeverityBadge';
 import RiskScore from '../components/RiskScore';
 import ReasoningBreakdown from '../components/ReasoningBreakdown';
 import AudienceSelector from '../components/AudienceSelector';
+import ScanComparison from '../components/ScanComparison';
 
 const STAGE_ORDER = ['subfinder', 'httpx', 'nmap', 'nuclei'];
 const STAGE_LABELS = { subfinder: 'Subfinder', httpx: 'Httpx', nmap: 'Nmap', nuclei: 'Nuclei' };
@@ -59,8 +60,10 @@ export default function ScanDetail() {
   const [selectedFindingId, setSelectedFindingId] = useState(null);
   const [audience, setAudience] = useState('');
   const [rawOpen, setRawOpen] = useState(false);
+  const [scanHistory, setScanHistory] = useState([]);
+  const [compareOpen, setCompareOpen] = useState(false);
 
-  const fetchFullScanData = async () => {
+  const fetchFullScanData = async (target, status) => {
     try {
       const sumRes = await client.get(`/findings/scan/${scan_id}/summary`);
       setSummary(sumRes.data);
@@ -75,6 +78,19 @@ export default function ScanDetail() {
       }
     } catch (err) {
       console.error("Failed to fetch full scan data", err);
+    }
+
+    // Only meaningful for the "compare to previous scan" section, and only
+    // for a completed scan (comparing against a failed one isn't useful and
+    // the diff endpoint rejects it) — a failure here shouldn't block the
+    // rest of the scan detail page.
+    if (status === 'completed') {
+      try {
+        const histRes = await client.get(`/scans/target/${target}/history`);
+        setScanHistory(histRes.data);
+      } catch (histErr) {
+        console.error("Failed to fetch scan history", histErr);
+      }
     }
   };
 
@@ -94,7 +110,10 @@ export default function ScanDetail() {
         setLoading(false);
 
         if (TERMINAL_STATUSES.includes(statRes.data.status)) {
-          await fetchFullScanData(); // fetch the full findings payload exactly once
+          // Comparison only makes sense for a completed scan — pass status
+          // explicitly rather than reading the `status` state var, which
+          // hasn't necessarily re-rendered with setStatus above yet.
+          await fetchFullScanData(statRes.data.target, statRes.data.status); // fetch the full findings payload exactly once
           return; // terminal — stop polling entirely
         }
       } catch (err) {
@@ -189,6 +208,25 @@ export default function ScanDetail() {
       </div>
 
       <StageStatusBar stageStatus={stageStatus} findings={findings} />
+
+      {status === 'completed' && scanHistory.filter(h => h.id !== scan_id).length > 0 && (
+        <div className="bg-card border border-bordercolor rounded-lg">
+          <button
+            onClick={() => setCompareOpen(o => !o)}
+            className="w-full flex items-center justify-between px-4 py-3 text-left"
+          >
+            <span className="flex items-center gap-2 font-semibold text-textpri text-sm">
+              <GitCompare size={16} className="text-accent" /> Compare to previous scan
+            </span>
+            {compareOpen ? <ChevronUp size={16} className="text-textmut" /> : <ChevronDown size={16} className="text-textmut" />}
+          </button>
+          {compareOpen && (
+            <div className="px-4 pb-4 border-t border-bordercolor pt-4">
+              <ScanComparison scanId={scan_id} history={scanHistory} />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Combined risk / severity stats only exist once the scan is terminal
           and the full findings payload has been fetched — see fetchFullScanData. */}

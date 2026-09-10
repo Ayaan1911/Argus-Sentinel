@@ -115,7 +115,9 @@ def test_stage_status_records_no_binary(clean_db):
 def test_live_discovered_subdomains_are_passed_to_nmap_and_nuclei(clean_db):
     """Regression guard for the sequential-pipeline fix: subfinder's
     discovered subdomains must only reach nmap/nuclei if httpx confirmed them
-    live, and the original target must always be included regardless."""
+    live, and the original target must always be included regardless. nuclei
+    specifically gets httpx's confirmed live URL (with scheme) rather than a
+    bare hostname, per the port-blindness fix in scan_tasks.py."""
     from app.tasks.scan_tasks import run_scan
 
     scan_id = _insert_pending_scan(clean_db["sync_engine"])
@@ -139,9 +141,9 @@ def test_live_discovered_subdomains_are_passed_to_nmap_and_nuclei(clean_db):
          patch("app.scanners.nuclei.run", new=nuclei_mock):
         run_scan(scan_id, "example.com", "student")
 
-    expected_targets = ["example.com", "live.example.com"]
-    nmap_mock.assert_awaited_once_with(expected_targets)
-    nuclei_mock.assert_awaited_once_with(expected_targets)
+    nmap_mock.assert_awaited_once_with(["example.com", "live.example.com"])
+    # nuclei gets httpx's confirmed live URL for each host, not a bare hostname.
+    nuclei_mock.assert_awaited_once_with(["http://example.com", "http://live.example.com"])
 
 
 def test_findings_are_persisted_and_processed(clean_db):
