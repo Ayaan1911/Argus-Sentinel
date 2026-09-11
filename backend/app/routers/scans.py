@@ -6,6 +6,9 @@ from sqlalchemy import func
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta, timezone
 
+from redis.asyncio import Redis
+
+from app.config import settings
 from app.database import get_db
 from app.models.scan import Scan
 from app.models.finding import Finding
@@ -17,6 +20,37 @@ from app.engines.diff import diff_findings
 from app.tasks.scan_tasks import run_scan
 
 router = APIRouter()
+
+
+def _scan_rate_limit() -> str:
+    # Tighter in demo mode — this endpoint is open to anonymous public
+    # traffic there, not just people who've set up their own API key.
+    return "3/minute" if settings.DEMO_MODE else "5/minute"
+
+
+async def _enforce_demo_scan_ceiling() -> None:
+    """A rolling daily cap on total scans created in demo mode, independent
+    of the per-IP rate limit above — protects against runaway compute cost
+    from many distinct visitors each staying under the per-IP limit."""
+    if not settings.DEMO_MODE:
+        return
+
+    redis = Redis.from_url(settings.REDIS_URL)
+    try:
+        day_key = f"demo:scan_count:{datetime.now(timezone.utc):%Y-%m-%d}"
+        count = await redis.incr(day_key)
+        if count == 1:
+            await redis.expire(day_key, 60 * 60 * 26)  # a little over a day, covers TZ edges
+        if count > settings.DEMO_SCAN_DAILY_LIMIT:
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    f"The public demo's daily scan limit ({settings.DEMO_SCAN_DAILY_LIMIT}/day) "
+                    "has been reached. Self-host Argus Sentinel for unlimited scanning."
+                ),
+            )
+    finally:
+        await redis.aclose()
 
 # How long a completed scan of the same (normalized) target is considered
 # fresh enough to hand back instead of launching a new one.
@@ -77,7 +111,7 @@ async def get_dashboard_stats(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/", response_model=ScanRead)
-@limiter.limit("5/minute")
+@limiter.limit(_scan_rate_limit)
 async def create_scan(request: Request, scan_in: ScanCreate, db: AsyncSession = Depends(get_db)):
     # scan_in.target is already normalized by the ScanCreate validator, so this
     # is a plain equality check — no need to re-normalize here.
@@ -115,6 +149,10 @@ async def create_scan(request: Request, scan_in: ScanCreate, db: AsyncSession = 
             stmt = select(Scan).options(selectinload(Scan.findings)).where(Scan.id == recent_completed.id)
             res = await db.execute(stmt)
             return res.scalar_one()
+
+    # Only counts against the daily demo ceiling once we're actually about to
+    # dispatch new scanner work — reused/deduped scans above don't cost anything.
+    await _enforce_demo_scan_ceiling()
 
     db_scan = Scan(target=scan_in.target, audience=scan_in.audience, status="pending")
     db.add(db_scan)

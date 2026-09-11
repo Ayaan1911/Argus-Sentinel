@@ -5,9 +5,11 @@ Celery dispatch (run_scan.delay) is mocked in every test that creates a scan,
 so these tests never need a live Redis/worker.
 """
 from datetime import datetime, timedelta
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+from app.config import settings
 
 
 def _create_scan_row(sync_engine, target, status, created_at=None, audience="student"):
@@ -381,3 +383,120 @@ def test_diff_400_when_targets_differ(client, auth_headers, clean_db):
 def test_diff_without_api_key_is_401(client):
     r = client.get("/api/v1/scans/11111111-1111-1111-1111-111111111111/diff")
     assert r.status_code == 401
+
+
+# --- Demo mode (DEMO_MODE=True) ---
+# These monkeypatch the already-imported `settings` singleton directly
+# (routers/schemas read its attributes at call time, not import time), and
+# never need a live Redis (see module docstring) — Redis is replaced with a
+# minimal fake in every test that exercises the demo scan-count ceiling.
+
+def _fake_redis_class(start_count: int = 0):
+    state = {"count": start_count}
+    fake_client = MagicMock()
+
+    async def _incr(key):
+        state["count"] += 1
+        return state["count"]
+
+    fake_client.incr = _incr
+    fake_client.expire = AsyncMock()
+    fake_client.aclose = AsyncMock()
+
+    fake_cls = MagicMock()
+    fake_cls.from_url = MagicMock(return_value=fake_client)
+    return fake_cls
+
+
+def test_demo_mode_rejects_real_domain_target(client, auth_headers, monkeypatch):
+    monkeypatch.setattr(settings, "DEMO_MODE", True)
+    monkeypatch.setattr(settings, "DEMO_API_KEY", auth_headers["x-api-key"])
+
+    with patch("app.routers.scans.Redis", _fake_redis_class()):
+        r = client.post("/api/v1/scans/", json={"target": "example.com"}, headers=auth_headers)
+
+    assert r.status_code == 422
+
+
+def test_demo_mode_rejects_previously_allowed_private_ip_too(client, auth_headers, monkeypatch):
+    # Sanity check the inversion is total: a target that would normally be
+    # rejected for a *different* reason (private IP) still gets rejected —
+    # this isn't "only newly-invalid targets get caught," everything except
+    # juice-shop is invalid in demo mode, full stop.
+    monkeypatch.setattr(settings, "DEMO_MODE", True)
+    monkeypatch.setattr(settings, "DEMO_API_KEY", auth_headers["x-api-key"])
+
+    with patch("app.routers.scans.Redis", _fake_redis_class()):
+        r = client.post("/api/v1/scans/", json={"target": "10.0.0.5"}, headers=auth_headers)
+
+    assert r.status_code == 422
+
+
+def test_demo_mode_still_allows_juice_shop(client, auth_headers, monkeypatch):
+    monkeypatch.setattr(settings, "DEMO_MODE", True)
+    monkeypatch.setattr(settings, "DEMO_API_KEY", auth_headers["x-api-key"])
+
+    with patch("app.routers.scans.run_scan") as mock_run_scan, \
+         patch("app.routers.scans.Redis", _fake_redis_class()):
+        r = client.post("/api/v1/scans/", json={"target": "juice-shop"}, headers=auth_headers)
+
+    assert r.status_code == 200
+    assert r.json()["target"] == "juice-shop"
+    mock_run_scan.delay.assert_called_once()
+
+
+def test_demo_mode_requires_the_demo_api_key_not_the_normal_one(client, auth_headers, monkeypatch):
+    monkeypatch.setattr(settings, "DEMO_MODE", True)
+    monkeypatch.setattr(settings, "DEMO_API_KEY", "the-public-demo-key")
+
+    with patch("app.routers.scans.Redis", _fake_redis_class()):
+        # The normal API key (auth_headers) no longer works once demo mode is on...
+        r_wrong = client.post(
+            "/api/v1/scans/", json={"target": "juice-shop"},
+            headers=auth_headers,
+        )
+        # ...only the published demo key does.
+        with patch("app.routers.scans.run_scan"):
+            r_right = client.post(
+                "/api/v1/scans/", json={"target": "juice-shop"},
+                headers={"x-api-key": "the-public-demo-key"},
+            )
+
+    assert r_wrong.status_code == 401
+    assert r_right.status_code == 200
+
+
+def test_demo_scan_ceiling_raises_429_once_exceeded(monkeypatch):
+    import asyncio
+    from fastapi import HTTPException
+    from app.routers.scans import _enforce_demo_scan_ceiling
+
+    monkeypatch.setattr(settings, "DEMO_MODE", True)
+    monkeypatch.setattr(settings, "DEMO_SCAN_DAILY_LIMIT", 2)
+
+    with patch("app.routers.scans.Redis", _fake_redis_class()):
+        asyncio.run(_enforce_demo_scan_ceiling())  # count -> 1, within limit
+        asyncio.run(_enforce_demo_scan_ceiling())  # count -> 2, within limit
+        with pytest.raises(HTTPException) as exc_info:
+            asyncio.run(_enforce_demo_scan_ceiling())  # count -> 3, over limit
+
+    assert exc_info.value.status_code == 429
+    assert "daily" in exc_info.value.detail.lower()
+
+
+def test_demo_scan_ceiling_is_a_noop_when_demo_mode_off(monkeypatch):
+    import asyncio
+    from app.routers.scans import _enforce_demo_scan_ceiling
+
+    monkeypatch.setattr(settings, "DEMO_MODE", False)
+
+    # Deliberately not mocking Redis here: if this ever touched Redis while
+    # demo mode is off, it would hang/fail against the real (unreachable
+    # from the test host) Redis URL instead of returning immediately.
+    asyncio.run(_enforce_demo_scan_ceiling())
+
+
+def test_demo_mode_off_by_default_uses_normal_rate_limit():
+    assert settings.DEMO_MODE is False
+    from app.routers.scans import _scan_rate_limit
+    assert _scan_rate_limit() == "5/minute"

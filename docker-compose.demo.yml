@@ -1,0 +1,24 @@
+# Locked-down public demo overlay — layers on top of docker-compose.yml
+# rather than duplicating it. See DEMO_DEPLOYMENT.md for how to actually
+# deploy this.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build -d
+#
+# DEMO_API_KEY is deliberately a real default here, not a secret placeholder
+# — the whole point of a demo key is that it's meant to be public/known, so
+# visitors don't need to generate their own. Override it via a shell export
+# or your own .env if you want a different fixed value; there's nothing to
+# "keep secret" about it either way.
+services:
+  api:
+    environment:
+      DEMO_MODE: "true"
+      DEMO_API_KEY: ${DEMO_API_KEY:-argus-public-demo-2026}
+      DEMO_SCAN_DAILY_LIMIT: ${DEMO_SCAN_DAILY_LIMIT:-500}
+
+  frontend:
+    environment:
+      VITE_DEMO_MODE: "true"
+      VITE_API_KEY: ${DEMO_API_KEY:-argus-public-demo-2026}
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000/api/v1}

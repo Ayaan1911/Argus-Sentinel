@@ -5,6 +5,7 @@ from pydantic import BaseModel, UUID4, field_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from .finding import FindingRead
+from app.config import settings
 from app.scanners.utils import is_internal_ip, normalize_target
 
 # The bundled juice-shop container is the intended default authorized local
@@ -18,6 +19,18 @@ def validate_scan_target(raw_target: str) -> str:
     hostname = normalize_target(raw_target)
     if not hostname:
         raise ValueError("target is required")
+
+    if settings.DEMO_MODE:
+        # Inverted from the normal allowlist-exception below: in a public
+        # demo deployment, juice-shop isn't just exempt from the private-IP
+        # block, it's the ONLY valid target, full stop — including domains
+        # that would otherwise pass every check below.
+        if hostname not in ALLOWED_INTERNAL_HOSTNAMES:
+            raise ValueError(
+                "This is a public demo deployment — scans are locked to the bundled "
+                f"'{next(iter(ALLOWED_INTERNAL_HOSTNAMES))}' target. Self-host Argus Sentinel to scan your own targets."
+            )
+        return hostname
 
     if hostname in ALLOWED_INTERNAL_HOSTNAMES:
         return hostname
