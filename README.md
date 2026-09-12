@@ -18,9 +18,11 @@ A user submits a target domain; the backend runs subfinder, httpx, nmap, and nuc
 ```bash
 git clone https://github.com/Ayaan1911/Argus-Sentinel
 cd Argus-Sentinel
-cp .env.example .env      # set API_KEY to your own long random value
+bash scripts/setup.sh
 docker compose up --build -d
 ```
+
+`scripts/setup.sh` creates `.env` and `frontend/.env` from their `.example` templates with a real, matching, randomly-generated `API_KEY` already filled in on both sides — there's no manual editing step for a normal local dev setup. The only real prerequisite is Docker itself (`docker compose version` to confirm you have the Compose plugin).
 
 | Service | URL |
 |---|---|
@@ -29,16 +31,22 @@ docker compose up --build -d
 | API docs | http://localhost:8000/docs |
 | OWASP Juice Shop (bundled scan target) | http://localhost:3000 |
 
-Every API call other than `/health` requires the `X-API-Key` header, matching the `API_KEY` set in `.env`. Run a scan against the bundled Juice Shop instance to verify the full pipeline:
+Every API call other than `/health` requires the `X-API-Key` header, matching the `API_KEY` in `.env`. Run a scan against the bundled Juice Shop instance to verify the full pipeline:
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/scans/ \
-  -H "X-API-Key: <your API_KEY>" \
+  -H "X-API-Key: $(grep '^API_KEY=' .env | cut -d= -f2-)" \
   -H "Content-Type: application/json" \
   -d '{"target": "juice-shop"}'
 ```
 
 `db` and `redis` are not exposed to the host — only `api` (8000), `frontend` (5173), and the `juice-shop` target container (3000) publish ports.
+
+---
+
+## Why Self-Hosted, Not a Hosted Service
+
+There's no shared "run your scan on our infrastructure" option, and that's deliberate, not a limitation waiting to be lifted. Once you self-host, nothing about what you scan — targets, findings, timing, anything — ever touches infrastructure this project controls, by construction. There's no telemetry phoning home and no shared backend to design access controls for in the first place. If you want to try the tool before self-hosting it, the bundled Juice Shop container gives you a real, safe, fully-featured scan target from the first `docker compose up` — see Quick Start above.
 
 ---
 
@@ -86,7 +94,7 @@ React 18 + Vite + Tailwind, talking to the API over axios with the API key wired
 |---|---|---|
 | Dashboard | `/` | Scan history, severity distribution, finding-type breakdown |
 | New Scan | `/scan/new` | Submit a target + choose an audience persona |
-| Scan Detail | `/scan/:scan_id` | Live per-tool `stage_status`, findings list, combined risk level — polls the scan while running and stops once it reaches a terminal status |
+| Scan Detail | `/scan/:scan_id` | Live per-tool `stage_status`, findings list, combined risk level — polls the scan while running and stops once it reaches a terminal status; for a target with prior completed scans, also offers a diff view showing what's new/resolved/changed/unchanged since a previous run |
 | Finding Detail | `/scan/:scan_id/finding/:finding_id` | Full reasoning breakdown, attack patterns, recommended actions, audience-specific guidance for one finding |
 | Intelligence Library | `/intelligence` | Browse the 57-entry services/technologies/vulnerabilities knowledge base directly |
 
@@ -136,11 +144,11 @@ subfinder correctly reports 0 real subdomains for `juice-shop` (it isn't a real 
 ## Testing
 
 ```bash
-cd backend && pytest        # 48 tests
-cd frontend && npm test     # vitest
+cd backend && pytest        # 119 tests
+cd frontend && npm test     # vitest, 12 tests
 ```
 
-The backend suite includes pure-Python unit tests for the scoring engines and scanner argv/output-parsing logic, plus a real Postgres-backed integration suite (`test_routes.py`, `test_scan_tasks.py`) that spins up a throwaway Postgres container via Docker and exercises actual API routes and task orchestration end-to-end — those tests skip automatically if Docker isn't reachable (e.g. running the suite from inside a container itself with no Docker-in-Docker access) rather than silently passing on mocked data. The frontend suite covers `ScanDetail`'s polling logic (`nextPollDelay`) directly.
+The backend suite includes pure-Python unit tests for the scoring engines, scanner argv/output-parsing logic, and the intelligence-library schema validator, plus a real Postgres-backed integration suite (`test_routes.py`, `test_scan_tasks.py`) that spins up a throwaway Postgres container via Docker and exercises actual API routes and task orchestration end-to-end — those tests skip automatically if Docker isn't reachable (e.g. running the suite from inside a container itself with no Docker-in-Docker access) rather than silently passing on mocked data. The frontend suite covers `ScanDetail`'s polling logic (`nextPollDelay`) and the scan-diff comparison view directly.
 
 ---
 
@@ -157,6 +165,12 @@ The original product vision and design philosophy this project started from is i
 
 ---
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for dev environment setup, running tests, code conventions, and PR expectations. **If you want to help without touching Python or React, adding a new entry to the intelligence library is the best first contribution** — see [argus-intelligence/CONTRIBUTING.md](argus-intelligence/CONTRIBUTING.md).
+
+---
+
 ## License
 
-MIT.
+MIT — see [LICENSE](LICENSE).
