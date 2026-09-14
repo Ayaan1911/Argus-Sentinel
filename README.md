@@ -9,7 +9,7 @@
 
 ---
 
-A user submits a target domain; the backend runs subfinder, httpx, nmap, and nuclei against it in sequence, and a correlation/reasoning engine — backed by a 57-entry JSON intelligence library — turns the raw output into risk-scored findings with audience-specific guidance. Built for authorized testing of owned/permitted targets, with a bundled OWASP Juice Shop container as the default safe local target.
+A user submits a target domain; the backend runs subfinder, httpx, nmap, and nuclei against it in sequence, and a correlation/reasoning engine — backed by a 51-entry JSON intelligence library — turns the raw output into risk-scored findings with audience-specific guidance. Built for authorized testing of owned/permitted targets, with a bundled OWASP Juice Shop container as the default safe local target.
 
 ---
 
@@ -73,7 +73,7 @@ Raw scanner output alone isn't a finding — it's an input. Three engines turn i
 - **Correlation Engine** — looks across all of a scan's findings together, not just one at a time (e.g. an exposed database *and* no authentication together is worse than either alone), and applies scan-wide modifiers on top of each finding's own reasoning score.
 - **Confidence Engine** — separately scores how *certain* a finding is (scanner reliability + corroborating evidence + intelligence-library match), independent of how severe it is — a finding can be high-confidence and low-severity, or the reverse.
 
-All three are backed by **`argus-intelligence/`**, a 57-entry JSON knowledge base (25 services, 18 technologies, 14 vulnerability classes) that the scoring engines look up by scanner-reported name/product — not a hardcoded lookup table inline in the scoring code.
+All three are backed by **`argus-intelligence/`**, a 51-entry JSON knowledge base (25 services, 12 technologies, 14 vulnerability classes) that the scoring engines look up by scanner-reported name/product — not a hardcoded lookup table inline in the scoring code.
 
 ---
 
@@ -96,7 +96,7 @@ React 18 + Vite + Tailwind, talking to the API over axios with the API key wired
 | New Scan | `/scan/new` | Submit a target + choose an audience persona |
 | Scan Detail | `/scan/:scan_id` | Live per-tool `stage_status`, findings list, combined risk level — polls the scan while running and stops once it reaches a terminal status; for a target with prior completed scans, also offers a diff view showing what's new/resolved/changed/unchanged since a previous run |
 | Finding Detail | `/scan/:scan_id/finding/:finding_id` | Full reasoning breakdown, attack patterns, recommended actions, audience-specific guidance for one finding |
-| Intelligence Library | `/intelligence` | Browse the 57-entry services/technologies/vulnerabilities knowledge base directly |
+| Intelligence Library | `/intelligence` | Browse the 51-entry services/technologies/vulnerabilities knowledge base directly |
 
 ---
 
@@ -154,7 +154,7 @@ The backend suite includes pure-Python unit tests for the scoring engines, scann
 
 ## Known Limitations
 
-- **Intelligence library coverage**: 57 entries across services/technologies/vulnerabilities. A finding whose scanner-reported name/product doesn't match an entry still gets a base reasoning score, just without library-sourced guidance.
+- **Intelligence library coverage**: 51 entries across services/technologies/vulnerabilities. A finding whose scanner-reported name/product doesn't match an entry still gets a base reasoning score, just without library-sourced guidance.
 - **nmap's outdated-version detection** only covers products it has a matching intelligence-library entry for (openssh, apache, nginx, mysql, postgresql, redis, mongodb) — an unlisted stack won't trigger "outdated version" modifiers even if nmap fingerprints it correctly.
 - **httpx/nuclei port coverage**: beyond 80/443, only a fixed list of common alternate web ports (3000, 8000, 8080, 8888) is probed — a target on an uncommon port outside that list won't be found.
 - **External target scanning** requires the `worker` container to have outbound internet access; passive sources like subfinder's will reach out to third-party APIs over the network for any target, including ones you don't expect to need it.

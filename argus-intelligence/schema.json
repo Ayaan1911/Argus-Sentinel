@@ -82,6 +82,25 @@
     "last_updated": { "type": "string", "format": "date" },
     "reviewed_by": { "type": "string", "minLength": 1 }
   },
+  "allOf": [
+    {
+      "description": "Every entry must state a real risk_level. Vulnerabilities use 'severity' instead (same enum) — both are accepted since that split already existed across the library before this schema was tightened.",
+      "anyOf": [
+        { "required": ["risk_level"] },
+        { "required": ["severity"] }
+      ]
+    },
+    {
+      "description": "A vulnerabilities/ entry (identified by carrying vulnerability_class) is unreachable by the correlation engine's tag/keyword matcher unless it has at least one non-empty nuclei_tags or title_keywords array. This is exactly the placeholder bug class fixed in the 2026-09 audit — this rule exists to stop it recurring.",
+      "if": { "required": ["vulnerability_class"] },
+      "then": {
+        "anyOf": [
+          { "required": ["nuclei_tags"], "properties": { "nuclei_tags": { "minItems": 1 } } },
+          { "required": ["title_keywords"], "properties": { "title_keywords": { "minItems": 1 } } }
+        ]
+      }
+    }
+  ],
   "$defs": {
     "riskLevel": { "type": "string", "enum": ["Informational", "Low", "Medium", "High", "Critical"] },
     "stringArray": { "type": "array", "items": { "type": "string" } }

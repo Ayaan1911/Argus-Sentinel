@@ -14,11 +14,11 @@ If you're not sure what string nmap/httpx will actually report, that's fine — 
 
 ## 2. Required and recommended fields
 
-**Required by `schema.json`** (every entry, all 3 folders): `description`, `audience_guidance` (all 5 keys: `student`, `developer`, `bug_bounty_hunter`, `pentester`, `security_team`), `learning_resources`, `version`, `last_updated`, `reviewed_by`.
+**Required by `schema.json`** (every entry, all 3 folders): `description`, `audience_guidance` (all 5 keys: `student`, `developer`, `bug_bounty_hunter`, `pentester`, `security_team`), `learning_resources`, `version`, `last_updated`, `reviewed_by`, and a real `risk_level` (`services`/`technologies`) or `severity` (`vulnerabilities`) — one of the two is mandatory, not optional. **`vulnerabilities/` entries additionally require at least one non-empty `nuclei_tags` or `title_keywords` array** — the validator rejects a vulnerability entry with neither, because without one it can never be matched to a real finding. This is enforced by `schema.json`, not just a style guideline: `python scripts/validate_intelligence.py` fails loudly on any entry missing these, so a "name + description, no real content" placeholder can no longer merge — see the 2026-09 audit in the project's `notes.md` for why this rule exists.
 
-**Strongly recommended, or your entry is technically valid but functionally inert** — see SCHEMA.md for exactly why each of these matters:
-- `services/` and `technologies/`: `risk_weight` (0–10), `recommended_actions`, `attack_patterns`, `related_findings`, `correlation_rules` (`amplifies`/`requires`/`mitigates`), `port`, `protocol`, `risk_level`.
-- `vulnerabilities/`: `nuclei_tags` and `title_keywords` (without these, your entry can never be matched to a real finding), `recommended_actions`, `attack_patterns`, `affected_technologies` if it's a technology-specific issue.
+**Strongly recommended, or your entry is technically valid but contributes little beyond guidance text** — see SCHEMA.md for exactly why each of these matters:
+- `services/` and `technologies/`: `risk_weight` (0–10), `recommended_actions`, `attack_patterns`, `related_findings`, `correlation_rules` (`amplifies`/`requires`/`mitigates`), `port`, `protocol`.
+- `vulnerabilities/`: `recommended_actions`, `attack_patterns`, `affected_technologies` if it's a technology-specific issue.
 
 **Only add `min_secure_version` if you're genuinely confident in the specific floor** (a well-documented CVE fix version, not a guess). It doesn't do anything by itself:
 - For an nmap-detected server product, you also need to add an entry to `PRODUCT_KB_MAP` in `backend/app/scanners/nmap.py` — the one place in this project where adding library data *does* require a small Python change.
@@ -75,7 +75,7 @@ Say nuclei has a template category you want covered: exposed `.htpasswd` files.
 
 ```bash
 python scripts/validate_intelligence.py
-# Intelligence library validation passed — 58 entries across services, technologies, vulnerabilities.
+# Intelligence library validation passed — 52 entries across services, technologies, vulnerabilities.
 ```
 
 **c. That's it — no Python or React changes needed.** The next time a nuclei finding carries the tag `htpasswd` (or its title contains ".htpasswd"), `processor.py`'s data-driven matching will find this entry automatically, and it'll show up in the Intelligence Library browser in the frontend without any further wiring.
