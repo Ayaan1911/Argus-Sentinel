@@ -1,7 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
+import { ChevronDown, ChevronUp, ArrowUpRight, ArrowDownRight, Minus, Plus, CheckCheck, RefreshCw } from 'lucide-react';
 import client from '../api/client';
 import SeverityBadge from './SeverityBadge';
+
+// Diff states are a different axis of meaning than finding severity, so they
+// deliberately borrow neither the sev-* palette nor pure success/danger:
+// violet = "new" (attention, not itself a verdict), accent = "changed"
+// (something to look at), muted gray = "resolved" (done, fading out).
+const DIFF_STYLE = {
+  new: { border: 'border-l-violet-400', badge: 'bg-violet-400/15 text-violet-300 border-violet-400/40', icon: Plus },
+  changed: { border: 'border-accent', badge: 'bg-accent/15 text-accent border-accent/40', icon: RefreshCw },
+  resolved: { border: 'border-l-bordercolor', badge: 'bg-surface text-textmut border-bordercolor', icon: CheckCheck },
+};
 
 function ScoreDelta({ previous, next }) {
   const delta = next - previous;
@@ -21,17 +31,20 @@ function ScoreDelta({ previous, next }) {
   );
 }
 
-function FindingRow({ finding, badge, badgeClass, muted }) {
+function FindingRow({ finding, state, muted }) {
+  const style = state ? DIFF_STYLE[state] : null;
+  const Icon = style?.icon;
   return (
-    <div className={`flex items-center justify-between gap-3 px-3 py-2 rounded-md border border-bordercolor bg-card ${muted ? 'opacity-50' : ''}`}>
+    <div className={`flex items-center justify-between gap-3 px-3 py-2 rounded-md border border-bordercolor bg-card ${muted ? 'opacity-50' : ''} ${style ? `border-l-4 ${style.border}` : ''}`}>
       <div className="min-w-0 flex-1">
         <div className={`text-sm font-medium text-textpri truncate ${muted ? 'line-through' : ''}`}>{finding.title}</div>
         <div className="text-xs text-textmut uppercase tracking-wider">{finding.type}</div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        {badge && (
-          <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase border ${badgeClass}`}>
-            {badge}
+        {style && (
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${style.badge}`}>
+            {Icon && <Icon size={10} />}
+            {state.toUpperCase()}
           </span>
         )}
         <SeverityBadge severity={finding.severity} />
@@ -106,22 +119,17 @@ export default function ScanComparison({ scanId, history }) {
         </div>
       )}
 
-      <div className="text-sm font-mono text-textpri">
-        <span className="text-success font-bold">{summary.new} new</span>
-        <span className="text-textmut mx-2">·</span>
-        <span className="text-textmut font-bold">{summary.resolved} resolved</span>
-        <span className="text-textmut mx-2">·</span>
-        <span className="text-warning font-bold">{summary.changed} changed</span>
-        <span className="text-textmut mx-2">·</span>
+      <div className="flex flex-wrap items-center gap-3 text-sm font-mono">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-violet-400/10 border border-violet-400/30 text-violet-300 font-bold"><Plus size={12} /> {summary.new} new</span>
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface border border-bordercolor text-textmut font-bold"><CheckCheck size={12} /> {summary.resolved} resolved</span>
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent font-bold"><RefreshCw size={12} /> {summary.changed} changed</span>
         <span className="text-textmut">{summary.unchanged} unchanged</span>
       </div>
 
       {new_findings.length > 0 && (
         <div className="space-y-2">
           {new_findings.map(f => (
-            <div key={f.id} className="border-l-4 border-l-success rounded-r-md overflow-hidden">
-              <FindingRow finding={f} badge="NEW" badgeClass="bg-success/20 text-success border-success/30" />
-            </div>
+            <FindingRow key={f.id} finding={f} state="new" />
           ))}
         </div>
       )}
@@ -129,7 +137,7 @@ export default function ScanComparison({ scanId, history }) {
       {changed_findings.length > 0 && (
         <div className="space-y-2">
           {changed_findings.map(c => (
-            <div key={c.finding.id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-md border border-warning/30 bg-warning/5">
+            <div key={c.finding.id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-md border border-bordercolor border-l-4 border-l-accent bg-accent/5">
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-medium text-textpri truncate">{c.finding.title}</div>
                 <div className="text-xs text-textmut uppercase tracking-wider">{c.finding.type}</div>
@@ -146,9 +154,7 @@ export default function ScanComparison({ scanId, history }) {
       {resolved_findings.length > 0 && (
         <div className="space-y-2">
           {resolved_findings.map(f => (
-            <div key={f.id} className="border-l-4 border-l-bordercolor rounded-r-md overflow-hidden">
-              <FindingRow finding={f} badge="RESOLVED" badgeClass="bg-surface text-textmut border-bordercolor" muted />
-            </div>
+            <FindingRow key={f.id} finding={f} state="resolved" muted />
           ))}
         </div>
       )}

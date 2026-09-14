@@ -8,10 +8,10 @@ export default function Layout({ children }) {
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-16 bg-surface border-b border-bordercolor flex items-center px-6 shrink-0">
-          <div className="flex items-center gap-3">
-            <h1 className="text-accent font-bold text-xl tracking-wider uppercase">Argus Sentinel</h1>
-            <span className="text-textmut text-sm hidden sm:inline">| AI Cybersecurity Reasoning Engine</span>
+        <header className="h-16 bg-surface border-b border-bordercolor flex items-center px-4 sm:px-6 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <h1 className="text-accent font-bold text-lg sm:text-xl tracking-wider uppercase truncate">Argus Sentinel</h1>
+            <span className="text-textmut text-sm hidden lg:inline shrink-0">| AI Cybersecurity Reasoning Engine</span>
           </div>
         </header>
         {DEMO_MODE && (

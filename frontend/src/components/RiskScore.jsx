@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { severityColor } from '../theme';
 
-export default function RiskScore({ score }) {
+function scoreToSeverityLabel(score) {
+  if (score >= 8.0) return 'critical';
+  if (score >= 6.0) return 'high';
+  if (score >= 4.0) return 'medium';
+  if (score > 2.0) return 'low';
+  return 'informational';
+}
+
+export default function RiskScore({ score, size = 96 }) {
   const targetScore = parseFloat(score || 0);
   const [displayScore, setDisplayScore] = useState(0);
 
@@ -8,7 +17,7 @@ export default function RiskScore({ score }) {
     let start = 0;
     const duration = 500; // ms
     const increment = targetScore / (duration / 16); // ~60fps
-    
+
     if (targetScore === 0) {
       setDisplayScore(0);
       return;
@@ -27,34 +36,30 @@ export default function RiskScore({ score }) {
     return () => clearInterval(timer);
   }, [targetScore]);
 
-  let color = '#3b82f6'; // low (blue)
-  if (targetScore >= 8.0) color = '#ef4444'; // critical (red)
-  else if (targetScore >= 6.0) color = '#f97316'; // high (orange)
-  else if (targetScore >= 4.0) color = '#eab308'; // medium (yellow)
+  const label = scoreToSeverityLabel(targetScore);
+  const color = severityColor(label);
 
-  const radius = 30;
+  const radius = 40;
   const circumference = 2 * Math.PI * radius;
-  // Animate the circle stroke based on displayScore too!
   const strokeDashoffset = circumference - (displayScore / 10) * circumference;
+  const box = 100;
 
   return (
-    <div className="relative flex items-center justify-center w-24 h-24">
-      <svg className="transform -rotate-90 w-24 h-24">
+    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+      <div
+        className="absolute inset-3 rounded-full blur-md opacity-25"
+        style={{ backgroundColor: color }}
+        aria-hidden="true"
+      />
+      <svg viewBox={`0 0 ${box} ${box}`} className="relative -rotate-90 w-full h-full">
+        <circle cx={box / 2} cy={box / 2} r={radius} stroke="currentColor" strokeWidth="8" fill="transparent" className="text-bordercolor" />
         <circle
-          cx="48"
-          cy="48"
-          r={radius}
-          stroke="currentColor"
-          strokeWidth="6"
-          fill="transparent"
-          className="text-bordercolor"
-        />
-        <circle
-          cx="48"
-          cy="48"
+          cx={box / 2}
+          cy={box / 2}
           r={radius}
           stroke={color}
-          strokeWidth="6"
+          strokeWidth="8"
+          strokeLinecap="round"
           fill="transparent"
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
@@ -62,8 +67,11 @@ export default function RiskScore({ score }) {
         />
       </svg>
       <div className="absolute flex flex-col items-center justify-center">
-        <span className="text-2xl font-bold font-mono text-textpri" style={{ color }}>{displayScore.toFixed(1)}</span>
-        <span className="text-xs text-textmut font-mono">/10</span>
+        <span className="text-2xl font-bold font-mono leading-none" style={{ color }}>{displayScore.toFixed(1)}</span>
+        <span className="text-[10px] text-textmut font-mono mt-1">/ 10</span>
+        <span className="text-[9px] font-bold uppercase tracking-wider mt-1" style={{ color }}>
+          {label === 'informational' ? 'info' : label}
+        </span>
       </div>
     </div>
   );

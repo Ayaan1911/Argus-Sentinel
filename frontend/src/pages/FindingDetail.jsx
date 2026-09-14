@@ -2,11 +2,33 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Server, Activity, ShieldAlert, GraduationCap, ChevronDown, ChevronUp } from 'lucide-react';
 import client from '../api/client';
-import LoadingSpinner from '../components/LoadingSpinner';
 import SeverityBadge from '../components/SeverityBadge';
 import RiskScore from '../components/RiskScore';
 import ReasoningBreakdown from '../components/ReasoningBreakdown';
 import AudienceSelector from '../components/AudienceSelector';
+
+function FindingDetailSkeleton() {
+  return (
+    <div className="max-w-6xl mx-auto space-y-6 pb-12 animate-pulse">
+      <div className="flex items-center gap-4 pb-2 border-b border-bordercolor">
+        <div className="w-9 h-9 bg-surface rounded-md" />
+        <div className="h-4 w-32 bg-surface rounded" />
+      </div>
+      <div className="flex flex-col md:flex-row gap-8 items-start">
+        <div className="flex-1 space-y-4 w-full">
+          <div className="h-6 w-40 bg-surface rounded-full" />
+          <div className="h-8 w-3/4 bg-surface rounded" />
+          <div className="h-4 w-1/2 bg-surface rounded" />
+        </div>
+        <div className="shrink-0 w-32 h-32 bg-surface rounded-xl" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+        <div className="h-48 bg-surface rounded-lg" />
+        <div className="h-48 bg-surface rounded-lg" />
+      </div>
+    </div>
+  );
+}
 
 export default function FindingDetail() {
   const { scan_id, finding_id } = useParams();
@@ -28,7 +50,7 @@ export default function FindingDetail() {
       .catch(err => setLoading(false));
   }, [finding_id]);
 
-  if (loading) return <LoadingSpinner />;
+  if (loading) return <FindingDetailSkeleton />;
   if (!finding) return <div className="text-danger">Finding not found</div>;
 
   return (
@@ -48,7 +70,7 @@ export default function FindingDetail() {
             <SeverityBadge severity={finding.severity} />
             <span className="text-textmut uppercase tracking-wider text-xs font-bold border border-bordercolor px-2 py-0.5 rounded bg-surface">{finding.type}</span>
           </div>
-          <h1 className="text-3xl font-bold text-textpri">{finding.title}</h1>
+          <h1 className="text-3xl font-bold text-textpri tracking-tight">{finding.title}</h1>
           <p className="text-textmut text-lg">{finding.technical_impact}</p>
         </div>
         <div className="shrink-0 bg-card border border-bordercolor rounded-xl p-6 flex flex-col items-center gap-2">

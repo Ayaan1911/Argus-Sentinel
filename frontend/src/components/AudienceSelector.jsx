@@ -1,24 +1,26 @@
 import React from 'react';
 
-export default function AudienceSelector({ selected, onChange }) {
-  const audiences = [
-    { id: 'student', label: 'Student' },
-    { id: 'developer', label: 'Developer' },
-    { id: 'bug_bounty_hunter', label: 'Bug Bounty Hunter' },
-    { id: 'pentester', label: 'Pentester' },
-    { id: 'security_team', label: 'Security Professional' },
-  ];
+const AUDIENCES = [
+  { id: 'student', label: 'Student' },
+  { id: 'developer', label: 'Developer' },
+  { id: 'bug_bounty_hunter', label: 'Bug Bounty Hunter' },
+  { id: 'pentester', label: 'Pentester' },
+  { id: 'security_team', label: 'Security Professional' },
+];
 
+export default function AudienceSelector({ selected, onChange }) {
   return (
-    <div className="flex flex-wrap gap-2">
-      {audiences.map((aud) => (
+    <div role="tablist" aria-label="Audience persona" className="inline-flex flex-wrap gap-1 bg-background border border-bordercolor rounded-lg p-1">
+      {AUDIENCES.map((aud) => (
         <button
           key={aud.id}
+          role="tab"
+          aria-selected={selected === aud.id}
           onClick={() => onChange(aud.id)}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors border ${
+          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
             selected === aud.id
-              ? 'bg-accent/20 border-accent/50 text-accent'
-              : 'bg-card border-bordercolor text-textmut hover:bg-surface hover:text-textpri'
+              ? 'bg-accent text-background shadow-sm'
+              : 'text-textmut hover:text-textpri hover:bg-card'
           }`}
         >
           {aud.label}

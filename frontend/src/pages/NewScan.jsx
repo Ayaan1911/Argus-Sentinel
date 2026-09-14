@@ -38,7 +38,7 @@ export default function NewScan() {
   return (
     <div className="max-w-2xl mx-auto mt-8">
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-textpri mb-2">Launch New Scan</h2>
+        <h2 className="text-3xl font-bold text-textpri tracking-tight mb-2">Launch New Scan</h2>
         <p className="text-textmut">
           {DEMO_MODE
             ? 'This public demo only scans the bundled vulnerable test app below.'

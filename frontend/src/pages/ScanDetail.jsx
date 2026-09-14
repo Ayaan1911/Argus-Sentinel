@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Loader2, AlertTriangle, AlertCircle, Info, ArrowRight, ShieldAlert, ShieldCheck, GitCompare, ChevronDown, ChevronUp } from 'lucide-react';
 import client from '../api/client';
 import SeverityBadge from '../components/SeverityBadge';
+import StatusPill from '../components/StatusPill';
 import RiskScore from '../components/RiskScore';
 import ReasoningBreakdown from '../components/ReasoningBreakdown';
 import AudienceSelector from '../components/AudienceSelector';
@@ -23,14 +24,13 @@ function StageStatusBar({ stageStatus, findings }) {
         return (
           <div
             key={stage}
-            className={`px-3 py-2 rounded-md border text-xs font-mono flex items-center gap-2
-              ${isOk ? 'bg-success/10 border-success/30 text-success' : 'bg-danger/10 border-danger/30 text-danger'}`}
+            className="px-3 py-2 rounded-md border border-bordercolor bg-card text-xs font-mono flex items-center gap-2"
             title={s.detail || ''}
           >
-            <span className="font-bold uppercase">{STAGE_LABELS[stage]}</span>
-            <span>
-              {isOk ? `succeeded, ${count} found` : `${s.status}${s.detail ? ` (${s.detail})` : ''}`}
-            </span>
+            <span className="font-bold uppercase text-textpri">{STAGE_LABELS[stage]}</span>
+            <StatusPill status={isOk ? 'success' : 'failed'}>
+              {isOk ? `${count} found` : `${s.status}${s.detail ? ` (${s.detail})` : ''}`}
+            </StatusPill>
           </div>
         );
       })}
@@ -194,14 +194,8 @@ export default function ScanDetail() {
         </Link>
         <div>
           <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold text-textpri font-mono">{scanMeta.target}</h2>
-            <span className={`px-2.5 py-1 rounded-full text-xs font-mono font-bold uppercase border
-              ${isRunning ? 'bg-warning/20 text-warning border-warning/30 animate-pulse' : ''}
-              ${status === 'failed' ? 'bg-danger/20 text-danger border-danger/30' : ''}
-              ${status === 'completed' ? 'bg-success/20 text-success border-success/30' : ''}
-            `}>
-              {status}
-            </span>
+            <h2 className="text-2xl font-bold text-textpri font-mono tracking-tight">{scanMeta.target}</h2>
+            <StatusPill status={status} />
           </div>
           <p className="text-sm text-textmut mt-1">Audience profile: <span className="text-textpri capitalize">{(scanMeta.audience || '').replace('_', ' ')}</span></p>
         </div>
@@ -269,7 +263,7 @@ export default function ScanDetail() {
       )}
 
       <div>
-        <h3 className="text-xl font-bold text-textpri mb-4">Findings</h3>
+        <h3 className="text-xl font-bold text-textpri tracking-tight mb-4">Findings</h3>
         
         {isRunning && findings.length === 0 ? (
           <div className="bg-card/80 backdrop-blur-md border border-bordercolor rounded-lg p-12 text-center flex flex-col items-center">
@@ -312,14 +306,28 @@ export default function ScanDetail() {
             <div className="w-full lg:w-1/3 flex flex-col gap-2 max-h-[800px] overflow-y-auto pr-2">
               {findings.map(f => {
                 const isSelected = selectedFindingId === f.id;
-                let sevBorder = 'border-l-bordercolor';
-                if (f.severity === 'critical') sevBorder = 'border-l-sev-critical shadow-sev-critical/10';
-                else if (f.severity === 'high') sevBorder = 'border-l-sev-high shadow-sev-high/10';
-                else if (f.severity === 'medium') sevBorder = 'border-l-sev-medium shadow-sev-medium/10';
-                else if (f.severity === 'low') sevBorder = 'border-l-sev-low shadow-sev-low/10';
+                const sevKey = (f.severity || 'informational').toLowerCase();
+                const sevBorderColor = {
+                  critical: 'border-l-sev-critical',
+                  high: 'border-l-sev-high',
+                  medium: 'border-l-sev-medium',
+                  low: 'border-l-sev-low',
+                }[sevKey] || 'border-l-sev-info';
+                const sevShadow = {
+                  critical: 'shadow-sev-critical/10',
+                  high: 'shadow-sev-high/10',
+                  medium: 'shadow-sev-medium/10',
+                  low: 'shadow-sev-low/10',
+                }[sevKey] || '';
+                const sevTextColor = {
+                  critical: 'text-sev-critical',
+                  high: 'text-sev-high',
+                  medium: 'text-sev-medium',
+                  low: 'text-sev-low',
+                }[sevKey] || 'text-sev-info';
 
                 return (
-                  <button 
+                  <button
                     key={f.id}
                     onClick={() => {
                       setSelectedFindingId(f.id);
@@ -328,13 +336,13 @@ export default function ScanDetail() {
                         if (keys.length > 0 && !keys.includes(audience)) setAudience(keys[0]);
                       }
                     }}
-                    className={`text-left p-4 rounded-r-lg border-y border-r border-l-4 transition-all hover:-translate-y-0.5 hover:shadow-lg focus:outline-none
-                      ${isSelected ? 'bg-surface/80 border-y-bordercolor border-r-bordercolor shadow-md ' + sevBorder : 'bg-card border-bordercolor border-l-transparent hover:bg-surface/50'}
+                    className={`text-left p-4 rounded-r-lg border-y border-r border-l-4 transition-all hover:-translate-y-0.5 hover:shadow-lg focus:outline-none ${sevBorderColor}
+                      ${isSelected ? `bg-surface/80 border-y-bordercolor border-r-bordercolor shadow-md ${sevShadow}` : 'bg-card border-bordercolor hover:bg-surface/50'}
                     `}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <SeverityBadge severity={f.severity} />
-                      <span className="text-textmut font-mono text-xs font-bold">{f.final_risk_score.toFixed(1)}</span>
+                      <span className={`font-mono text-xs font-bold ${sevTextColor}`}>{f.final_risk_score.toFixed(1)}</span>
                     </div>
                     <div className="font-semibold text-textpri mb-1 line-clamp-1">{f.title}</div>
                     <div className="text-xs text-textmut uppercase tracking-wider font-bold">{f.type}</div>
