@@ -6,6 +6,54 @@ body {
   @apply bg-background text-textpri font-sans m-0 p-0;
 }
 
+/* Background depth. Two very wide, very low-opacity radial washes plus a
+   barely-there grid, fixed so it doesn't scroll with content. The point is
+   purely to give the glass panels and glow effects something to read as
+   "floating above" — if any of this is individually noticeable as a
+   pattern, it's turned up too far. Lives on body (not the Layout wrapper,
+   which is now transparent) so every route inherits it for free. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1000px 600px at 12% -15%, rgba(0, 212, 255, 0.075), transparent 62%),
+    radial-gradient(800px 600px at 105% 0%, rgba(139, 92, 246, 0.06), transparent 58%),
+    radial-gradient(900px 700px at 50% 115%, rgba(0, 212, 255, 0.04), transparent 60%),
+    linear-gradient(to right, rgba(148, 163, 184, 0.022) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(148, 163, 184, 0.022) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 64px 64px, 64px 64px;
+}
+
+@layer components {
+  /* Glassmorphism panel surface. For card/stat/detail/dropdown surfaces
+     only — NOT for dense tables or scrollable finding lists, where a blurred
+     backdrop behind small text measurably costs legibility. Those keep the
+     flat opaque `bg-card`. */
+  .glass {
+    @apply bg-card/55 backdrop-blur-xl border border-white/[0.07] shadow-glass;
+  }
+
+  /* Slightly more opaque variant for surfaces that sit over other content
+     (dropdowns, popovers) and need to actually occlude it. */
+  .glass-solid {
+    @apply bg-surface/85 backdrop-blur-xl border border-white/[0.07] shadow-glass;
+  }
+}
+
+/* The glow pulse is signal, but it's also motion — honour the OS setting.
+   animate-spin is deliberately left alone: it's the only indication that an
+   in-flight scan is still alive. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-glow-pulse,
+  .animate-glow-pulse-new,
+  .animate-pulse {
+    animation: none !important;
+  }
+}
+
 /* Custom scrollbar for dark theme */
 ::-webkit-scrollbar {
   width: 8px;

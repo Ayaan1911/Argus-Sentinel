@@ -38,7 +38,7 @@ export default function NewScan() {
   return (
     <div className="max-w-2xl mx-auto mt-8">
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-textpri tracking-tight mb-2">Launch New Scan</h2>
+        <h2 className="text-4xl sm:text-5xl font-black text-textpri tracking-tighter leading-none mb-3">Launch New Scan</h2>
         <p className="text-textmut">
           {DEMO_MODE
             ? 'This public demo only scans the bundled vulnerable test app below.'
@@ -46,7 +46,7 @@ export default function NewScan() {
         </p>
       </div>
 
-      <div className="bg-card border border-bordercolor rounded-xl overflow-hidden shadow-lg shadow-black/20">
+      <div className="glass rounded-2xl overflow-hidden">
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
           {error && <div className="bg-danger/20 text-danger border border-danger/30 p-3 rounded-md text-sm">{error}</div>}
 

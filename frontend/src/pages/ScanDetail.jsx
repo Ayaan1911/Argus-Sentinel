@@ -194,7 +194,7 @@ export default function ScanDetail() {
         </Link>
         <div>
           <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold text-textpri font-mono tracking-tight">{scanMeta.target}</h2>
+            <h2 className="text-3xl sm:text-4xl font-black text-textpri font-mono tracking-tighter">{scanMeta.target}</h2>
             <StatusPill status={status} />
           </div>
           <p className="text-sm text-textmut mt-1">Audience profile: <span className="text-textpri capitalize">{(scanMeta.audience || '').replace('_', ' ')}</span></p>
@@ -204,18 +204,18 @@ export default function ScanDetail() {
       <StageStatusBar stageStatus={stageStatus} findings={findings} />
 
       {status === 'completed' && scanHistory.filter(h => h.id !== scan_id).length > 0 && (
-        <div className="bg-card border border-bordercolor rounded-lg">
+        <div className="glass rounded-xl">
           <button
             onClick={() => setCompareOpen(o => !o)}
-            className="w-full flex items-center justify-between px-4 py-3 text-left"
+            className="w-full flex items-center justify-between px-4 py-3.5 text-left"
           >
-            <span className="flex items-center gap-2 font-semibold text-textpri text-sm">
+            <span className="flex items-center gap-2 font-bold uppercase tracking-[0.12em] text-textpri text-xs">
               <GitCompare size={16} className="text-accent" /> Compare to previous scan
             </span>
             {compareOpen ? <ChevronUp size={16} className="text-textmut" /> : <ChevronDown size={16} className="text-textmut" />}
           </button>
           {compareOpen && (
-            <div className="px-4 pb-4 border-t border-bordercolor pt-4">
+            <div className="px-4 pb-4 border-t border-white/[0.06] pt-4">
               <ScanComparison scanId={scan_id} history={scanHistory} />
             </div>
           )}
@@ -226,35 +226,35 @@ export default function ScanDetail() {
           and the full findings payload has been fetched — see fetchFullScanData. */}
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-          <div className="col-span-2 bg-card border border-bordercolor rounded-lg p-4">
-            <div className="text-textmut text-xs uppercase font-bold tracking-wider mb-1">Combined Risk</div>
-            <div className="text-xl font-bold flex items-center gap-2">
+          <div className="col-span-2 glass rounded-xl p-4 flex flex-col justify-between">
+            <div className="text-textmut text-[10px] uppercase font-bold tracking-[0.2em] mb-2">Combined Risk</div>
+            <div className="flex items-center gap-2">
               <SeverityBadge severity={summary.combined_risk_level} />
             </div>
           </div>
-          <div className="bg-card/60 backdrop-blur-md border border-sev-critical/30 rounded-lg p-4">
-            <div className="text-sev-critical text-xs uppercase font-bold tracking-wider mb-1">Critical</div>
-            <div className="text-2xl font-bold font-mono text-textpri">{summary.by_severity.critical}</div>
+          <div className={`glass border-sev-critical/30 rounded-xl p-4 ${summary.by_severity.critical > 0 ? 'shadow-glow-critical animate-glow-pulse' : ''}`}>
+            <div className="text-sev-critical text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Critical</div>
+            <div className="text-4xl font-black font-mono tabular-nums tracking-tighter" style={{ color: summary.by_severity.critical > 0 ? '#ef4444' : '#475569' }}>{summary.by_severity.critical}</div>
           </div>
-          <div className="bg-card/60 backdrop-blur-md border border-sev-high/30 rounded-lg p-4">
-            <div className="text-sev-high text-xs uppercase font-bold tracking-wider mb-1">High</div>
-            <div className="text-2xl font-bold font-mono text-textpri">{summary.by_severity.high}</div>
+          <div className={`glass border-sev-high/30 rounded-xl p-4 ${summary.by_severity.high > 0 ? 'shadow-glow-high' : ''}`}>
+            <div className="text-sev-high text-[10px] uppercase font-bold tracking-[0.2em] mb-1">High</div>
+            <div className="text-4xl font-black font-mono tabular-nums tracking-tighter" style={{ color: summary.by_severity.high > 0 ? '#f97316' : '#475569' }}>{summary.by_severity.high}</div>
           </div>
-          <div className="bg-card/60 backdrop-blur-md border border-sev-medium/30 rounded-lg p-4">
-            <div className="text-sev-medium text-xs uppercase font-bold tracking-wider mb-1">Medium</div>
-            <div className="text-2xl font-bold font-mono text-textpri">{summary.by_severity.medium}</div>
+          <div className="glass border-sev-medium/30 rounded-xl p-4">
+            <div className="text-sev-medium text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Medium</div>
+            <div className="text-4xl font-black font-mono tabular-nums tracking-tighter" style={{ color: summary.by_severity.medium > 0 ? '#eab308' : '#475569' }}>{summary.by_severity.medium}</div>
           </div>
-          <div className="bg-card/60 backdrop-blur-md border border-sev-low/30 rounded-lg p-4">
-            <div className="text-sev-low text-xs uppercase font-bold tracking-wider mb-1">Low</div>
-            <div className="text-2xl font-bold font-mono text-textpri">{summary.by_severity.low}</div>
+          <div className="glass border-sev-low/30 rounded-xl p-4">
+            <div className="text-sev-low text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Low</div>
+            <div className="text-4xl font-black font-mono tabular-nums tracking-tighter" style={{ color: summary.by_severity.low > 0 ? '#3b82f6' : '#475569' }}>{summary.by_severity.low}</div>
           </div>
         </div>
       )}
 
       {/* Severity Distribution Bar */}
       {summary && findings.length > 0 && (
-        <div className="h-2 w-full flex rounded-full overflow-hidden bg-surface">
-          <div style={{ width: `${(summary.by_severity.critical / findings.length) * 100}%` }} className="bg-sev-critical"></div>
+        <div className="h-2.5 w-full flex rounded-full overflow-hidden bg-surface ring-1 ring-inset ring-white/[0.05]">
+          <div style={{ width: `${(summary.by_severity.critical / findings.length) * 100}%`, boxShadow: summary.by_severity.critical > 0 ? '0 0 14px #ef4444' : 'none' }} className="bg-sev-critical"></div>
           <div style={{ width: `${(summary.by_severity.high / findings.length) * 100}%` }} className="bg-sev-high"></div>
           <div style={{ width: `${(summary.by_severity.medium / findings.length) * 100}%` }} className="bg-sev-medium"></div>
           <div style={{ width: `${(summary.by_severity.low / findings.length) * 100}%` }} className="bg-sev-low"></div>
@@ -263,7 +263,7 @@ export default function ScanDetail() {
       )}
 
       <div>
-        <h3 className="text-xl font-bold text-textpri tracking-tight mb-4">Findings</h3>
+        <h3 className="text-2xl font-bold text-textpri tracking-tight mb-4">Findings</h3>
         
         {isRunning && findings.length === 0 ? (
           <div className="bg-card/80 backdrop-blur-md border border-bordercolor rounded-lg p-12 text-center flex flex-col items-center">
@@ -319,6 +319,9 @@ export default function ScanDetail() {
                   medium: 'shadow-sev-medium/10',
                   low: 'shadow-sev-low/10',
                 }[sevKey] || '';
+                // Static, not pulsing: several rows can be critical at once
+                // and a list of synchronised pulses is noise, not signal.
+                const sevGlow = sevKey === 'critical' ? 'shadow-glow-critical' : '';
                 const sevTextColor = {
                   critical: 'text-sev-critical',
                   high: 'text-sev-high',
@@ -336,16 +339,16 @@ export default function ScanDetail() {
                         if (keys.length > 0 && !keys.includes(audience)) setAudience(keys[0]);
                       }
                     }}
-                    className={`text-left p-4 rounded-r-lg border-y border-r border-l-4 transition-all hover:-translate-y-0.5 hover:shadow-lg focus:outline-none ${sevBorderColor}
+                    className={`text-left p-4 rounded-r-lg border-y border-r border-l-4 transition-all hover:-translate-y-0.5 hover:shadow-lg focus:outline-none ${sevBorderColor} ${sevGlow}
                       ${isSelected ? `bg-surface/80 border-y-bordercolor border-r-bordercolor shadow-md ${sevShadow}` : 'bg-card border-bordercolor hover:bg-surface/50'}
                     `}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <SeverityBadge severity={f.severity} />
-                      <span className={`font-mono text-xs font-bold ${sevTextColor}`}>{f.final_risk_score.toFixed(1)}</span>
+                      <span className={`font-mono text-base font-black tabular-nums tracking-tight ${sevTextColor}`}>{f.final_risk_score.toFixed(1)}</span>
                     </div>
                     <div className="font-semibold text-textpri mb-1 line-clamp-1">{f.title}</div>
-                    <div className="text-xs text-textmut uppercase tracking-wider font-bold">{f.type}</div>
+                    <div className="text-[10px] text-textmut uppercase tracking-[0.18em] font-bold">{f.type}</div>
                   </button>
                 );
               })}
@@ -353,20 +356,23 @@ export default function ScanDetail() {
 
             {/* RIGHT PANE: Details */}
             {selectedFinding && (
-              <div className="w-full lg:w-2/3 bg-card border border-bordercolor rounded-lg p-6 space-y-6 overflow-y-auto max-h-[800px]">
+              <div className="w-full lg:w-2/3 glass rounded-xl p-6 space-y-6 overflow-y-auto max-h-[800px]">
                 <div className="flex flex-col md:flex-row gap-8 items-start border-b border-bordercolor pb-6">
                   <div className="flex-1 space-y-4">
                     <div className="flex items-center gap-3">
                       <SeverityBadge severity={selectedFinding.severity} />
                       <span className="text-textmut uppercase tracking-wider text-xs font-bold border border-bordercolor px-2 py-0.5 rounded bg-surface">{selectedFinding.type}</span>
                     </div>
-                    <h2 className="text-2xl font-bold text-textpri">{selectedFinding.title}</h2>
-                    <p className="text-textmut text-sm">{selectedFinding.technical_impact}</p>
+                    <h2 className="text-3xl font-black text-textpri tracking-tighter leading-tight">{selectedFinding.title}</h2>
+                    <p className="text-textmut text-sm leading-relaxed">{selectedFinding.technical_impact}</p>
                   </div>
-                  <div className="shrink-0 bg-surface border border-bordercolor rounded-xl p-4 flex flex-col items-center gap-2">
-                    <div className="text-xs uppercase font-bold text-textmut tracking-wider">Risk Score</div>
-                    <RiskScore score={selectedFinding.final_risk_score} />
-                    <div className="text-xs text-textmut mt-1">Conf: {(selectedFinding.confidence * 100).toFixed(0)}%</div>
+                  <div className={`shrink-0 bg-surface/70 border border-white/[0.07] rounded-2xl p-5 flex flex-col items-center gap-2 ${
+                    (selectedFinding.severity || '').toLowerCase() === 'critical' ? 'shadow-glow-critical'
+                      : (selectedFinding.severity || '').toLowerCase() === 'high' ? 'shadow-glow-high' : ''
+                  }`}>
+                    <div className="text-[10px] uppercase font-bold text-textmut tracking-[0.25em]">Risk Score</div>
+                    <RiskScore score={selectedFinding.final_risk_score} size={132} />
+                    <div className="text-[10px] text-textmut mt-1 font-mono uppercase tracking-wider">Conf: {(selectedFinding.confidence * 100).toFixed(0)}%</div>
                   </div>
                 </div>
 

@@ -30,6 +30,36 @@ export default {
         textpri: "#f1f5f9",
         textmut: "#94a3b8",
       },
+      // Glow utilities layered on top of the severity tokens. Deliberately
+      // defined ONLY for critical/high/accent/new-in-diff: the *absence* of a
+      // glow on medium/low/info is what makes the glow carry hierarchy, so
+      // don't add the missing three "for completeness" — that would flatten
+      // the signal back out.
+      boxShadow: {
+        'glow-critical': '0 0 0 1px rgba(239,68,68,0.30), 0 0 28px -6px rgba(239,68,68,0.60)',
+        'glow-high': '0 0 0 1px rgba(249,115,22,0.25), 0 0 24px -8px rgba(249,115,22,0.45)',
+        'glow-accent': '0 0 0 1px rgba(0,212,255,0.25), 0 0 24px -8px rgba(0,212,255,0.45)',
+        'glow-new': '0 0 0 1px rgba(167,139,250,0.30), 0 0 26px -6px rgba(167,139,250,0.55)',
+        'glass': 'inset 0 1px 0 0 rgba(255,255,255,0.05), 0 16px 40px -16px rgba(0,0,0,0.75)',
+      },
+      // The only decorative-looking animation in the app that is actually
+      // load-bearing: it fires on critical severity and on NEW diff findings,
+      // i.e. exactly the two things a user must not scroll past. Anything
+      // that pulses without that meaning behind it does not get this class.
+      keyframes: {
+        'glow-pulse': {
+          '0%, 100%': { boxShadow: '0 0 0 1px rgba(239,68,68,0.25), 0 0 18px -8px rgba(239,68,68,0.40)' },
+          '50%': { boxShadow: '0 0 0 1px rgba(239,68,68,0.45), 0 0 34px -4px rgba(239,68,68,0.75)' },
+        },
+        'glow-pulse-new': {
+          '0%, 100%': { boxShadow: '0 0 0 1px rgba(167,139,250,0.25), 0 0 18px -8px rgba(167,139,250,0.35)' },
+          '50%': { boxShadow: '0 0 0 1px rgba(167,139,250,0.45), 0 0 32px -4px rgba(167,139,250,0.65)' },
+        },
+      },
+      animation: {
+        'glow-pulse': 'glow-pulse 3s ease-in-out infinite',
+        'glow-pulse-new': 'glow-pulse-new 3s ease-in-out infinite',
+      },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],

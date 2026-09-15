@@ -5,9 +5,15 @@ import React from 'react';
 // indicator anywhere (badges, gauges, charts, list borders) must resolve to
 // exactly these five, never a one-off hex, so a "critical" reads the same
 // color everywhere a user sees it.
+// Deliberately NOT glowing, even for critical. This badge is the single
+// most-repeated element in the app (every list row, every card, every diff
+// row) — glowing it would stack with the container-level glow on critical
+// rows and turn a hierarchy signal into ambient noise. The glow lives on the
+// container (list item, gauge panel, stat card); the badge just gets more
+// fill/border contrast than the calmer three.
 const STYLES = {
-  critical: 'bg-sev-critical/15 text-sev-critical border-sev-critical/40',
-  high: 'bg-sev-high/15 text-sev-high border-sev-high/40',
+  critical: 'bg-sev-critical/20 text-sev-critical border-sev-critical/60',
+  high: 'bg-sev-high/20 text-sev-high border-sev-high/50',
   medium: 'bg-sev-medium/15 text-sev-medium border-sev-medium/40',
   low: 'bg-sev-low/15 text-sev-low border-sev-low/40',
   informational: 'bg-sev-info/15 text-sev-info border-sev-info/40',

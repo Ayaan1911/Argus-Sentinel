@@ -19,7 +19,7 @@ export default function AudienceSelector({ selected, onChange }) {
           onClick={() => onChange(aud.id)}
           className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
             selected === aud.id
-              ? 'bg-accent text-background shadow-sm'
+              ? 'bg-accent text-background font-bold shadow-glow-accent'
               : 'text-textmut hover:text-textpri hover:bg-card'
           }`}
         >

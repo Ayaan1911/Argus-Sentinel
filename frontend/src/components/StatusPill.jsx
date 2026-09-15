@@ -11,7 +11,7 @@ const CONFIG = {
   running: { label: 'running', className: 'bg-warning/15 text-warning border-warning/40 animate-pulse', Icon: Loader2, spin: true },
   completed: { label: 'completed', className: 'bg-success/15 text-success border-success/40', Icon: CheckCircle2 },
   success: { label: 'success', className: 'bg-success/15 text-success border-success/40', Icon: CheckCircle2 },
-  failed: { label: 'failed', className: 'bg-danger/15 text-danger border-danger/40', Icon: XCircle },
+  failed: { label: 'failed', className: 'bg-danger/20 text-danger border-danger/50 shadow-glow-critical', Icon: XCircle },
 };
 
 export default function StatusPill({ status, children, size = 'sm' }) {

@@ -6,6 +6,23 @@ import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, B
 import StatusPill from '../components/StatusPill';
 import { SEVERITY_COLORS, TYPE_COLORS, CHART_NEUTRAL, STATE_COLORS } from '../theme';
 
+// Severity order, worst first. The hero number is tinted and glowed by the
+// worst severity actually present across all scans, so the single biggest
+// element on the page answers "how bad is it right now?" before anything is
+// read. Only critical/high carry a glow — see tailwind.config.js.
+const SEVERITY_RANK = [
+  { key: 'critical', label: 'Critical', glow: 'shadow-glow-critical' },
+  { key: 'high', label: 'High', glow: 'shadow-glow-high' },
+  { key: 'medium', label: 'Medium', glow: '' },
+  { key: 'low', label: 'Low', glow: '' },
+  { key: 'info', label: 'Info', glow: '' },
+];
+
+function dominantSeverity(distribution) {
+  if (!distribution) return null;
+  return SEVERITY_RANK.find(s => (distribution[s.key] || 0) > 0) || null;
+}
+
 const COLORS = SEVERITY_COLORS;
 
 const CustomTooltip = ({ active, payload }) => {
@@ -67,6 +84,8 @@ export default function Dashboard() {
 
   const totalScans = scans.length;
   const totalFindings = stats?.total_findings || 0;
+  const peak = dominantSeverity(stats?.severity_distribution);
+  const peakColor = peak ? COLORS[peak.key] : '#f1f5f9';
 
   // Prepare chart data
   const severityData = stats ? [
@@ -88,33 +107,105 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-textpri tracking-tight">Dashboard Overview</h2>
-        <Link to="/scan/new" className="bg-accent text-background px-4 py-2 rounded-md font-semibold hover:bg-accent/90 transition-colors flex items-center gap-2">
+      <div className="flex justify-between items-end gap-4 flex-wrap">
+        <div>
+          <div className="text-[11px] text-textmut uppercase tracking-[0.25em] font-bold mb-1">Argus Sentinel</div>
+          <h2 className="text-4xl sm:text-5xl font-black text-textpri tracking-tighter leading-none">Dashboard</h2>
+        </div>
+        <Link to="/scan/new" className="bg-accent text-background px-5 py-2.5 rounded-md font-bold hover:bg-accent/90 transition-all shadow-glow-accent flex items-center gap-2 shrink-0">
           <Target size={18} /> New Scan
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-card/80 backdrop-blur-md border border-bordercolor rounded-lg p-6 flex items-center gap-4 shadow-lg shadow-black/10">
-          <div className="p-3 bg-accent/10 text-accent rounded-lg"><Activity size={24} /></div>
-          <div>
-            <div className="text-3xl font-bold font-mono text-textpri">{totalScans}</div>
-            <div className="text-sm text-textmut uppercase tracking-wider font-semibold">Total Scans</div>
+      {/* Hero band. One number is deliberately far larger than anything else
+          on the page so the dashboard has an unmistakable entry point; its
+          color and glow come from the worst severity actually present, which
+          is what makes it signal rather than decoration. */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className={`lg:col-span-2 glass rounded-2xl p-6 sm:p-8 ${peak && peak.glow ? peak.glow : ''} ${peak && peak.key === 'critical' ? 'animate-glow-pulse' : ''}`}>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <div className="flex items-center gap-2 text-[11px] text-textmut uppercase tracking-[0.25em] font-bold">
+                <ShieldAlert size={13} /> Total Findings
+              </div>
+              <div
+                className="font-mono font-black tabular-nums tracking-tighter leading-none mt-3 text-7xl sm:text-8xl"
+                style={{
+                  color: peakColor,
+                  textShadow: peak && peak.glow ? `0 0 48px ${peakColor}55` : 'none',
+                }}
+              >
+                {totalFindings}
+              </div>
+            </div>
+            {peak && (
+              <div className="text-right">
+                <div className="text-[11px] text-textmut uppercase tracking-[0.25em] font-bold">Peak Severity</div>
+                <div className="text-2xl sm:text-3xl font-black uppercase tracking-tight mt-2" style={{ color: peakColor }}>
+                  {peak.label}
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* The severity distribution as one continuous spectrum bar, so
+              proportion is legible before the pie chart below is even read. */}
+          {totalFindings > 0 && (
+            <>
+              <div className="mt-8 h-2.5 w-full flex rounded-full overflow-hidden bg-background/80 ring-1 ring-inset ring-white/[0.05]">
+                {SEVERITY_RANK.map(s => {
+                  const count = (stats && stats.severity_distribution && stats.severity_distribution[s.key]) || 0;
+                  if (count === 0) return null;
+                  return (
+                    <div
+                      key={s.key}
+                      title={`${s.label}: ${count}`}
+                      style={{
+                        width: `${(count / totalFindings) * 100}%`,
+                        backgroundColor: COLORS[s.key],
+                        boxShadow: s.key === 'critical' ? `0 0 14px ${COLORS.critical}` : 'none',
+                      }}
+                    />
+                  );
+                })}
+              </div>
+              <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+                {SEVERITY_RANK.map(s => {
+                  const count = (stats && stats.severity_distribution && stats.severity_distribution[s.key]) || 0;
+                  const c = COLORS[s.key];
+                  return (
+                    <div key={s.key} className="flex items-baseline gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0 self-center" style={{ backgroundColor: c, opacity: count ? 1 : 0.3 }} />
+                      <span className="font-mono font-bold tabular-nums text-lg" style={{ color: count ? c : '#475569' }}>{count}</span>
+                      <span className="text-[10px] text-textmut uppercase tracking-[0.15em] font-bold">{s.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
-        <div className="bg-card/80 backdrop-blur-md border border-bordercolor rounded-lg p-6 flex items-center gap-4 shadow-lg shadow-black/10">
-          <div className="p-3 bg-accent/10 text-accent rounded-lg"><ShieldAlert size={24} /></div>
+
+        <div className="glass rounded-2xl p-6 sm:p-8 flex flex-col justify-between">
           <div>
-            <div className="text-3xl font-bold font-mono text-textpri">{totalFindings}</div>
-            <div className="text-sm text-textmut uppercase tracking-wider font-semibold">Total Findings</div>
+            <div className="flex items-center gap-2 text-[11px] text-textmut uppercase tracking-[0.25em] font-bold">
+              <Activity size={13} /> Total Scans
+            </div>
+            <div className="text-6xl font-mono font-black tabular-nums tracking-tighter text-textpri leading-none mt-3">
+              {totalScans}
+            </div>
+          </div>
+          <div className="mt-6 pt-4 border-t border-white/[0.06] text-xs text-textmut font-mono">
+            {scans.length > 0
+              ? <>Last run <span className="text-textpri">{new Date(scans[0].created_at).toLocaleString()}</span></>
+              : 'No scans run yet'}
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-card border border-bordercolor rounded-lg p-5 shadow-lg shadow-black/10">
-          <h3 className="text-sm text-textmut uppercase tracking-wider font-semibold mb-4">Severity Distribution</h3>
+        <div className="glass rounded-xl p-5">
+          <h3 className="text-[11px] text-textmut uppercase tracking-[0.2em] font-bold mb-4">Severity Distribution</h3>
           {severityData.length === 0 ? (
             <div className="h-48 flex items-center justify-center text-textmut text-sm">No findings yet</div>
           ) : (
@@ -131,8 +222,8 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="bg-card border border-bordercolor rounded-lg p-5 shadow-lg shadow-black/10">
-          <h3 className="text-sm text-textmut uppercase tracking-wider font-semibold mb-4">Finding Types</h3>
+        <div className="glass rounded-xl p-5">
+          <h3 className="text-[11px] text-textmut uppercase tracking-[0.2em] font-bold mb-4">Finding Types</h3>
           {typeData.length === 0 ? (
             <div className="h-48 flex items-center justify-center text-textmut text-sm">No findings yet</div>
           ) : (
@@ -153,8 +244,8 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="bg-card border border-bordercolor rounded-lg p-5 shadow-lg shadow-black/10">
-          <h3 className="text-sm text-textmut uppercase tracking-wider font-semibold mb-4">Scans Over Time (14 Days)</h3>
+        <div className="glass rounded-xl p-5">
+          <h3 className="text-[11px] text-textmut uppercase tracking-[0.2em] font-bold mb-4">Scans Over Time (14 Days)</h3>
           {scansOverTime.reduce((a, b) => a + b.count, 0) === 0 ? (
             <div className="h-48 flex items-center justify-center text-textmut text-sm">No scans yet</div>
           ) : (
@@ -173,7 +264,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <h3 className="text-xl font-bold text-textpri tracking-tight pt-4">Recon History</h3>
+      <h3 className="text-2xl font-bold text-textpri tracking-tight pt-4">Recon History</h3>
       {scans.length === 0 ? (
         <div className="bg-card border border-bordercolor rounded-lg p-12 text-center">
           <div className="text-textmut mb-4">No scans yet.</div>

@@ -7,6 +7,19 @@ import RiskScore from '../components/RiskScore';
 import ReasoningBreakdown from '../components/ReasoningBreakdown';
 import AudienceSelector from '../components/AudienceSelector';
 
+// The gauge panel is the single most visually weighted element in the app —
+// the explained risk score is the product's actual differentiator. Its glow
+// is keyed to the finding's own severity, and only critical pulses, so the
+// treatment itself communicates "drop what you're doing" vs "read later".
+const PANEL_GLOW = {
+  critical: 'shadow-glow-critical animate-glow-pulse',
+  high: 'shadow-glow-high',
+  medium: '',
+  low: '',
+  informational: '',
+  info: '',
+};
+
 function FindingDetailSkeleton() {
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-12 animate-pulse">
@@ -53,6 +66,8 @@ export default function FindingDetail() {
   if (loading) return <FindingDetailSkeleton />;
   if (!finding) return <div className="text-danger">Finding not found</div>;
 
+  const severityGlow = PANEL_GLOW[(finding.severity || 'informational').toLowerCase()] || '';
+
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-12">
       <div className="flex items-center gap-4 pb-2 border-b border-bordercolor">
@@ -65,18 +80,26 @@ export default function FindingDetail() {
       </div>
 
       <div className="flex flex-col md:flex-row gap-8 items-start">
-        <div className="flex-1 space-y-4">
-          <div className="flex items-center gap-3">
+        <div className="flex-1 space-y-4 min-w-0">
+          <div className="flex items-center gap-3 flex-wrap">
             <SeverityBadge severity={finding.severity} />
-            <span className="text-textmut uppercase tracking-wider text-xs font-bold border border-bordercolor px-2 py-0.5 rounded bg-surface">{finding.type}</span>
+            <span className="text-textmut uppercase tracking-[0.18em] text-[10px] font-bold border border-bordercolor px-2 py-1 rounded bg-surface">{finding.type}</span>
           </div>
-          <h1 className="text-3xl font-bold text-textpri tracking-tight">{finding.title}</h1>
-          <p className="text-textmut text-lg">{finding.technical_impact}</p>
+          <h1 className="text-4xl sm:text-5xl font-black text-textpri tracking-tighter leading-[1.05]">{finding.title}</h1>
+          <p className="text-textmut text-lg leading-relaxed">{finding.technical_impact}</p>
         </div>
-        <div className="shrink-0 bg-card border border-bordercolor rounded-xl p-6 flex flex-col items-center gap-2">
-          <div className="text-xs uppercase font-bold text-textmut tracking-wider">Final Risk Score</div>
-          <RiskScore score={finding.final_risk_score} />
-          <div className="text-xs text-textmut mt-2">Confidence: {(finding.confidence * 100).toFixed(0)}%</div>
+        <div className={`shrink-0 glass rounded-2xl p-7 flex flex-col items-center gap-3 ${severityGlow}`}>
+          <div className="text-[10px] uppercase font-bold text-textmut tracking-[0.25em]">Final Risk Score</div>
+          <RiskScore score={finding.final_risk_score} size={176} />
+          <div className="w-full pt-3 border-t border-white/[0.06]">
+            <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.15em] font-bold text-textmut mb-1.5">
+              <span>Confidence</span>
+              <span className="font-mono text-textpri">{(finding.confidence * 100).toFixed(0)}%</span>
+            </div>
+            <div className="h-1.5 w-full bg-background/80 rounded-full overflow-hidden">
+              <div className="h-full bg-accent rounded-full" style={{ width: `${finding.confidence * 100}%` }} />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -84,8 +107,8 @@ export default function FindingDetail() {
         <div className="space-y-6">
           <ReasoningBreakdown breakdown={finding.reasoning_breakdown} />
           
-          <div className="bg-card border border-bordercolor rounded-lg overflow-hidden">
-            <div className="bg-surface px-4 py-3 border-b border-bordercolor font-semibold flex items-center gap-2">
+          <div className="glass rounded-xl overflow-hidden">
+            <div className="bg-surface/60 px-4 py-3 border-b border-white/[0.06] font-bold uppercase tracking-[0.12em] text-xs text-textpri flex items-center gap-2">
               <Activity size={18} className="text-accent" /> Business Impact
             </div>
             <div className="p-4 text-textpri text-sm">
@@ -95,9 +118,9 @@ export default function FindingDetail() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-card border border-bordercolor rounded-lg overflow-hidden flex flex-col h-full">
-            <div className="bg-surface px-4 py-3 border-b border-bordercolor flex justify-between items-center">
-              <div className="font-semibold flex items-center gap-2">
+          <div className="glass rounded-xl overflow-hidden flex flex-col h-full">
+            <div className="bg-surface/60 px-4 py-3 border-b border-white/[0.06] flex justify-between items-center">
+              <div className="font-bold uppercase tracking-[0.12em] text-xs text-textpri flex items-center gap-2">
                 <GraduationCap size={18} className="text-accent" /> Targeted Guidance
               </div>
             </div>
@@ -114,8 +137,8 @@ export default function FindingDetail() {
       {(finding.recommended_actions?.length > 0 || finding.learning_resources?.length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {finding.recommended_actions?.length > 0 && (
-            <div className="bg-card border border-bordercolor rounded-lg p-5">
-              <h3 className="font-semibold text-textpri mb-3 flex items-center gap-2"><ShieldAlert size={18} className="text-success" /> Recommended Actions</h3>
+            <div className="glass rounded-xl p-5">
+              <h3 className="font-bold uppercase tracking-[0.12em] text-xs text-textpri mb-3 flex items-center gap-2"><ShieldAlert size={18} className="text-success" /> Recommended Actions</h3>
               <ul className="space-y-2">
                 {finding.recommended_actions.map((act, i) => (
                   <li key={i} className="text-sm text-textmut flex gap-2"><span className="text-success">▹</span> {act}</li>
@@ -124,8 +147,8 @@ export default function FindingDetail() {
             </div>
           )}
           {finding.learning_resources?.length > 0 && (
-            <div className="bg-card border border-bordercolor rounded-lg p-5">
-              <h3 className="font-semibold text-textpri mb-3 flex items-center gap-2"><Server size={18} className="text-accent" /> Learning Resources</h3>
+            <div className="glass rounded-xl p-5">
+              <h3 className="font-bold uppercase tracking-[0.12em] text-xs text-textpri mb-3 flex items-center gap-2"><Server size={18} className="text-accent" /> Learning Resources</h3>
               <ul className="space-y-2">
                 {finding.learning_resources.map((res, i) => (
                   <li key={i} className="text-sm text-accent hover:underline flex gap-2"><span className="text-textmut">▹</span> <a href={res} target="_blank" rel="noreferrer">{res}</a></li>

@@ -5,10 +5,10 @@ const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
 
 export default function Layout({ children }) {
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-16 bg-surface border-b border-bordercolor flex items-center px-4 sm:px-6 shrink-0">
+        <header className="h-16 bg-surface/70 backdrop-blur-xl border-b border-bordercolor flex items-center px-4 sm:px-6 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <h1 className="text-accent font-bold text-lg sm:text-xl tracking-wider uppercase truncate">Argus Sentinel</h1>
             <span className="text-textmut text-sm hidden lg:inline shrink-0">| AI Cybersecurity Reasoning Engine</span>

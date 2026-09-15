@@ -77,7 +77,7 @@ function EntryDetail({ entry, resultType }) {
             <span className="text-xs font-mono bg-surface border border-bordercolor px-2 py-0.5 rounded text-textmut">Secure from v{entry.min_secure_version}</span>
           )}
         </div>
-        <h2 className="text-2xl font-bold text-textpri tracking-tight">{name}</h2>
+        <h2 className="text-3xl font-black text-textpri tracking-tighter leading-tight">{name}</h2>
         <p className="text-textmut text-sm leading-relaxed">{entry.description}</p>
       </div>
 
@@ -225,7 +225,7 @@ export default function Intelligence() {
     <div className="max-w-6xl mx-auto space-y-6 pb-12">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-textpri tracking-tight">Intelligence Library</h2>
+          <h2 className="text-4xl sm:text-5xl font-black text-textpri tracking-tighter leading-none">Intelligence Library</h2>
           <p className="text-textmut text-sm mt-1">The core knowledge base powering Argus Sentinel's deterministic reasoning.</p>
         </div>
 
@@ -287,7 +287,7 @@ export default function Intelligence() {
           </div>
 
           {selected && (
-            <div className="w-full lg:w-2/3 bg-card border border-bordercolor rounded-lg p-6 max-h-[70vh] overflow-y-auto">
+            <div className="w-full lg:w-2/3 glass rounded-xl p-6 max-h-[70vh] overflow-y-auto">
               <EntryDetail entry={selected.entry} resultType={selected.resultType} />
             </div>
           )}
