@@ -55,14 +55,33 @@ export default {
           '0%, 100%': { boxShadow: '0 0 0 1px rgba(167,139,250,0.25), 0 0 18px -8px rgba(167,139,250,0.35)' },
           '50%': { boxShadow: '0 0 0 1px rgba(167,139,250,0.45), 0 0 32px -4px rgba(167,139,250,0.65)' },
         },
+        // Landing hero orb only — a slow, barely-perceptible drift, not a
+        // spin. "Subtle, not gimmicky" per the brief.
+        'orb-drift': {
+          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+          '33%': { transform: 'translate(2%, -3%) scale(1.03)' },
+          '66%': { transform: 'translate(-2%, 2%) scale(0.98)' },
+        },
       },
       animation: {
         'glow-pulse': 'glow-pulse 3s ease-in-out infinite',
         'glow-pulse-new': 'glow-pulse-new 3s ease-in-out infinite',
+        'orb-drift': 'orb-drift 16s ease-in-out infinite',
       },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        // Landing page emphasis words only — see Landing.jsx and the
+        // "italic serif for emphasis" rule in ARCHITECTURE notes. Never
+        // used for body copy or data.
+        serif: ['"Instrument Serif"', 'Georgia', 'serif'],
+      },
+      // The chromatic ribbon: one gradient, reused as the landing page's
+      // pipeline connector and (much thinner, once per page) as a header
+      // divider on the dashboard. Stops are literally the severity scale
+      // plus the accent — not an arbitrary new palette, per the brief.
+      backgroundImage: {
+        ribbon: 'linear-gradient(90deg, #3b82f6 0%, #00d4ff 22%, #eab308 50%, #f97316 75%, #ef4444 100%)',
       },
     },
   },

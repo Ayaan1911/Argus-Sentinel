@@ -1,6 +1,8 @@
 import React from 'react';
 
-const AUDIENCES = [
+// Exported so the landing page can list the same 5 real personas without
+// re-typing them — one source of truth for what Argus actually supports.
+export const AUDIENCES = [
   { id: 'student', label: 'Student' },
   { id: 'developer', label: 'Developer' },
   { id: 'bug_bounty_hunter', label: 'Bug Bounty Hunter' },

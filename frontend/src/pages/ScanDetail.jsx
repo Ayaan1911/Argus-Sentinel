@@ -189,7 +189,7 @@ export default function ScanDetail() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center gap-4 border-b border-bordercolor pb-4">
-        <Link to="/" className="p-2 hover:bg-card rounded-md text-textmut hover:text-textpri transition-colors">
+        <Link to="/dashboard" className="p-2 hover:bg-card rounded-md text-textmut hover:text-textpri transition-colors">
           <ArrowLeft size={20} />
         </Link>
         <div>
@@ -200,6 +200,7 @@ export default function ScanDetail() {
           <p className="text-sm text-textmut mt-1">Audience profile: <span className="text-textpri capitalize">{(scanMeta.audience || '').replace('_', ' ')}</span></p>
         </div>
       </div>
+      <div className="h-0.5 w-24 bg-ribbon rounded-full -mt-4" />
 
       <StageStatusBar stageStatus={stageStatus} findings={findings} />
 
@@ -263,7 +264,7 @@ export default function ScanDetail() {
       )}
 
       <div>
-        <h3 className="text-2xl font-bold text-textpri tracking-tight mb-4">Findings</h3>
+        <h3 className="text-2xl font-serif italic font-normal text-textpri tracking-tight mb-4">Findings</h3>
         
         {isRunning && findings.length === 0 ? (
           <div className="bg-card/80 backdrop-blur-md border border-bordercolor rounded-lg p-12 text-center flex flex-col items-center">

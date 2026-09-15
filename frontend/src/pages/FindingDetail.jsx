@@ -6,6 +6,8 @@ import SeverityBadge from '../components/SeverityBadge';
 import RiskScore from '../components/RiskScore';
 import ReasoningBreakdown from '../components/ReasoningBreakdown';
 import AudienceSelector from '../components/AudienceSelector';
+import GlowOrb from '../components/GlowOrb';
+import { severityColor } from '../theme';
 
 // The gauge panel is the single most visually weighted element in the app —
 // the explained risk score is the product's actual differentiator. Its glow
@@ -78,6 +80,7 @@ export default function FindingDetail() {
           Finding Detail
         </div>
       </div>
+      <div className="h-0.5 w-24 bg-ribbon rounded-full -mt-4" />
 
       <div className="flex flex-col md:flex-row gap-8 items-start">
         <div className="flex-1 space-y-4 min-w-0">
@@ -88,16 +91,27 @@ export default function FindingDetail() {
           <h1 className="text-4xl sm:text-5xl font-black text-textpri tracking-tighter leading-[1.05]">{finding.title}</h1>
           <p className="text-textmut text-lg leading-relaxed">{finding.technical_impact}</p>
         </div>
-        <div className={`shrink-0 glass rounded-2xl p-7 flex flex-col items-center gap-3 ${severityGlow}`}>
-          <div className="text-[10px] uppercase font-bold text-textmut tracking-[0.25em]">Final Risk Score</div>
-          <RiskScore score={finding.final_risk_score} size={176} />
-          <div className="w-full pt-3 border-t border-white/[0.06]">
-            <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.15em] font-bold text-textmut mb-1.5">
-              <span>Confidence</span>
-              <span className="font-mono text-textpri">{(finding.confidence * 100).toFixed(0)}%</span>
+        <div className="relative shrink-0">
+          {/* Risk aura — restrained, single-tone, severity-colored. Only
+              critical/high get one at all (matching PANEL_GLOW above);
+              medium/low/info stay plain, same "absence carries hierarchy"
+              rule as every other glow in this app. */}
+          {severityGlow && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <GlowOrb size={260} severity={severityColor(finding.severity)} />
             </div>
-            <div className="h-1.5 w-full bg-background/80 rounded-full overflow-hidden">
-              <div className="h-full bg-accent rounded-full" style={{ width: `${finding.confidence * 100}%` }} />
+          )}
+          <div className={`relative glass rounded-2xl p-7 flex flex-col items-center gap-3 ${severityGlow}`}>
+            <div className="text-[10px] uppercase font-bold text-textmut tracking-[0.25em]">Final Risk Score</div>
+            <RiskScore score={finding.final_risk_score} size={176} />
+            <div className="w-full pt-3 border-t border-white/[0.06]">
+              <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.15em] font-bold text-textmut mb-1.5">
+                <span>Confidence</span>
+                <span className="font-mono text-textpri">{(finding.confidence * 100).toFixed(0)}%</span>
+              </div>
+              <div className="h-1.5 w-full bg-background/80 rounded-full overflow-hidden">
+                <div className="h-full bg-accent rounded-full" style={{ width: `${finding.confidence * 100}%` }} />
+              </div>
             </div>
           </div>
         </div>

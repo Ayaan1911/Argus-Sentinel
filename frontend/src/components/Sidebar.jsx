@@ -4,7 +4,7 @@ import { LayoutDashboard, Target, BookOpen } from 'lucide-react';
 
 export default function Sidebar() {
   const links = [
-    { name: 'Dashboard', path: '/', icon: <LayoutDashboard size={20} /> },
+    { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
     { name: 'New Scan', path: '/scan/new', icon: <Target size={20} /> },
     { name: 'Intelligence Library', path: '/intelligence', icon: <BookOpen size={20} /> },
   ];

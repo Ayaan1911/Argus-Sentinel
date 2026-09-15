@@ -30,7 +30,13 @@ export default function ReasoningBreakdown({ breakdown }) {
     <div className="glass rounded-xl overflow-hidden">
       <div className="bg-surface/60 px-4 py-3 border-b border-white/[0.06] flex items-center gap-2">
         <Gauge size={16} className="text-accent" />
-        <h3 className="text-xs font-bold text-textpri uppercase tracking-[0.12em]">Why this risk score?</h3>
+        {/* The one header in this component that gets the landing page's
+            bold-sans + italic-serif pairing — this panel is the app's actual
+            differentiator, so it's the deliberate exception to the
+            uppercase-tracking-label style every sibling panel header uses. */}
+        <h3 className="text-sm font-bold text-textpri">
+          Why this <em className="font-serif italic font-normal text-accent">risk score</em>?
+        </h3>
       </div>
 
       {base && (

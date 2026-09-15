@@ -4,6 +4,7 @@ import { Target, Activity, ShieldAlert, ArrowRight } from 'lucide-react';
 import client from '../api/client';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, LabelList } from 'recharts';
 import StatusPill from '../components/StatusPill';
+import GlowOrb from '../components/GlowOrb';
 import { SEVERITY_COLORS, TYPE_COLORS, CHART_NEUTRAL, STATE_COLORS } from '../theme';
 
 // Severity order, worst first. The hero number is tinted and glowed by the
@@ -116,6 +117,7 @@ export default function Dashboard() {
           <Target size={18} /> New Scan
         </Link>
       </div>
+      <div className="h-0.5 w-24 bg-ribbon rounded-full -mt-2" />
 
       {/* Hero band. One number is deliberately far larger than anything else
           on the page so the dashboard has an unmistakable entry point; its
@@ -128,14 +130,21 @@ export default function Dashboard() {
               <div className="flex items-center gap-2 text-[11px] text-textmut uppercase tracking-[0.25em] font-bold">
                 <ShieldAlert size={13} /> Total Findings
               </div>
-              <div
-                className="font-mono font-black tabular-nums tracking-tighter leading-none mt-3 text-7xl sm:text-8xl"
-                style={{
-                  color: peakColor,
-                  textShadow: peak && peak.glow ? `0 0 48px ${peakColor}55` : 'none',
-                }}
-              >
-                {totalFindings}
+              <div className="relative mt-3">
+                {peak && peak.glow && (
+                  <div className="absolute inset-0 flex items-center justify-start -translate-x-8 -translate-y-1/4">
+                    <GlowOrb size={200} severity={peakColor} />
+                  </div>
+                )}
+                <div
+                  className="relative font-mono font-black tabular-nums tracking-tighter leading-none text-7xl sm:text-8xl"
+                  style={{
+                    color: peakColor,
+                    textShadow: peak && peak.glow ? `0 0 48px ${peakColor}55` : 'none',
+                  }}
+                >
+                  {totalFindings}
+                </div>
               </div>
             </div>
             {peak && (
@@ -264,7 +273,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <h3 className="text-2xl font-bold text-textpri tracking-tight pt-4">Recon History</h3>
+      <h3 className="text-2xl font-bold text-textpri tracking-tight pt-4">Recon <em className="font-serif italic font-normal text-accent">History</em></h3>
       {scans.length === 0 ? (
         <div className="bg-card border border-bordercolor rounded-lg p-12 text-center">
           <div className="text-textmut mb-4">No scans yet.</div>

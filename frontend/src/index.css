@@ -49,7 +49,8 @@ body::before {
 @media (prefers-reduced-motion: reduce) {
   .animate-glow-pulse,
   .animate-glow-pulse-new,
-  .animate-pulse {
+  .animate-pulse,
+  .animate-orb-drift {
     animation: none !important;
   }
 }
