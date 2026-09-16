@@ -1,17 +1,30 @@
 # Argus Sentinel
 
-**An automated web reconnaissance tool that turns raw scanner output into risk-scored, explained findings.**
-
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Python](https://img.shields.io/badge/python-3.11-3776AB)
 ![React](https://img.shields.io/badge/react-18-61DAFB)
 ![Docker](https://img.shields.io/badge/docker-compose-2496ED)
 
----
+<!--
+  No CI badge: there is no GitHub Actions workflow in this repo yet, so
+  there is nothing honest to point a badge at. See notes.md for this
+  session's note on adding one as a reasonable future improvement, and add
+  the badge here once `.github/workflows/` actually exists.
+-->
 
-A user submits a target domain; the backend runs subfinder, httpx, nmap, and nuclei against it in sequence, and a correlation/reasoning engine — backed by a 51-entry JSON intelligence library — turns the raw output into risk-scored findings with audience-specific guidance. Built for authorized testing of owned/permitted targets, with a bundled OWASP Juice Shop container as the default safe local target.
+Argus Sentinel is a self-hosted web recon tool: point it at a target and it runs subfinder, httpx, nmap, and nuclei in a real sequential pipeline, then a correlation/reasoning engine turns the raw output into risk-scored findings — each with an explained "why" and guidance tailored to who's reading it. Built for authorized testing of owned/permitted targets, with a bundled OWASP Juice Shop container as the default safe local target.
 
----
+![Scan Detail view of a real, completed Juice Shop scan showing severity cards, findings list, and the risk-score gauge](docs/screenshots/scan-detail.jpg)
+
+*Scan Detail view of a real, completed scan against the bundled Juice Shop target — real findings, real risk scores, not staged data.*
+
+## What It Does
+
+- **Real sequential recon pipeline** — subfinder discovers subdomains, httpx confirms which are actually live and fingerprints their technology, and nmap/nuclei then only scan what httpx confirmed live — not four tools fired blind and independently.
+- **Correlation & reasoning scoring engine** — every finding ships with a `reasoning_breakdown`: a base score plus labeled modifiers (internet-facing, no authentication, outdated version, admin panel exposed, and more), so you see *why* a score is what it is, not just a severity label.
+- **Audience-specific guidance** — the same finding reads differently for a Student, Developer, Bug Bounty Hunter, Pentester, or Security Professional; pick who's reading and the guidance adapts.
+- **Scan-history diffing** — every scan is automatically compared against the one before it: what's NEW, what's RESOLVED, and what CHANGED (with the old and new risk score shown side by side).
+- **51-entry intelligence library** — a real, verified JSON knowledge base (25 services, 12 technologies, 14 vulnerability classes) the scoring engines actually read from at scan time, not a hardcoded table buried in the scoring code.
 
 ## Quick Start
 
@@ -31,7 +44,7 @@ docker compose up --build -d
 | API docs | http://localhost:8000/docs |
 | OWASP Juice Shop (bundled scan target) | http://localhost:3000 |
 
-Every API call other than `/health` requires the `X-API-Key` header, matching the `API_KEY` in `.env`. Run a scan against the bundled Juice Shop instance to verify the full pipeline:
+Every API call other than `/health` requires the `X-API-Key` header, matching the `API_KEY` in `.env`. Run a scan against the bundled Juice Shop instance to see real output end to end:
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/scans/ \
@@ -42,13 +55,19 @@ curl -X POST http://localhost:8000/api/v1/scans/ \
 
 `db` and `redis` are not exposed to the host — only `api` (8000), `frontend` (5173), and the `juice-shop` target container (3000) publish ports.
 
+<!--
+  Placeholder, consistent with how the landing page (frontend/src/pages/
+  landing/data.js — PLACEHOLDER_DEMO_URL) already handles this: no public
+  demo deployment exists yet, see DEMO_DEPLOYMENT.md for how to stand one
+  up. Update both places once a real deployment exists.
+-->
+**Try it live:** no public demo is deployed yet — `https://demo.argus-sentinel.dev` is a placeholder, not a working link. Until then, Quick Start above is the fastest path to real output.
+
 ---
 
 ## Why Self-Hosted, Not a Hosted Service
 
 There's no shared "run your scan on our infrastructure" option, and that's deliberate, not a limitation waiting to be lifted. Once you self-host, nothing about what you scan — targets, findings, timing, anything — ever touches infrastructure this project controls, by construction. There's no telemetry phoning home and no shared backend to design access controls for in the first place. If you want to try the tool before self-hosting it, the bundled Juice Shop container gives you a real, safe, fully-featured scan target from the first `docker compose up` — see Quick Start above.
-
----
 
 ## The Pipeline
 
@@ -63,8 +82,6 @@ subfinder(target)
 
 subfinder's output feeds httpx so every discovered subdomain gets a liveness check; nmap and nuclei then only spend time on the target plus whatever subfinder found that httpx actually confirmed responds — not the full unfiltered subdomain list. Candidates with no DNS record at all (neither A nor CNAME) are discarded before they ever become a finding, since third-party passive sources occasionally fabricate results for domains they have no real data on. Each stage's outcome is tracked independently in `stage_status` (`success` / `failed` / `timeout` / `no_binary` per tool), not collapsed into one overall scan status.
 
----
-
 ## Scoring: Correlation, Reasoning, and Confidence
 
 Raw scanner output alone isn't a finding — it's an input. Three engines turn it into something explainable:
@@ -75,8 +92,6 @@ Raw scanner output alone isn't a finding — it's an input. Three engines turn i
 
 All three are backed by **`argus-intelligence/`**, a 51-entry JSON knowledge base (25 services, 12 technologies, 14 vulnerability classes) that the scoring engines look up by scanner-reported name/product — not a hardcoded lookup table inline in the scoring code.
 
----
-
 ## Security Posture
 
 - **Authentication** — every endpoint except `/health` requires a valid `X-API-Key` header; requests without one get a `401`.
@@ -84,21 +99,18 @@ All three are backed by **`argus-intelligence/`**, a 51-entry JSON knowledge bas
 - **Rate limiting** — scan creation (`POST /api/v1/scans/`) is limited to 5 requests/minute per client.
 - **CORS** — restricted to the origins listed in `ALLOWED_ORIGINS` (`.env`), not wide open.
 
----
-
 ## Frontend
 
 React 18 + Vite + Tailwind, talking to the API over axios with the API key wired in automatically:
 
 | Page | Route | Purpose |
 |---|---|---|
-| Dashboard | `/` | Scan history, severity distribution, finding-type breakdown |
+| Landing | `/` | Standalone public marketing page — no scan data, no auth required |
+| Dashboard | `/dashboard` | Scan history, severity distribution, finding-type breakdown |
 | New Scan | `/scan/new` | Submit a target + choose an audience persona |
 | Scan Detail | `/scan/:scan_id` | Live per-tool `stage_status`, findings list, combined risk level — polls the scan while running and stops once it reaches a terminal status; for a target with prior completed scans, also offers a diff view showing what's new/resolved/changed/unchanged since a previous run |
 | Finding Detail | `/scan/:scan_id/finding/:finding_id` | Full reasoning breakdown, attack patterns, recommended actions, audience-specific guidance for one finding |
 | Intelligence Library | `/intelligence` | Browse the 51-entry services/technologies/vulnerabilities knowledge base directly |
-
----
 
 ## Tech Stack
 
@@ -110,8 +122,6 @@ React 18 + Vite + Tailwind, talking to the API over axios with the API key wired
 | Frontend | React 18 + Vite + Tailwind CSS |
 | Scanners | subfinder, ProjectDiscovery httpx, nmap, nuclei |
 | Containers | Docker Compose |
-
----
 
 ## Real Scan Output
 
@@ -139,18 +149,14 @@ From an actual scan run against the bundled Juice Shop target (`target: "juice-s
 
 subfinder correctly reports 0 real subdomains for `juice-shop` (it isn't a real internet domain — any passive-source hits get resolved and discarded if they don't actually exist in DNS). Risk scores vary by finding type and the specific data each scanner returned — not a flat default.
 
----
-
 ## Testing
 
 ```bash
 cd backend && pytest        # 119 tests
-cd frontend && npm test     # vitest, 12 tests
+cd frontend && npm test     # vitest, 17 tests
 ```
 
-The backend suite includes pure-Python unit tests for the scoring engines, scanner argv/output-parsing logic, and the intelligence-library schema validator, plus a real Postgres-backed integration suite (`test_routes.py`, `test_scan_tasks.py`) that spins up a throwaway Postgres container via Docker and exercises actual API routes and task orchestration end-to-end — those tests skip automatically if Docker isn't reachable (e.g. running the suite from inside a container itself with no Docker-in-Docker access) rather than silently passing on mocked data. The frontend suite covers `ScanDetail`'s polling logic (`nextPollDelay`) and the scan-diff comparison view directly.
-
----
+The backend suite includes pure-Python unit tests for the scoring engines, scanner argv/output-parsing logic, and the intelligence-library schema validator, plus a real Postgres-backed integration suite (`test_routes.py`, `test_scan_tasks.py`) that spins up a throwaway Postgres container via Docker and exercises actual API routes and task orchestration end-to-end — those tests skip automatically if Docker isn't reachable (e.g. running the suite from inside a container itself with no Docker-in-Docker access) rather than silently passing on mocked data. The frontend suite covers `ScanDetail`'s polling logic (`nextPollDelay`), the scan-diff comparison view, and the reasoning-breakdown score math directly.
 
 ## Known Limitations
 
@@ -163,13 +169,9 @@ The backend suite includes pure-Python unit tests for the scoring engines, scann
 
 The original product vision and design philosophy this project started from is in [ARGUS_SENTINEL.md](ARGUS_SENTINEL.md) — note that document predates the current implementation and describes a broader long-term scope than what exists today; this README is the accurate description of the current codebase.
 
----
-
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for dev environment setup, running tests, code conventions, and PR expectations. **If you want to help without touching Python or React, adding a new entry to the intelligence library is the best first contribution** — see [argus-intelligence/CONTRIBUTING.md](argus-intelligence/CONTRIBUTING.md).
-
----
 
 ## License
 

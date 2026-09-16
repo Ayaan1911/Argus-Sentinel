@@ -36,7 +36,7 @@ If you want to iterate on the backend outside Docker (faster reload than rebuild
 
 ```bash
 cd backend && pytest        # 119 tests
-cd frontend && npm test     # vitest, 12 tests
+cd frontend && npm test     # vitest, 17 tests
 ```
 
 The backend suite includes pure-Python unit tests (scoring engines, scanner argv/output-parsing, the intelligence-library schema validator) that need nothing beyond `pip install -r requirements.txt`, plus a real Postgres-backed integration suite (`test_routes.py`, `test_scan_tasks.py`) that spins up a throwaway Postgres container via Docker itself — so **Docker needs to be running and reachable** for the full suite to pass, not just for `docker compose up`. Those specific tests skip automatically (rather than failing) if Docker isn't reachable — for example, if you run `pytest` from inside the `api` container itself, which has no Docker-in-Docker access. Run it on your host, with Docker running, to get the full suite rather than a partial one.
