@@ -48,7 +48,11 @@ services:
   worker:
     build:
       context: ./backend
-    command: celery -A app.tasks.celery_app worker --loglevel=info
+    # -B runs celery's beat scheduler embedded in this same worker process
+    # (see scan_tasks.py's beat_schedule / prune_demo_scans) — fine for a
+    # single worker instance; move beat to its own service first if this
+    # worker is ever scaled to multiple replicas.
+    command: celery -A app.tasks.celery_app worker --loglevel=info -B
     volumes:
       - ./backend:/app
       - ./argus-intelligence:/argus-intelligence

@@ -5,13 +5,20 @@ import client from '../api/client';
 import AudienceSelector from '../components/AudienceSelector';
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
-const DEMO_TARGET = 'juice-shop';
+// Both explicitly authorized public demo targets (see backend's
+// DEMO_ALLOWED_TARGETS in app/schemas/scan.py) — juice-shop is the bundled
+// vulnerable app, scanme.nmap.org is the Nmap project's own dedicated public
+// test target.
+const DEMO_TARGETS = [
+  { id: 'juice-shop', label: 'juice-shop (bundled)' },
+  { id: 'scanme.nmap.org', label: 'scanme.nmap.org' },
+];
 
 export default function NewScan() {
-  // In demo mode the target is fixed and never editable — this isn't just a
-  // default value, the input itself doesn't exist below, so there's nothing
-  // for a visitor to type a real domain into.
-  const [target, setTarget] = useState(DEMO_MODE ? DEMO_TARGET : '');
+  // In demo mode the target is never freely editable — there's still no text
+  // input for a visitor to type a real domain into, only a fixed choice
+  // between the two server-allowlisted demo targets above.
+  const [target, setTarget] = useState(DEMO_MODE ? DEMO_TARGETS[0].id : '');
   const [audience, setAudience] = useState('student');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -41,7 +48,7 @@ export default function NewScan() {
         <h2 className="text-4xl sm:text-5xl font-black text-textpri tracking-tighter leading-none mb-3">Launch New Scan</h2>
         <p className="text-textmut">
           {DEMO_MODE
-            ? 'This public demo only scans the bundled vulnerable test app below.'
+            ? 'This public demo is locked to two explicitly authorized targets — pick one below.'
             : 'Enter a target domain or IP address to begin reconnaissance.'}
         </p>
       </div>
@@ -53,9 +60,24 @@ export default function NewScan() {
           <div className="space-y-2">
             <label className="block text-sm font-medium text-textpri">Target Scope</label>
             {DEMO_MODE ? (
-              <div className="flex items-center gap-3 bg-surface border border-bordercolor rounded-lg pl-3 pr-4 py-3 text-textpri font-mono">
-                <Lock size={18} className="text-textmut shrink-0" />
-                <span>{DEMO_TARGET} (demo target)</span>
+              <div role="tablist" aria-label="Demo target" className="inline-flex flex-wrap gap-1 bg-background border border-bordercolor rounded-lg p-1">
+                {DEMO_TARGETS.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={target === t.id}
+                    onClick={() => setTarget(t.id)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-mono font-medium transition-colors ${
+                      target === t.id
+                        ? 'bg-accent text-background font-bold shadow-glow-accent'
+                        : 'text-textmut hover:text-textpri hover:bg-card'
+                    }`}
+                  >
+                    <Lock size={14} className={target === t.id ? 'text-background/70' : 'text-textmut'} />
+                    {t.label}
+                  </button>
+                ))}
               </div>
             ) : (
               <div className="relative">

@@ -445,6 +445,40 @@ def test_demo_mode_still_allows_juice_shop(client, auth_headers, monkeypatch):
     mock_run_scan.delay.assert_called_once()
 
 
+def test_demo_mode_allows_scanme_nmap_org_as_second_target(client, auth_headers, monkeypatch):
+    monkeypatch.setattr(settings, "DEMO_MODE", True)
+    monkeypatch.setattr(settings, "DEMO_API_KEY", auth_headers["x-api-key"])
+
+    with patch("app.routers.scans.run_scan") as mock_run_scan, \
+         patch("app.routers.scans.Redis", _fake_redis_class()):
+        r = client.post("/api/v1/scans/", json={"target": "scanme.nmap.org"}, headers=auth_headers)
+
+    assert r.status_code == 200
+    assert r.json()["target"] == "scanme.nmap.org"
+    mock_run_scan.delay.assert_called_once()
+
+
+def test_demo_mode_scans_are_flagged_is_demo(client, clean_db, auth_headers, monkeypatch):
+    monkeypatch.setattr(settings, "DEMO_MODE", True)
+    monkeypatch.setattr(settings, "DEMO_API_KEY", auth_headers["x-api-key"])
+
+    with patch("app.routers.scans.run_scan"), \
+         patch("app.routers.scans.Redis", _fake_redis_class()):
+        r = client.post("/api/v1/scans/", json={"target": "juice-shop"}, headers=auth_headers)
+
+    scan_id = r.json()["id"]
+
+    # is_demo isn't part of ScanRead's response shape (it's an internal
+    # pruning flag, not user-facing data) — assert against the DB row directly.
+    from sqlalchemy import text
+    with clean_db["sync_engine"].begin() as conn:
+        is_demo = conn.execute(
+            text("SELECT is_demo FROM scans WHERE id = :id"), {"id": scan_id}
+        ).scalar_one()
+
+    assert is_demo is True
+
+
 def test_demo_mode_requires_the_demo_api_key_not_the_normal_one(client, auth_headers, monkeypatch):
     monkeypatch.setattr(settings, "DEMO_MODE", True)
     monkeypatch.setattr(settings, "DEMO_API_KEY", "the-public-demo-key")

@@ -4,20 +4,22 @@ is called directly (bypassing the broker), with each scanner's run()
 patched out, against the real throwaway Postgres from conftest.py.
 """
 import uuid
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, patch
 
 from sqlalchemy import text
 
 
-def _insert_pending_scan(sync_engine, target="example.com", audience="student"):
+def _insert_pending_scan(sync_engine, target="example.com", audience="student", is_demo=False, created_at=None):
     scan_id = str(uuid.uuid4())
+    created_at = created_at or datetime.now(timezone.utc)
     with sync_engine.begin() as conn:
         conn.execute(
             text(
-                "INSERT INTO scans (id, target, status, audience, stage_status, created_at) "
-                "VALUES (:id, :target, 'pending', :audience, '{}', now())"
+                "INSERT INTO scans (id, target, status, audience, stage_status, is_demo, created_at) "
+                "VALUES (:id, :target, 'pending', :audience, '{}', :is_demo, :created_at)"
             ),
-            {"id": scan_id, "target": target, "audience": audience},
+            {"id": scan_id, "target": target, "audience": audience, "is_demo": is_demo, "created_at": created_at},
         )
     return scan_id
 
@@ -41,6 +43,19 @@ def _fetch_finding_count(sync_engine, scan_id):
 
 def _no_finding(source, ftype, title, raw_data):
     return {"source": source, "type": ftype, "title": title, "raw_data": raw_data}
+
+
+def _insert_finding(sync_engine, scan_id, title="Test Finding"):
+    finding_id = str(uuid.uuid4())
+    with sync_engine.begin() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO findings (id, scan_id, type, title, severity, confidence, risk_score, final_risk_score) "
+                "VALUES (:id, :scan_id, 'port', :title, 'low', 1.0, 2.0, 2.0)"
+            ),
+            {"id": finding_id, "scan_id": scan_id, "title": title},
+        )
+    return finding_id
 
 
 def test_stage_status_recorded_on_success_for_every_tool(clean_db):
@@ -176,3 +191,35 @@ def test_scan_marked_failed_when_task_raises(clean_db):
 
     row = _fetch_scan(clean_db["sync_engine"], scan_id)
     assert row["status"] == "failed"
+
+
+def test_prune_demo_scans_deletes_only_expired_demo_scans(clean_db):
+    from app.tasks.scan_tasks import prune_demo_scans
+
+    sync_engine = clean_db["sync_engine"]
+    now = datetime.now(timezone.utc)
+
+    old_demo_id = _insert_pending_scan(sync_engine, is_demo=True, created_at=now - timedelta(hours=25))
+    _insert_finding(sync_engine, old_demo_id)
+    fresh_demo_id = _insert_pending_scan(sync_engine, is_demo=True, created_at=now - timedelta(hours=1))
+    old_real_id = _insert_pending_scan(sync_engine, is_demo=False, created_at=now - timedelta(hours=25))
+
+    result = prune_demo_scans()
+
+    assert result == {"pruned": 1}
+    assert _fetch_scan(sync_engine, old_demo_id) is None
+    assert _fetch_finding_count(sync_engine, old_demo_id) == 0
+    assert _fetch_scan(sync_engine, fresh_demo_id) is not None
+    assert _fetch_scan(sync_engine, old_real_id) is not None
+
+
+def test_prune_demo_scans_is_a_noop_with_nothing_expired(clean_db):
+    from app.tasks.scan_tasks import prune_demo_scans
+
+    sync_engine = clean_db["sync_engine"]
+    fresh_demo_id = _insert_pending_scan(sync_engine, is_demo=True, created_at=datetime.now(timezone.utc))
+
+    result = prune_demo_scans()
+
+    assert result == {"pruned": 0}
+    assert _fetch_scan(sync_engine, fresh_demo_id) is not None

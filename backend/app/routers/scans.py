@@ -154,7 +154,12 @@ async def create_scan(request: Request, scan_in: ScanCreate, db: AsyncSession = 
     # dispatch new scanner work — reused/deduped scans above don't cost anything.
     await _enforce_demo_scan_ceiling()
 
-    db_scan = Scan(target=scan_in.target, audience=scan_in.audience, status="pending")
+    db_scan = Scan(
+        target=scan_in.target,
+        audience=scan_in.audience,
+        status="pending",
+        is_demo=settings.DEMO_MODE,
+    )
     db.add(db_scan)
     await db.commit()
     

@@ -14,6 +14,14 @@ from app.scanners.utils import is_internal_ip, normalize_target
 # Docker network address.
 ALLOWED_INTERNAL_HOSTNAMES = {"juice-shop"}
 
+# Targets a public demo deployment (DEMO_MODE=true) is locked to — a
+# different, broader concept than ALLOWED_INTERNAL_HOSTNAMES above, which is
+# specifically about exempting an internal Docker hostname from the
+# private-IP block. scanme.nmap.org is a real public domain (no internal-IP
+# exemption needed) but is the Nmap project's own dedicated, explicitly
+# authorized public scan target, so it's safe to allow here the same way.
+DEMO_ALLOWED_TARGETS = ALLOWED_INTERNAL_HOSTNAMES | {"scanme.nmap.org"}
+
 
 def validate_scan_target(raw_target: str) -> str:
     hostname = normalize_target(raw_target)
@@ -22,13 +30,14 @@ def validate_scan_target(raw_target: str) -> str:
 
     if settings.DEMO_MODE:
         # Inverted from the normal allowlist-exception below: in a public
-        # demo deployment, juice-shop isn't just exempt from the private-IP
-        # block, it's the ONLY valid target, full stop — including domains
-        # that would otherwise pass every check below.
-        if hostname not in ALLOWED_INTERNAL_HOSTNAMES:
+        # demo deployment, the bundled/authorized targets aren't just exempt
+        # from the private-IP block, they're the ONLY valid targets, full
+        # stop — including domains that would otherwise pass every check below.
+        if hostname not in DEMO_ALLOWED_TARGETS:
             raise ValueError(
-                "This is a public demo deployment — scans are locked to the bundled "
-                f"'{next(iter(ALLOWED_INTERNAL_HOSTNAMES))}' target. Self-host Argus Sentinel to scan your own targets."
+                "This is a public demo deployment — scans are locked to the authorized "
+                f"demo targets ({', '.join(sorted(DEMO_ALLOWED_TARGETS))}). "
+                "Self-host Argus Sentinel to scan your own targets."
             )
         return hostname
 

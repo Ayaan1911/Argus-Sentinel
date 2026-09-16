@@ -1,11 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Target, Activity, ShieldAlert, ArrowRight } from 'lucide-react';
+import { Target, Activity, ShieldAlert, ArrowRight, PieChart as PieChartIcon, BarChart3, TrendingUp } from 'lucide-react';
 import client from '../api/client';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, LabelList } from 'recharts';
 import StatusPill from '../components/StatusPill';
 import GlowOrb from '../components/GlowOrb';
 import { SEVERITY_COLORS, TYPE_COLORS, CHART_NEUTRAL, STATE_COLORS } from '../theme';
+
+// Small colored icon badge, paired with a number/label — the stat-card and
+// panel-header composition borrowed from Vision UI Dashboard's card style.
+// Color is always either a real severity token or the app's one existing
+// brand accent, never a new decorative color (see tailwind.config.js).
+function IconBadge({ icon, color }) {
+  return (
+    <div
+      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border"
+      style={{ backgroundColor: `${color}1f`, borderColor: `${color}4d`, color }}
+    >
+      {icon}
+    </div>
+  );
+}
 
 // Severity order, worst first. The hero number is tinted and glowed by the
 // worst severity actually present across all scans, so the single biggest
@@ -127,8 +142,9 @@ export default function Dashboard() {
         <div className={`lg:col-span-2 glass rounded-2xl p-6 sm:p-8 ${peak && peak.glow ? peak.glow : ''} ${peak && peak.key === 'critical' ? 'animate-glow-pulse' : ''}`}>
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <div className="flex items-center gap-2 text-[11px] text-textmut uppercase tracking-[0.25em] font-bold">
-                <ShieldAlert size={13} /> Total Findings
+              <div className="flex items-center gap-3">
+                <IconBadge icon={<ShieldAlert size={18} />} color={peak ? peakColor : STATE_COLORS.accent} />
+                <div className="text-[11px] text-textmut uppercase tracking-[0.25em] font-bold">Total Findings</div>
               </div>
               <div className="relative mt-3">
                 {peak && peak.glow && (
@@ -197,8 +213,9 @@ export default function Dashboard() {
 
         <div className="glass rounded-2xl p-6 sm:p-8 flex flex-col justify-between">
           <div>
-            <div className="flex items-center gap-2 text-[11px] text-textmut uppercase tracking-[0.25em] font-bold">
-              <Activity size={13} /> Total Scans
+            <div className="flex items-center gap-3">
+              <IconBadge icon={<Activity size={18} />} color={STATE_COLORS.accent} />
+              <div className="text-[11px] text-textmut uppercase tracking-[0.25em] font-bold">Total Scans</div>
             </div>
             <div className="text-6xl font-mono font-black tabular-nums tracking-tighter text-textpri leading-none mt-3">
               {totalScans}
@@ -214,11 +231,14 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="glass rounded-xl p-5">
-          <h3 className="text-[11px] text-textmut uppercase tracking-[0.2em] font-bold mb-4">Severity Distribution</h3>
+          <div className="flex items-center gap-3 mb-4">
+            <IconBadge icon={<PieChartIcon size={16} />} color={STATE_COLORS.accent} />
+            <h3 className="text-[11px] text-textmut uppercase tracking-[0.2em] font-bold">Severity Distribution</h3>
+          </div>
           {severityData.length === 0 ? (
             <div className="h-48 flex items-center justify-center text-textmut text-sm">No findings yet</div>
           ) : (
-            <div className="h-48">
+            <div className="h-48 relative">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={severityData} innerRadius={50} outerRadius={70} paddingAngle={2} dataKey="value" stroke="none">
@@ -227,12 +247,21 @@ export default function Dashboard() {
                   <RechartsTooltip content={<CustomTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
+              {/* Total count in the donut's hole — the number the chart is
+                  already implicitly about, made explicit at a glance. */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-2xl font-mono font-black tabular-nums text-textpri leading-none">{totalFindings}</span>
+                <span className="text-[9px] text-textmut uppercase tracking-[0.15em] font-bold mt-1">Findings</span>
+              </div>
             </div>
           )}
         </div>
 
         <div className="glass rounded-xl p-5">
-          <h3 className="text-[11px] text-textmut uppercase tracking-[0.2em] font-bold mb-4">Finding Types</h3>
+          <div className="flex items-center gap-3 mb-4">
+            <IconBadge icon={<BarChart3 size={16} />} color={STATE_COLORS.accent} />
+            <h3 className="text-[11px] text-textmut uppercase tracking-[0.2em] font-bold">Finding Types</h3>
+          </div>
           {typeData.length === 0 ? (
             <div className="h-48 flex items-center justify-center text-textmut text-sm">No findings yet</div>
           ) : (
@@ -254,7 +283,10 @@ export default function Dashboard() {
         </div>
 
         <div className="glass rounded-xl p-5">
-          <h3 className="text-[11px] text-textmut uppercase tracking-[0.2em] font-bold mb-4">Scans Over Time (14 Days)</h3>
+          <div className="flex items-center gap-3 mb-4">
+            <IconBadge icon={<TrendingUp size={16} />} color={STATE_COLORS.accent} />
+            <h3 className="text-[11px] text-textmut uppercase tracking-[0.2em] font-bold">Scans Over Time (14 Days)</h3>
+          </div>
           {scansOverTime.reduce((a, b) => a + b.count, 0) === 0 ? (
             <div className="h-48 flex items-center justify-center text-textmut text-sm">No scans yet</div>
           ) : (

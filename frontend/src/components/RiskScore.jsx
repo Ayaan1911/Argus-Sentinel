@@ -9,16 +9,17 @@ function scoreToSeverityLabel(score) {
   return 'informational';
 }
 
-// 270° instrument sweep (gap at the bottom) rather than a closed ring: an
-// open arc has an unambiguous "empty" end, so a 3.1 and a 9.4 are
-// distinguishable by shape alone at thumbnail size, before the number is
-// legible at all.
+// 270° sweep (gap at the bottom) rather than a closed ring: an open arc has
+// an unambiguous "empty" end, so a 3.1 and a 9.4 are distinguishable by
+// shape alone at thumbnail size, before the number is legible at all. A
+// clean two-layer arc (track + progress), no tick marks — closer to the
+// crisp, uncluttered circular-gauge style of Vision UI's dashboard cards
+// than the previous instrument-panel tick ring.
 const SWEEP = 0.75;
 const RADIUS = 40;
 const BOX = 100;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 const ARC = CIRCUMFERENCE * SWEEP;
-const TICKS = 10;
 
 export default function RiskScore({ score, size = 96 }) {
   const targetScore = parseFloat(score || 0);
@@ -75,34 +76,12 @@ export default function RiskScore({ score, size = 96 }) {
         style={{ transform: 'rotate(135deg)' }}
         aria-hidden="true"
       >
-        {/* Tick ring — reads as a calibrated instrument rather than a
-            generic progress donut. Ticks past the current value stay dim. */}
-        {Array.from({ length: TICKS + 1 }, (_, i) => {
-          const angle = (i / TICKS) * SWEEP * 2 * Math.PI;
-          const inner = RADIUS + 8;
-          const outer = RADIUS + (i % 5 === 0 ? 13 : 11);
-          const cx = BOX / 2;
-          const passed = i / TICKS <= filled;
-          return (
-            <line
-              key={i}
-              x1={cx + inner * Math.cos(angle)}
-              y1={cx + inner * Math.sin(angle)}
-              x2={cx + outer * Math.cos(angle)}
-              y2={cx + outer * Math.sin(angle)}
-              stroke={passed ? color : '#242d3a'}
-              strokeWidth={i % 5 === 0 ? 2 : 1}
-              strokeLinecap="round"
-              opacity={passed ? 0.9 : 0.6}
-            />
-          );
-        })}
         <circle
           cx={BOX / 2}
           cy={BOX / 2}
           r={RADIUS}
-          stroke="#1a222e"
-          strokeWidth="9"
+          stroke="#202935"
+          strokeWidth="10"
           strokeLinecap="round"
           fill="transparent"
           strokeDasharray={`${ARC} ${CIRCUMFERENCE}`}
@@ -112,7 +91,7 @@ export default function RiskScore({ score, size = 96 }) {
           cy={BOX / 2}
           r={RADIUS}
           stroke={color}
-          strokeWidth="9"
+          strokeWidth="10"
           strokeLinecap="round"
           fill="transparent"
           strokeDasharray={`${ARC} ${CIRCUMFERENCE}`}

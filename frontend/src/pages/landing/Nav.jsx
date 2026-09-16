@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Github } from 'lucide-react';
+import { Github, ArrowRight } from 'lucide-react';
 import { GITHUB_URL } from './data';
 
 export default function Nav() {
@@ -20,9 +20,14 @@ export default function Nav() {
               self-hosted, see data.js's DEMO_MODE comment for the full
               reasoning), so /dashboard is already the right, working
               destination in both modes: the locked demo in one, the real
-              instance in the other. */}
-          <Link to="/dashboard" className="text-sm text-textmut hover:text-textpri transition-colors hidden sm:inline">
-            Launch App
+              instance in the other. A real filled button, not a quiet text
+              link — this is the nav's one clear primary action, same visual
+              weight as Hero's "Try the Demo" CTA. */}
+          <Link
+            to="/dashboard"
+            className="flex items-center gap-2 text-sm font-bold bg-accent text-background px-4 py-2 rounded-md shadow-glow-accent hover:bg-accent/90 transition-all"
+          >
+            Launch App <ArrowRight size={16} />
           </Link>
           <a
             href={GITHUB_URL}

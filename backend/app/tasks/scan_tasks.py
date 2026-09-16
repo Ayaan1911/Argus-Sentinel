@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import urllib.parse
+from datetime import datetime, timedelta, timezone
 
 from celery import Celery
 from sqlalchemy import create_engine
@@ -23,6 +24,19 @@ engine = create_engine(sync_url)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 celery_app = Celery("argus", broker=settings.REDIS_URL, backend=settings.REDIS_URL)
+
+# ponytail: embedded beat (see docker-compose.yml's worker `-B` flag) runs in
+# the same process as the worker, which double-schedules this task if the
+# worker is ever scaled to multiple replicas — move to a dedicated `beat`
+# service first if that happens. Hourly is plenty of margin for a 24h window.
+celery_app.conf.beat_schedule = {
+    "prune-demo-scans-hourly": {
+        "task": "prune_demo_scans",
+        "schedule": 3600.0,
+    },
+}
+
+DEMO_SCAN_RETENTION = timedelta(hours=24)
 
 
 def _live_hostnames(httpx_results: list[dict]) -> set:
@@ -161,5 +175,35 @@ def run_scan(scan_id: str, target: str, audience: str):
         if scan:
             scan.status = "failed"
             db.commit()
+    finally:
+        db.close()
+
+
+@celery_app.task(name="prune_demo_scans")
+def prune_demo_scans():
+    """Deletes demo-mode scan records (and their findings) once older than
+    DEMO_SCAN_RETENTION. Only ever touches rows with is_demo=True — a
+    self-hosted deployment's real scan history is never marked is_demo (see
+    routers/scans.py::create_scan), so running this unconditionally is a
+    harmless no-op there rather than something that needs its own on/off
+    switch."""
+    db = SessionLocal()
+    try:
+        cutoff = datetime.now(timezone.utc) - DEMO_SCAN_RETENTION
+        expired_ids = [
+            row[0] for row in
+            db.query(Scan.id).filter(Scan.is_demo.is_(True), Scan.created_at < cutoff).all()
+        ]
+        if not expired_ids:
+            logger.info("prune_demo_scans: nothing expired")
+            return {"pruned": 0}
+
+        # No DB-level ON DELETE CASCADE on findings.scan_id, so findings are
+        # deleted explicitly first, in the same transaction as the scans.
+        db.query(Finding).filter(Finding.scan_id.in_(expired_ids)).delete(synchronize_session=False)
+        db.query(Scan).filter(Scan.id.in_(expired_ids)).delete(synchronize_session=False)
+        db.commit()
+        logger.info(f"prune_demo_scans: pruned {len(expired_ids)} expired demo scan(s)")
+        return {"pruned": len(expired_ids)}
     finally:
         db.close()
