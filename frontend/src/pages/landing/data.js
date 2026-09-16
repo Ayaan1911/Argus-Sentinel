@@ -79,3 +79,42 @@ export const INTELLIGENCE_TOTAL =
 
 export const GITHUB_URL = 'https://github.com/Ayaan1911/Argus-Sentinel';
 export const INTELLIGENCE_CONTRIBUTING_URL = `${GITHUB_URL}/blob/main/argus-intelligence/CONTRIBUTING.md`;
+
+// Single source of truth for both landing-page CTAs that touch the app
+// (Nav's "Launch App" and Hero's "Try the Demo"), so the two can't drift
+// out of sync about what deployment mode this build is running in.
+//
+// This frontend has no per-visitor login — every deployment bakes one fixed
+// VITE_API_KEY into the JS bundle at build time (see frontend/api/client.js),
+// so "/dashboard" already works for whoever can reach this origin, in every
+// mode this repo actually supports:
+//   - VITE_DEMO_MODE=true (the public demo build): the baked-in key is the
+//     public DEMO_API_KEY, and DEMO_MODE also locks the target to juice-shop
+//     app-wide (see Layout.jsx/NewScan.jsx) — so /dashboard already IS the
+//     locked demo, from either CTA.
+//   - VITE_DEMO_MODE=false (a self-hosted build): the baked-in key is
+//     whatever the self-hoster generated for themselves, and /dashboard is
+//     their real, unrestricted instance — correct for their own landing page.
+// There's no third "marketing-only, no backend configured" deployment in
+// this repo's docker-compose files, so /dashboard doesn't need to branch.
+export const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
+
+// "Try the Demo" points at the locked PUBLIC demo instance once it's
+// deployed (see DEMO_DEPLOYMENT.md — no live URL exists yet, that file only
+// documents how to stand one up). If this exact build IS that demo
+// deployment, /dashboard already is the locked demo, so link there directly
+// instead of an external placeholder.
+// PLACEHOLDER — replace once DEMO_DEPLOYMENT.md has actually been run
+// against a real host and a real domain exists.
+export const PLACEHOLDER_DEMO_URL = 'https://demo.argus-sentinel.dev';
+export const DEMO_URL = DEMO_MODE ? '/dashboard' : PLACEHOLDER_DEMO_URL;
+
+// Whether the "Try the Demo" hero CTA should render at all. On a
+// self-hosted (non-demo) build there's no live public demo to send visitors
+// to but the placeholder domain, and the self-hoster's own "Launch App"
+// link already offers full, unrestricted access to this exact instance —
+// showing a second CTA that points at an unrelated, unresolving external
+// domain would be actively confusing rather than merely redundant. Both
+// CTAs are kept (not hidden) in demo mode, where they correctly point at
+// the same real, working destination.
+export const SHOW_DEMO_CTA = DEMO_MODE;

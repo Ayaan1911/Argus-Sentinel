@@ -14,6 +14,13 @@ export default function Nav() {
           <span className="text-textpri font-black tracking-[0.18em] text-sm">SENTINEL</span>
         </Link>
         <div className="flex items-center gap-3">
+          {/* Always /dashboard, unconditionally — doesn't need a
+              VITE_DEMO_MODE branch. This build's own frontend bundle
+              already has one fixed API key baked in at build time (demo or
+              self-hosted, see data.js's DEMO_MODE comment for the full
+              reasoning), so /dashboard is already the right, working
+              destination in both modes: the locked demo in one, the real
+              instance in the other. */}
           <Link to="/dashboard" className="text-sm text-textmut hover:text-textpri transition-colors hidden sm:inline">
             Launch App
           </Link>
