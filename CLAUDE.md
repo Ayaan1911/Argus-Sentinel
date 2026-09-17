@@ -72,6 +72,7 @@ If any of the above drift from what's actually in `package.json` / `Makefile` / 
 - `argus-intelligence/*.json` is treated as reference data, not application logic — don't refactor its structure without checking every consumer in `engines/` and `intelligence/loader.py`.
 - If mid-remediation on a known audit finding (auth, SSRF validation, CORS, exposed DB/Redis ports, dead scoring branches, polling/pagination), check `notes.md` before assuming it's unfixed — it may be in progress or partially done in a way not yet reflected in a stale comment or TODO.
 - Do not silently change scanner output field names/shapes without checking `engines/reasoning.py` and `correlation.py` — they key off specific field names in `raw_data`, and a rename there breaks scoring silently.
+- **A running container does not necessarily reflect the latest code or schema.** This has twice caused a real change to look "missing" when it was actually present and committed: once because Vite's file watcher doesn't reliably trigger HMR over this project's Windows bind mount (an edited frontend file kept serving stale content from a container that was never restarted), and once because a pending Alembic migration was never applied to a long-running `api` container (migrations only run at container startup, via `start.sh`). Before any visual verification pass, and before reporting that a change didn't take effect, run `docker compose down && docker compose up --build -d` first — do not trust that an already-running container reflects what's currently on disk.
 
 ## 7. Current Focus
 
