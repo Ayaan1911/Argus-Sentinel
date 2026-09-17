@@ -25,6 +25,11 @@ build/
 # Python cache
 *.pyc
 
+# Celery beat's local schedule state (shelve DB) — written into the
+# bind-mounted backend/ dir by the worker's embedded beat (-B flag in
+# docker-compose.yml), not a source file.
+celerybeat-schedule
+
 
 
 notes.md
