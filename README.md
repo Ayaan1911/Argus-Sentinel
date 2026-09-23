@@ -21,10 +21,12 @@ Argus Sentinel is a self-hosted web recon tool: point it at a target and it runs
 ## What It Does
 
 - **Real sequential recon pipeline** — subfinder discovers subdomains, httpx confirms which are actually live and fingerprints their technology, and nmap/nuclei then only scan what httpx confirmed live — not four tools fired blind and independently.
+- **Scan-history diffing** — rerun a target and every scan is compared against a previous one: what's **NEW**, what's **RESOLVED**, and what **CHANGED** (old and new risk score side by side). Pick any earlier scan of the same target to compare against.
 - **Correlation & reasoning scoring engine** — every finding ships with a `reasoning_breakdown`: a base score plus labeled modifiers (internet-facing, no authentication, outdated version, admin panel exposed, and more), so you see *why* a score is what it is, not just a severity label.
 - **Audience-specific guidance** — the same finding reads differently for a Student, Developer, Bug Bounty Hunter, Pentester, or Security Professional; pick who's reading and the guidance adapts.
-- **Scan-history diffing** — every scan is automatically compared against the one before it: what's NEW, what's RESOLVED, and what CHANGED (with the old and new risk score shown side by side).
-- **51-entry intelligence library** — a real, verified JSON knowledge base (25 services, 12 technologies, 14 vulnerability classes) the scoring engines actually read from at scan time, not a hardcoded table buried in the scoring code.
+- **51-entry intelligence library** — a real, verified JSON knowledge base (25 services, 12 technologies, 14 vulnerability classes) the scoring engines actually read from at scan time, and browsable directly in the UI.
+- **Dashboard** — severity distribution, finding-type breakdown, and scan history across every target you've scanned.
+- **Hardened by default** — API-key auth, SSRF target validation, rate-limited scan creation, restricted CORS, no DB/Redis ports exposed. An optional demo mode locks scanning to two authorized targets and prunes demo scans after 24h (see [DEMO_DEPLOYMENT.md](DEMO_DEPLOYMENT.md)).
 
 ## Quick Start
 
@@ -55,15 +57,28 @@ curl -X POST http://localhost:8000/api/v1/scans/ \
 
 `db` and `redis` are not exposed to the host — only `api` (8000), `frontend` (5173), and the `juice-shop` target container (3000) publish ports.
 
-<!--
-  Placeholder, consistent with how the landing page (frontend/src/pages/
-  landing/data.js — PLACEHOLDER_DEMO_URL) already handles this: no public
-  demo deployment exists yet, see DEMO_DEPLOYMENT.md for how to stand one
-  up. Update both places once a real deployment exists.
--->
-**Try it live:** no public demo is deployed yet — `https://demo.argus-sentinel.dev` is a placeholder, not a working link. Until then, Quick Start above is the fastest path to real output.
+The two commands above (`scripts/setup.sh`, then `docker compose up`) are how you see Argus Sentinel running — it's self-hosted by design, so there's no hosted instance to visit. Everything below is captured from a real local stack.
 
----
+## See It Run
+
+A real scan, recorded end to end: target submitted, the pipeline runs, and the finished Scan Detail page comes back with per-tool results and scored findings. (Per-tool `stage_status` is written when the pipeline finishes, so the stage pills appear on completion rather than ticking over one by one.)
+
+![Recording of submitting a juice-shop scan, the in-progress view, and the completed Scan Detail page](docs/screenshots/scan-flow.gif)
+
+### Scan-history diffing
+
+Two real scans of `scanme.nmap.org`, compared: two ports/checks that newly appeared, five that were resolved, and two whose risk score changed between runs (`0.0 → 2.0`).
+
+![Scan comparison view showing 2 new, 5 resolved, and 2 changed findings between two real scans of scanme.nmap.org](docs/screenshots/scan-diff.jpg)
+
+### Why this risk score + audience-specific guidance
+
+The same real finding (SSH on `scanme.nmap.org`, 7.0 HIGH) with its score breakdown, viewed as a **Student** (left) and as a **Pentester** (right) — the score and evidence stay fixed, the guidance changes for who's reading.
+
+<p>
+  <img src="docs/screenshots/persona-student.jpg" width="49%" alt="Finding Detail for SSH on port 22 with the Student persona selected: a plain-language explanation">
+  <img src="docs/screenshots/persona-pentester.jpg" width="49%" alt="The same finding with the Pentester persona selected: offensive testing guidance">
+</p>
 
 ## Why Self-Hosted, Not a Hosted Service
 
@@ -152,11 +167,11 @@ subfinder correctly reports 0 real subdomains for `juice-shop` (it isn't a real 
 ## Testing
 
 ```bash
-cd backend && pytest        # 119 tests
-cd frontend && npm test     # vitest, 17 tests
+cd backend && pytest        # 123 tests
+cd frontend && npm test     # vitest, 21 tests
 ```
 
-The backend suite includes pure-Python unit tests for the scoring engines, scanner argv/output-parsing logic, and the intelligence-library schema validator, plus a real Postgres-backed integration suite (`test_routes.py`, `test_scan_tasks.py`) that spins up a throwaway Postgres container via Docker and exercises actual API routes and task orchestration end-to-end — those tests skip automatically if Docker isn't reachable (e.g. running the suite from inside a container itself with no Docker-in-Docker access) rather than silently passing on mocked data. The frontend suite covers `ScanDetail`'s polling logic (`nextPollDelay`), the scan-diff comparison view, and the reasoning-breakdown score math directly.
+The backend suite includes pure-Python unit tests for the scoring engines, scanner argv/output-parsing logic, and the intelligence-library schema validator, plus a real Postgres-backed integration suite (`test_routes.py`, `test_scan_tasks.py`) that spins up a throwaway Postgres container via Docker and exercises actual API routes and task orchestration end-to-end — those tests skip automatically if Docker isn't reachable (e.g. running the suite from inside a container itself with no Docker-in-Docker access) rather than silently passing on mocked data. The frontend suite covers `ScanDetail`'s polling logic (`nextPollDelay`), the scan-diff comparison view, the reasoning-breakdown score math, and the New Scan form (demo-mode target lock, persona selection).
 
 ## Known Limitations
 

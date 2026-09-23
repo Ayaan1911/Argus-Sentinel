@@ -16,6 +16,7 @@ export default function AudienceSelector({ selected, onChange }) {
       {AUDIENCES.map((aud) => (
         <button
           key={aud.id}
+          type="button"
           role="tab"
           aria-selected={selected === aud.id}
           onClick={() => onChange(aud.id)}

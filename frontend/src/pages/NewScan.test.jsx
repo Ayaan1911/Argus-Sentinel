@@ -64,4 +64,14 @@ describe('NewScan in self-hosted (non-demo) mode', () => {
     // target tablist specifically rather than asserting no tabs at all.
     expect(screen.queryByRole('tablist', { name: /demo target/i })).toBeNull();
   });
+
+  it('picking a persona does not submit the form', async () => {
+    client.post.mockClear();
+    await renderNewScan();
+
+    fireEvent.change(screen.getByPlaceholderText(/example\.com/i), { target: { value: 'juice-shop' } });
+    fireEvent.click(screen.getByRole('tab', { name: /pentester/i }));
+
+    expect(client.post).not.toHaveBeenCalled();
+  });
 });
