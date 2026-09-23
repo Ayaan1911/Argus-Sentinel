@@ -28,13 +28,10 @@ class CorrelationEngine:
         result = CorrelationResult()
         
         db_findings = []
-        any_no_auth = False
         ssh_findings = []
         high_sev_count = 0
         tech_outdated_findings = []
         vuln_findings = []
-        web_vuln_findings = []
-        any_waf = False
 
         for f in findings:
             raw = f.get("raw_data", {})
@@ -45,14 +42,12 @@ class CorrelationEngine:
             if risk_score >= 6.1:
                 high_sev_count += 1
             
-            if raw.get("no_authentication"):
-                any_no_auth = True
-            
-            if raw.get("waf_detected"):
-                any_waf = True
-                
+            # The database finding itself must be unauthenticated — not just
+            # any finding anywhere in the scan (an anonymous FTP server says
+            # nothing about whether Redis next to it wants a password).
             port = raw.get("port")
-            if port in [3306, 6379] or "mysql" in title.lower() or "redis" in title.lower():
+            is_db = port in [3306, 6379] or "mysql" in title.lower() or "redis" in title.lower()
+            if is_db and raw.get("no_authentication"):
                 db_findings.append(f)
                 
             if port == 22 or "ssh" in title.lower():
@@ -68,11 +63,9 @@ class CorrelationEngine:
                 
             if f_type == "vulnerability":
                 vuln_findings.append(f)
-                if "xss" in title.lower() or "sql injection" in title.lower() or "sqli" in title.lower():
-                    web_vuln_findings.append(f)
 
         # Rule 1
-        if db_findings and any_no_auth:
+        if db_findings:
             result.correlations_found.append(CorrelationMatch(
                 rule_name="open_database_no_auth",
                 matched_findings=[f["title"] for f in db_findings],
@@ -111,7 +104,7 @@ class CorrelationEngine:
                 explanation="Outdated technology with known vulnerabilities significantly increases exploitation likelihood."
             ))
 
-        # Rules 5, 6, 8
+        # Rules 5, 6
         for f in findings:
             raw = f.get("raw_data", {})
             if raw.get("admin_panel_exposed"):
@@ -121,13 +114,6 @@ class CorrelationEngine:
                     modifier=1.5,
                     explanation="Exposed admin panels are high-value targets for brute force and authentication bypass attacks."
                 ))
-            if raw.get("firewall_restricted") and raw.get("internet_facing"):
-                result.correlations_found.append(CorrelationMatch(
-                    rule_name="firewall_mitigates_exposure",
-                    matched_findings=[f["title"]],
-                    modifier=-1.5,
-                    explanation="Firewall restrictions reduce the exploitability of internet-facing services."
-                ))
             if f.get("type", "").lower() == "subdomain" and raw.get("takeover_possible"):
                 result.correlations_found.append(CorrelationMatch(
                     rule_name="subdomain_takeover_critical",
@@ -135,15 +121,6 @@ class CorrelationEngine:
                     modifier=3.0,
                     explanation="Subdomain takeover allows an attacker to serve malicious content under your trusted domain."
                 ))
-
-        # Rule 7
-        if any_waf and web_vuln_findings:
-            result.correlations_found.append(CorrelationMatch(
-                rule_name="waf_mitigates_web_vulns",
-                matched_findings=[f["title"] for f in web_vuln_findings],
-                modifier=-1.0,
-                explanation="A WAF provides partial mitigation for common web vulnerabilities."
-            ))
 
         # Determine amplified/mitigated findings
         amplified = set()

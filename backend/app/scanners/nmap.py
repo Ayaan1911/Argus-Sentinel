@@ -60,6 +60,13 @@ def _parse_auth_signals(scripts: dict) -> dict:
     if ftp_anon_output and "anonymous ftp login allowed" in ftp_anon_output.lower():
         signals["no_authentication"] = True
 
+    # redis-info only gets a "Version:" line back if Redis answered INFO
+    # without auth; against a requirepass instance the script prints nothing
+    # (checked live against both kinds of Redis).
+    redis_info_output = scripts.get("redis-info")
+    if redis_info_output and "version:" in redis_info_output.lower():
+        signals["no_authentication"] = True
+
     return signals
 
 
@@ -67,7 +74,7 @@ async def run(targets: list[str]) -> tuple[list[dict], dict]:
     hostnames = [normalize_target(t) for t in targets]
     logger.info(f"Starting nmap scan for {len(hostnames)} target(s)")
     command = [
-        "/usr/bin/nmap", "-sV", "--script=default,ssh-auth-methods,banner",
+        "/usr/bin/nmap", "-sV", "--script=default,ssh-auth-methods,banner,redis-info",
         "-T4", "--open", "-oX", "-", *hostnames,
     ]
     findings = []

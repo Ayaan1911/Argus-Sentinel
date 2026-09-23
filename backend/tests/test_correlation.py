@@ -49,23 +49,18 @@ def test_multiple_high_severity_triggers():
     assert any(c.rule_name == "multiple_high_severity" for c in result.correlations_found)
     assert result.combined_risk_level == "critical"  # Max is 8.0 + 1.5 = 9.5 -> critical
 
-def test_firewall_mitigates():
+def test_open_database_needs_the_database_itself_unauthenticated():
+    # Anonymous FTP elsewhere in the scan must not make a password-protected
+    # Redis count as "no auth" — the old scan-wide flag did exactly that.
     engine = CorrelationEngine()
     findings = [
-        {
-            "type": "service",
-            "title": "Internal App",
-            "raw_data": {"internet_facing": True, "firewall_restricted": True},
-            "risk_score": 6.0,
-            "reasoning_breakdown": []
-        }
+        {"type": "port", "title": "Port 6379/tcp: redis", "risk_score": 5.0,
+         "raw_data": {"port": 6379}, "reasoning_breakdown": []},
+        {"type": "port", "title": "Port 21/tcp: ftp", "risk_score": 4.0,
+         "raw_data": {"port": 21, "no_authentication": True}, "reasoning_breakdown": []},
     ]
     result = engine.correlate(findings)
-    assert any(c.rule_name == "firewall_mitigates_exposure" for c in result.correlations_found)
-    assert "Internal App" in result.mitigated_findings
-    
-    updated = engine.apply_modifiers(findings, result)
-    assert updated[0]["final_risk_score"] == 4.5
+    assert not any(c.rule_name == "open_database_no_auth" for c in result.correlations_found)
 
 def test_subdomain_takeover_critical():
     engine = CorrelationEngine()

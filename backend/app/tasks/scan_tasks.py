@@ -140,7 +140,11 @@ def run_scan(scan_id: str, target: str, audience: str):
                     "raw_data": f.raw_data,
                     "risk_score": f.risk_score,
                     "severity": f.severity,
-                    "reasoning_breakdown": f.reasoning_breakdown,
+                    # A copy, not the ORM's own list: apply_modifiers appends to
+                    # it in place, and reassigning the *same* list object back
+                    # onto the JSON column is invisible to SQLAlchemy's change
+                    # detection, so the correlation rows were silently dropped.
+                    "reasoning_breakdown": list(f.reasoning_breakdown),
                     "final_risk_score": f.final_risk_score,
                     "correlation_modifier": f.correlation_modifier
                 })

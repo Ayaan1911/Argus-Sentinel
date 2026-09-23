@@ -157,7 +157,7 @@ def test_nmap_argv():
 
     assert isinstance(captured["command"], list)
     assert captured["command"] == [
-        "/usr/bin/nmap", "-sV", "--script=default,ssh-auth-methods,banner",
+        "/usr/bin/nmap", "-sV", "--script=default,ssh-auth-methods,banner,redis-info",
         "-T4", "--open", "-oX", "-", "example.com", "sub.example.com",
     ]
 

@@ -22,7 +22,7 @@ Argus Sentinel is a self-hosted web recon tool: point it at a target and it runs
 
 - **Real sequential recon pipeline** — subfinder discovers subdomains, httpx confirms which are actually live and fingerprints their technology, and nmap/nuclei then only scan what httpx confirmed live — not four tools fired blind and independently.
 - **Scan-history diffing** — rerun a target and every scan is compared against a previous one: what's **NEW**, what's **RESOLVED**, and what **CHANGED** (old and new risk score side by side). Pick any earlier scan of the same target to compare against.
-- **Correlation & reasoning scoring engine** — every finding ships with a `reasoning_breakdown`: a base score plus labeled modifiers (internet-facing, no authentication, outdated version, admin panel exposed, and more), so you see *why* a score is what it is, not just a severity label.
+- **Correlation & reasoning scoring engine** — every finding ships with a `reasoning_breakdown`: a base score plus labeled modifiers (e.g. internet-facing, password auth enabled, outdated version, default port) and any cross-finding correlation rules that fired, so you see *why* a score is what it is, not just a severity label.
 - **Audience-specific guidance** — the same finding reads differently for a Student, Developer, Bug Bounty Hunter, Pentester, or Security Professional; pick who's reading and the guidance adapts.
 - **51-entry intelligence library** — a real, verified JSON knowledge base (25 services, 12 technologies, 14 vulnerability classes) the scoring engines actually read from at scan time, and browsable directly in the UI.
 - **Dashboard** — severity distribution, finding-type breakdown, and scan history across every target you've scanned.
@@ -73,7 +73,7 @@ Two real scans of `scanme.nmap.org`, compared: two ports/checks that newly appea
 
 ### Why this risk score + audience-specific guidance
 
-The same real finding (SSH on `scanme.nmap.org`, 7.0 HIGH) with its score breakdown, viewed as a **Student** (left) and as a **Pentester** (right) — the score and evidence stay fixed, the guidance changes for who's reading.
+A real finding from a real scan of `scanme.nmap.org`: SSH on port 22, OpenSSH 6.6.1 with password auth enabled. Base score 7.0, then five reasoning modifiers from what nmap actually reported, plus the `internet_facing_ssh_weak_auth` correlation rule (+2.5). The total is +8.5, so the final score is capped at 10.0 CRITICAL. It's shown as a **Student** (left) and as a **Pentester** (right): the score and evidence stay fixed, and the guidance changes for who's reading.
 
 <p>
   <img src="docs/screenshots/persona-student.jpg" width="49%" alt="Finding Detail for SSH on port 22 with the Student persona selected: a plain-language explanation">
@@ -102,7 +102,18 @@ subfinder's output feeds httpx so every discovered subdomain gets a liveness che
 Raw scanner output alone isn't a finding — it's an input. Three engines turn it into something explainable:
 
 - **Reasoning Engine** — assigns a deterministic base risk score per finding type (port/service, vulnerability, technology, subdomain), then applies labeled modifiers (internet-facing, no authentication, outdated version, admin panel exposed, WAF detected, etc.) sourced from the scanner's raw output and the matching intelligence library entry. Every score ships with a `reasoning_breakdown` array showing exactly which modifiers fired and why.
-- **Correlation Engine** — looks across all of a scan's findings together, not just one at a time (e.g. an exposed database *and* no authentication together is worse than either alone), and applies scan-wide modifiers on top of each finding's own reasoning score.
+- **Correlation Engine** — looks across all of a scan's findings together, not just one at a time, and adds a modifier on top of a finding's own reasoning score when a specific combination shows up. There are six rules, each driven only by signals the four scanners actually produce:
+
+  | Rule | Fires when | Modifier | Seen on a real scan? |
+  |---|---|---|---|
+  | `internet_facing_ssh_weak_auth` | nmap sees SSH on a public IP and `ssh-auth-methods` lists `password` | +2.5 | ✅ scanme.nmap.org |
+  | `outdated_stack_with_vuln` | nmap/httpx detect a version below the library's `min_secure_version`, and nuclei reports a vulnerability in the same scan | +2.0 per vuln | ✅ scanme.nmap.org (OpenSSH 6.6.1) |
+  | `open_database_no_auth` | nmap's `redis-info` gets server info back from Redis without credentials | +3.0 | Checked against a real auth-less Redis; no public target scanned |
+  | `admin_panel_exposed` | httpx finds a live URL whose path or page title looks like an admin/login panel | +1.5 | Pipeline-tested only |
+  | `subdomain_takeover_critical` | subfinder finds a subdomain CNAME'd to a known third-party host that no longer resolves | +3.0 | Pipeline-tested only |
+  | `multiple_high_severity` | ≥3 findings scoring ≥6.1 (raises the scan's combined risk, not any single finding) | +1.5 | Pipeline-tested only |
+
+  "Pipeline-tested" means a Postgres-backed test feeds real-shaped tool output through the actual scanner parsers, scoring, and storage, and checks the modifier comes out the other end (`test_every_correlation_rule_fires_through_the_real_pipeline`). The bundled Juice Shop target triggers none of them, which is correct: it has no SSH or database ports, nmap can't version its Node service, and its title isn't an admin page.
 - **Confidence Engine** — separately scores how *certain* a finding is (scanner reliability + corroborating evidence + intelligence-library match), independent of how severe it is — a finding can be high-confidence and low-severity, or the reverse.
 
 All three are backed by **`argus-intelligence/`**, a 51-entry JSON knowledge base (25 services, 12 technologies, 14 vulnerability classes) that the scoring engines look up by scanner-reported name/product — not a hardcoded lookup table inline in the scoring code.

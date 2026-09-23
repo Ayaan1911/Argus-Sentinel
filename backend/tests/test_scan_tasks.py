@@ -223,3 +223,103 @@ def test_prune_demo_scans_is_a_noop_with_nothing_expired(clean_db):
 
     assert result == {"pruned": 0}
     assert _fetch_scan(sync_engine, fresh_demo_id) is not None
+
+
+def _fetch_findings(sync_engine, scan_id):
+    with sync_engine.begin() as conn:
+        rows = conn.execute(
+            text("SELECT title, risk_score, correlation_modifier, final_risk_score, reasoning_breakdown "
+                 "FROM findings WHERE scan_id = :id"),
+            {"id": scan_id},
+        ).mappings().all()
+    return {r["title"]: r for r in rows}
+
+
+def test_correlation_modifier_is_persisted(clean_db):
+    """Plumbing guard: a finding that must trigger a correlation rule has
+    that rule's modifier in its stored correlation_modifier, final_risk_score
+    AND reasoning_breakdown — i.e. what the API and frontend actually read."""
+    from app.tasks.scan_tasks import run_scan
+
+    scan_id = _insert_pending_scan(clean_db["sync_engine"])
+    admin = _no_finding("httpx", "technology", "Live Host: http://example.com/admin",
+                        {"url": "http://example.com/admin", "admin_panel_exposed": True})
+
+    with patch("app.scanners.subfinder.run", new=AsyncMock(return_value=([], {"status": "success", "detail": None}))), \
+         patch("app.scanners.httpx.run", new=AsyncMock(return_value=([admin], {"status": "success", "detail": None}))), \
+         patch("app.scanners.nmap.run", new=AsyncMock(return_value=([], {"status": "success", "detail": None}))), \
+         patch("app.scanners.nuclei.run", new=AsyncMock(return_value=([], {"status": "success", "detail": None}))):
+        run_scan(scan_id, "example.com", "student")
+
+    row = _fetch_findings(clean_db["sync_engine"], scan_id)["Live Host: http://example.com/admin"]
+    assert row["correlation_modifier"] == 1.5
+    assert row["final_risk_score"] == row["risk_score"] + 1.5
+    assert any(b["label"] == "Correlation: admin_panel_exposed" for b in row["reasoning_breakdown"])
+
+
+# Real tool output captured from live runs (2026-09-23): the SSH script output
+# and nuclei record are verbatim from a real scanme.nmap.org scan, the
+# redis-info output is verbatim from nmap against an auth-less Redis.
+_REAL_NMAP_XML = """<?xml version="1.0"?>
+<nmaprun><host><status state="up"/>
+<address addr="45.33.32.156" addrtype="ipv4"/>
+<ports>
+<port protocol="tcp" portid="22"><state state="open"/>
+<service name="ssh" product="OpenSSH" version="6.6.1p1 Ubuntu 2ubuntu2.13"/>
+<script id="ssh-auth-methods" output="&#xa;  Supported authentication methods: &#xa;    publickey&#xa;    password"/></port>
+<port protocol="tcp" portid="80"><state state="open"/>
+<service name="http" product="Apache httpd" version="2.4.7"/></port>
+<port protocol="tcp" portid="6379"><state state="open"/>
+<service name="redis" product="Redis key-value store" version="7.4.9"/>
+<script id="redis-info" output="&#xa;  Version: 7.4.9&#xa;  Operating System: Linux 6.6.114.1-microsoft-standard-WSL2 x86_64&#xa;  Architecture: 64 bits&#xa;  Role: master"/></port>
+</ports></host></nmaprun>"""
+
+_REAL_NUCLEI_LINE = (
+    '{"template-id": "apache-mod-negotiation-listing", "info": {"name": "Apache mod_negotiation - Pseudo Directory Listing", '
+    '"tags": ["apache", "misconfig", "exposure", "mod-negotiation"], "severity": "low"}, "type": "http", '
+    '"host": "example.com", "matched-at": "http://example.com/index", "ip": "45.33.32.156"}'
+)
+
+_HTTPX_LINES = "\n".join([
+    '{"url": "http://example.com", "title": "Go ahead and ScanMe!", "status_code": 200, "tech": ["Apache HTTP Server:2.4.7", "Ubuntu"]}',
+    '{"url": "http://example.com:8080", "title": "Admin Login", "status_code": 200, "tech": ["Apache HTTP Server:2.4.7"]}',
+])
+
+
+def _subprocess_output(stdout):
+    return AsyncMock(return_value=(stdout, "", {"status": "success", "detail": None}))
+
+
+def test_every_correlation_rule_fires_through_the_real_pipeline(clean_db, caplog):
+    """Real scanner parsers + processor + correlation + DB, with only the
+    tool subprocesses and DNS lookups faked. Every remaining rule must come
+    out the other end as a stored, nonzero modifier (or, for the scan-wide
+    multiple_high_severity rule, in the engine's matched-rules log line)."""
+    import logging
+    from app.tasks.scan_tasks import run_scan
+
+    scan_id = _insert_pending_scan(clean_db["sync_engine"])
+    dns_a = {"legacy-app.herokuapp.com": None}  # CNAME target gone -> dangling
+    with patch("app.scanners.subfinder.run_subprocess", new=_subprocess_output("legacy.example.com\n")), \
+         patch("app.scanners.subfinder._resolve_a", side_effect=lambda h: dns_a.get(h)), \
+         patch("app.scanners.subfinder._resolve_cname",
+               side_effect=lambda h: "legacy-app.herokuapp.com" if h == "legacy.example.com" else None), \
+         patch("app.scanners.httpx.run_subprocess", new=_subprocess_output(_HTTPX_LINES)), \
+         patch("app.scanners.nmap.run_subprocess", new=_subprocess_output(_REAL_NMAP_XML)), \
+         patch("app.scanners.nuclei.run_subprocess", new=_subprocess_output(_REAL_NUCLEI_LINE)), \
+         caplog.at_level(logging.INFO, logger="app.tasks.scan_tasks"):
+        run_scan(scan_id, "example.com", "student")
+
+    rows = _fetch_findings(clean_db["sync_engine"], scan_id)
+
+    def corr(title):
+        return {b["label"].removeprefix("Correlation: "): b["modifier"]
+                for b in rows[title]["reasoning_breakdown"] if b["label"].startswith("Correlation: ")}
+
+    assert corr("Port 6379/tcp: redis") == {"open_database_no_auth": 3.0}
+    assert corr("Port 22/tcp: ssh") == {"internet_facing_ssh_weak_auth": 2.5}
+    assert corr("Apache mod_negotiation - Pseudo Directory Listing: http://example.com/index") == {"outdated_stack_with_vuln": 2.0}
+    assert corr("Live Host: http://example.com:8080") == {"admin_panel_exposed": 1.5}
+    assert corr("Subdomain: legacy.example.com") == {"subdomain_takeover_critical": 3.0}
+    assert rows["Port 6379/tcp: redis"]["correlation_modifier"] == 3.0
+    assert "multiple_high_severity" in caplog.text
