@@ -21,6 +21,8 @@ import asyncio
 import os
 import socket
 import subprocess
+import sys
+from pathlib import Path
 import time
 
 import pytest
@@ -91,7 +93,6 @@ def postgres_engines():
 
         import app.database as database_module
         import app.tasks.scan_tasks as scan_tasks_module
-        from app.models.base import Base
 
         # NullPool: every operation gets a fresh connection instead of reusing
         # a pooled one across the different event loops each asyncio.run()
@@ -107,11 +108,13 @@ def postgres_engines():
         scan_tasks_module.engine = sync_engine
         scan_tasks_module.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
 
-        async def _create_all():
-            async with async_engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
-
-        asyncio.run(_create_all())
+        # Exercise the same empty-database migration path used by Compose.
+        subprocess.run(
+            [sys.executable, "-m", "alembic", "upgrade", "head"],
+            cwd=Path(__file__).resolve().parents[1],
+            env={**os.environ, "DATABASE_URL": async_url},
+            check=True,
+        )
 
         yield {"async_engine": async_engine, "sync_engine": sync_engine}
     finally:

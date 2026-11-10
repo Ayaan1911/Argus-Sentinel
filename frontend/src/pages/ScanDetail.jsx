@@ -203,6 +203,11 @@ export default function ScanDetail() {
       <div className="h-0.5 w-24 bg-ribbon rounded-full -mt-4" />
 
       <StageStatusBar stageStatus={stageStatus} findings={findings} />
+      {status === 'failed' && findings.length > 0 && (
+        <div role="alert" className="rounded-lg border border-sev-critical/40 bg-sev-critical/10 p-4 text-textpri">
+          Scan incomplete: one or more scanner stages failed. The findings below are partial and cannot establish that the target is secure.
+        </div>
+      )}
 
       {status === 'completed' && scanHistory.filter(h => h.id !== scan_id).length > 0 && (
         <div className="glass rounded-xl">

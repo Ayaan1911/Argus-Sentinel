@@ -22,6 +22,10 @@ from app.tasks.scan_tasks import run_scan
 router = APIRouter()
 
 
+def _visible(stmt):
+    return stmt.where(Scan.is_demo.is_(True)) if settings.DEMO_MODE else stmt
+
+
 def _scan_rate_limit() -> str:
     # Tighter in demo mode — this endpoint is open to anonymous public
     # traffic there, not just people who've set up their own API key.
@@ -60,6 +64,8 @@ RESCAN_WINDOW = timedelta(hours=24)
 async def get_dashboard_stats(db: AsyncSession = Depends(get_db)):
     # Get all findings
     stmt = select(Finding)
+    if settings.DEMO_MODE:
+        stmt = stmt.join(Scan).where(Scan.is_demo.is_(True))
     result = await db.execute(stmt)
     findings = result.scalars().all()
     
@@ -86,7 +92,7 @@ async def get_dashboard_stats(db: AsyncSession = Depends(get_db)):
     # datetime.utcnow() here would silently shift this cutoff on any host
     # whose local timezone isn't UTC.
     fourteen_days_ago = datetime.now(timezone.utc) - timedelta(days=14)
-    stmt_scans = select(Scan.created_at).where(Scan.created_at >= fourteen_days_ago)
+    stmt_scans = _visible(select(Scan.created_at).where(Scan.created_at >= fourteen_days_ago))
     res_scans = await db.execute(stmt_scans)
     scan_dates = [row[0] for row in res_scans.all()]
     
@@ -119,6 +125,7 @@ async def create_scan(request: Request, scan_in: ScanCreate, db: AsyncSession = 
     # Check for an already in-flight scan of this target to avoid duplicating
     # active work, regardless of force_rescan.
     stmt = select(Scan).where(Scan.target == scan_in.target, Scan.status.in_(["pending", "running"]))
+    stmt = _visible(stmt)
     result = await db.execute(stmt)
     existing_scan = result.scalars().first()
 
@@ -142,6 +149,7 @@ async def create_scan(request: Request, scan_in: ScanCreate, db: AsyncSession = 
             )
             .order_by(Scan.created_at.desc())
         )
+        stmt = _visible(stmt)
         result = await db.execute(stmt)
         recent_completed = result.scalars().first()
 
@@ -163,8 +171,13 @@ async def create_scan(request: Request, scan_in: ScanCreate, db: AsyncSession = 
     db.add(db_scan)
     await db.commit()
     
-    # Trigger celery task
-    run_scan.delay(str(db_scan.id), db_scan.target, db_scan.audience)
+    # A broker failure must not leave a pending row that blocks future scans.
+    try:
+        run_scan.delay(str(db_scan.id), db_scan.target, db_scan.audience)
+    except Exception:
+        db_scan.status = "failed"
+        await db.commit()
+        raise HTTPException(status_code=503, detail="Scan queue unavailable; please retry")
     
     # Re-fetch with selectinload to prevent Greenlet async load errors during serialization
     stmt = select(Scan).options(selectinload(Scan.findings)).where(Scan.id == db_scan.id)
@@ -175,7 +188,7 @@ async def create_scan(request: Request, scan_in: ScanCreate, db: AsyncSession = 
 
 @router.get("/", response_model=List[Dict[str, Any]])
 async def list_scans(db: AsyncSession = Depends(get_db)):
-    stmt = select(Scan).options(selectinload(Scan.findings)).order_by(Scan.created_at.desc())
+    stmt = _visible(select(Scan).options(selectinload(Scan.findings))).order_by(Scan.created_at.desc())
     result = await db.execute(stmt)
     scans = result.scalars().all()
     
@@ -203,6 +216,7 @@ async def get_scan_history_for_target(normalized_target: str, db: AsyncSession =
         .where(Scan.target == target, Scan.status == "completed")
         .order_by(Scan.created_at.desc())
     )
+    stmt = _visible(stmt)
     result = await db.execute(stmt)
     scans = result.scalars().all()
 
@@ -232,7 +246,7 @@ async def get_scan_history_for_target(normalized_target: str, db: AsyncSession =
 
 @router.get("/{scan_id}", response_model=ScanRead)
 async def get_scan(scan_id: str, db: AsyncSession = Depends(get_db)):
-    stmt = select(Scan).options(selectinload(Scan.findings)).where(Scan.id == scan_id)
+    stmt = _visible(select(Scan).options(selectinload(Scan.findings)).where(Scan.id == scan_id))
     result = await db.execute(stmt)
     scan = result.scalar_one_or_none()
     if not scan:
@@ -243,7 +257,7 @@ async def get_scan(scan_id: str, db: AsyncSession = Depends(get_db)):
 async def get_scan_status(scan_id: str, db: AsyncSession = Depends(get_db)):
     # Deliberately lightweight: no findings are loaded, just a count, so this
     # is cheap enough to poll every few seconds for the life of a scan.
-    stmt = select(Scan).where(Scan.id == scan_id)
+    stmt = _visible(select(Scan).where(Scan.id == scan_id))
     result = await db.execute(stmt)
     scan = result.scalar_one_or_none()
     if not scan:
@@ -268,7 +282,7 @@ async def get_scan_diff(
     compare_to: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
-    stmt = select(Scan).where(Scan.id == scan_id)
+    stmt = _visible(select(Scan).where(Scan.id == scan_id))
     result = await db.execute(stmt)
     scan = result.scalar_one_or_none()
     if not scan:
@@ -279,7 +293,7 @@ async def get_scan_diff(
     target = normalize_target(scan.target)
 
     if compare_to:
-        stmt = select(Scan).where(Scan.id == compare_to)
+        stmt = _visible(select(Scan).where(Scan.id == compare_to))
         result = await db.execute(stmt)
         compare_scan = result.scalar_one_or_none()
         if not compare_scan:
@@ -305,6 +319,7 @@ async def get_scan_diff(
             )
             .order_by(Scan.created_at.desc())
         )
+        stmt = _visible(stmt)
         result = await db.execute(stmt)
         compare_scan = result.scalars().first()
         if not compare_scan:
@@ -336,6 +351,8 @@ async def get_scan_diff(
 
 @router.delete("/{scan_id}")
 async def delete_scan(scan_id: str, db: AsyncSession = Depends(get_db)):
+    if settings.DEMO_MODE:
+        raise HTTPException(status_code=403, detail="Deletion is disabled in demo mode")
     stmt = select(Scan).options(noload(Scan.findings)).where(Scan.id == scan_id)
     result = await db.execute(stmt)
     scan = result.scalar_one_or_none()

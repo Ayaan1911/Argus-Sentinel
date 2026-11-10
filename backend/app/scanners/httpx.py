@@ -79,7 +79,6 @@ async def run(targets: list[str]) -> tuple[list[dict], dict]:
         "-H", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
         "-retries", "2",
         "-timeout", "10",
-        "-follow-redirects",
         "-mc", "200,201,301,302,303,307,308,401,403,404,500,502,503",
     ]
     findings = []

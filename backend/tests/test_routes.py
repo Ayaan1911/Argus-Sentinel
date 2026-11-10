@@ -534,3 +534,47 @@ def test_demo_mode_off_by_default_uses_normal_rate_limit():
     assert settings.DEMO_MODE is False
     from app.routers.scans import _scan_rate_limit
     assert _scan_rate_limit() == "5/minute"
+
+
+def test_dispatch_failure_marks_row_failed_and_allows_retry(client, clean_db, auth_headers):
+    from sqlalchemy import text
+
+    with patch("app.routers.scans.run_scan") as task:
+        task.delay.side_effect = RuntimeError("broker offline")
+        first = client.post("/api/v1/scans/", json={"target": "example.com"}, headers=auth_headers)
+    assert first.status_code == 503
+    with clean_db["sync_engine"].begin() as conn:
+        statuses = conn.execute(text("SELECT status FROM scans WHERE target = 'example.com'")).scalars().all()
+    assert statuses == ["failed"]
+
+    with patch("app.routers.scans.run_scan") as task:
+        second = client.post("/api/v1/scans/", json={"target": "example.com"}, headers=auth_headers)
+    assert second.status_code == 200
+    task.delay.assert_called_once()
+
+
+def test_public_demo_cannot_read_private_history_or_delete(client, clean_db, auth_headers, monkeypatch):
+    private_id = _create_scan_row(clean_db["sync_engine"], "juice-shop", "completed")
+    finding_id = _create_finding_row(clean_db["sync_engine"], private_id)
+    monkeypatch.setattr(settings, "DEMO_MODE", True)
+    monkeypatch.setattr(settings, "DEMO_API_KEY", auth_headers["x-api-key"])
+
+    assert client.delete(f"/api/v1/scans/{private_id}", headers=auth_headers).status_code == 403
+    assert client.get(f"/api/v1/scans/{private_id}", headers=auth_headers).status_code == 404
+    assert client.get(f"/api/v1/scans/{private_id}/status", headers=auth_headers).status_code == 404
+    assert client.get(f"/api/v1/findings/{finding_id}", headers=auth_headers).status_code == 404
+    assert client.get(f"/api/v1/findings/scan/{private_id}/summary", headers=auth_headers).status_code == 404
+    assert client.get(f"/api/v1/findings/scan/{private_id}", headers=auth_headers).json() == []
+    assert client.get("/api/v1/scans/", headers=auth_headers).json() == []
+    assert client.get("/api/v1/scans/target/juice-shop/history", headers=auth_headers).json() == []
+
+
+def test_public_demo_cannot_dedupe_private_scan(client, clean_db, auth_headers, monkeypatch):
+    private_id = _create_scan_row(clean_db["sync_engine"], "juice-shop", "pending")
+    monkeypatch.setattr(settings, "DEMO_MODE", True)
+    monkeypatch.setattr(settings, "DEMO_API_KEY", auth_headers["x-api-key"])
+    with patch("app.routers.scans.run_scan") as task, patch("app.routers.scans.Redis", _fake_redis_class()):
+        r = client.post("/api/v1/scans/", json={"target": "juice-shop"}, headers=auth_headers)
+    assert r.status_code == 200
+    assert r.json()["id"] != private_id
+    task.delay.assert_called_once()

@@ -89,8 +89,8 @@ def test_stage_status_records_timeout(clean_db):
         run_scan(scan_id, "example.com", "student")
 
     row = _fetch_scan(clean_db["sync_engine"], scan_id)
-    # A tool timing out doesn't crash the whole scan — it's recorded per-stage.
-    assert row["status"] == "completed"
+    # A timeout leaves the result incomplete even when other tools succeeded.
+    assert row["status"] == "failed"
     assert row["stage_status"]["nmap"] == timeout_status
 
 
@@ -107,7 +107,7 @@ def test_stage_status_records_nonzero_exit_failure(clean_db):
         run_scan(scan_id, "example.com", "student")
 
     row = _fetch_scan(clean_db["sync_engine"], scan_id)
-    assert row["status"] == "completed"
+    assert row["status"] == "failed"
     assert row["stage_status"]["httpx"] == failed_status
 
 
@@ -124,6 +124,7 @@ def test_stage_status_records_no_binary(clean_db):
         run_scan(scan_id, "example.com", "student")
 
     row = _fetch_scan(clean_db["sync_engine"], scan_id)
+    assert row["status"] == "failed"
     assert row["stage_status"]["nuclei"] == no_binary_status
 
 
@@ -152,6 +153,7 @@ def test_live_discovered_subdomains_are_passed_to_nmap_and_nuclei(clean_db):
 
     with patch("app.scanners.subfinder.run", new=AsyncMock(return_value=(subfinder_findings, {"status": "success", "detail": None}))), \
          patch("app.scanners.httpx.run", new=AsyncMock(return_value=(httpx_findings, {"status": "success", "detail": None}))), \
+         patch("app.tasks.scan_tasks.validate_scan_target", side_effect=lambda host: host), \
          patch("app.scanners.nmap.run", new=nmap_mock), \
          patch("app.scanners.nuclei.run", new=nuclei_mock):
         run_scan(scan_id, "example.com", "student")
@@ -323,3 +325,28 @@ def test_every_correlation_rule_fires_through_the_real_pipeline(clean_db, caplog
     assert corr("Subdomain: legacy.example.com") == {"subdomain_takeover_critical": 3.0}
     assert rows["Port 6379/tcp: redis"]["correlation_modifier"] == 3.0
     assert "multiple_high_severity" in caplog.text
+
+
+def test_scope_rejects_poisoned_discovery_and_private_dns(monkeypatch):
+    from app.tasks.scan_tasks import _check_scope
+    from app.schemas.scan import socket
+
+    def resolve(host, *_args, **_kwargs):
+        ip = "10.0.0.7" if host == "private.example.com" else "93.184.215.14"
+        return [(socket.AF_INET, socket.SOCK_STREAM, 0, "", (ip, 0))]
+
+    monkeypatch.setattr(socket, "getaddrinfo", resolve)
+    assert _check_scope("live.example.com", "example.com")
+    assert not _check_scope("example.com.evil.test", "example.com")
+    assert not _check_scope("private.example.com", "example.com")
+    assert not _check_scope("sub.juice-shop", "juice-shop")
+
+
+def test_demo_scanme_dns_must_stay_public(monkeypatch):
+    from app.tasks.scan_tasks import _check_scope
+    from app.schemas.scan import socket
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "DEMO_MODE", True)
+    monkeypatch.setattr(socket, "getaddrinfo", lambda *_args: [(socket.AF_INET, 0, 0, "", ("10.0.0.9", 0))])
+    assert not _check_scope("scanme.nmap.org", "scanme.nmap.org")

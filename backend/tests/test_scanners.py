@@ -110,6 +110,7 @@ def test_httpx_argv_and_stdin():
     assert isinstance(captured["command"], list)
     assert captured["command"][0] == "/usr/local/bin/httpx"
     assert "-tech-detect" in captured["command"]
+    assert "-follow-redirects" not in captured["command"]
     stdin_urls = captured["input_bytes"].decode().split("\n")
     # Each normalized target expands to its default scheme URLs plus the
     # common non-standard web ports (httpx's own "-ports" flag is broken in
@@ -259,3 +260,18 @@ def test_genuinely_empty_output_is_success_not_failed(module_path):
 
     assert findings == []
     assert status == {"status": "success", "detail": None}
+
+
+def test_nuclei_disables_template_redirects():
+    import app.scanners.nuclei as nuclei_mod
+
+    captured = {}
+
+    async def fake_run_subprocess(command, timeout=300, input_bytes=None):
+        captured["command"] = command
+        return "", "", {"status": "success", "detail": None}
+
+    with patch.object(nuclei_mod, "run_subprocess", fake_run_subprocess):
+        asyncio.run(nuclei_mod.run(["example.com"]))
+
+    assert "-dr" in captured["command"]

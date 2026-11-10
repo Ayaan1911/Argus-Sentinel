@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import urllib.parse
+import socket
 from datetime import datetime, timedelta, timezone
 
 from celery import Celery
@@ -8,6 +9,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.config import settings
+from app.schemas.scan import validate_scan_target
+from app.scanners.utils import is_internal_ip
 from app.models.scan import Scan
 from app.models.finding import Finding
 
@@ -37,6 +40,40 @@ celery_app.conf.beat_schedule = {
 }
 
 DEMO_SCAN_RETENTION = timedelta(hours=24)
+
+
+def _in_scope_name(host: str, root: str) -> bool:
+    host = host.rstrip(".").lower()
+    if root == "juice-shop":
+        return host == root
+    return host == root or host.endswith("." + root)
+
+
+def _check_scope(host: str, root: str) -> bool:
+    """Recheck resolved destinations at each active scanner handoff."""
+    host = host.rstrip(".").lower()
+    if not _in_scope_name(host, root):
+        return False
+    # The bundled test container is the only deliberate internal exception.
+    if root == "juice-shop":
+        return True
+    try:
+        if validate_scan_target(host) != host:
+            return False
+        # Demo allowlisting does not DNS-check scanme.nmap.org at submission.
+        # Check every A/AAAA destination at the worker handoff too.
+        if settings.DEMO_MODE:
+            addresses = socket.getaddrinfo(host, None)
+            return bool(addresses) and all(not is_internal_ip(info[4][0]) for info in addresses)
+        return True
+    except (ValueError, socket.gaierror):
+        return False
+
+
+def _checked_root(root: str) -> str:
+    if not _check_scope(root, root):
+        raise ValueError(f"Target {root!r} is no longer safe to scan")
+    return root
 
 
 def _live_hostnames(httpx_results: list[dict]) -> set:
@@ -69,27 +106,40 @@ async def _run_pipeline(target: str):
     subdomains, not the full unfiltered subdomain list."""
     stage_status = {}
 
+    _checked_root(target)
     subfinder_results, subfinder_status = await subfinder.run(target)
     stage_status["subfinder"] = subfinder_status
 
-    discovered = [
-        f["raw_data"]["host"] for f in subfinder_results
+    subfinder_results = [
+        f for f in subfinder_results
         if f.get("raw_data", {}).get("host")
+        and _in_scope_name(f["raw_data"]["host"], target)
     ]
+    discovered = [f["raw_data"]["host"] for f in subfinder_results]
 
+    _checked_root(target)
+    discovered = [h for h in discovered if _check_scope(h, target)]
     httpx_results, httpx_status = await httpx.run([target] + discovered)
     stage_status["httpx"] = httpx_status
 
+    httpx_results = [
+        f for f in httpx_results
+        if _check_scope(urllib.parse.urlparse(f.get("raw_data", {}).get("url", "")).hostname or "", target)
+    ]
     live_hosts = _live_hostnames(httpx_results)
     live_discovered = [h for h in discovered if h in live_hosts]
     # The original target is always in scope regardless of its own httpx
     # result — only the *discovered* subdomains get filtered by liveness.
     scan_targets = [target] + live_discovered
 
+    scan_targets = [h for h in scan_targets if _check_scope(h, target)]
+    _checked_root(target)
     nmap_results, nmap_status = await nmap.run(scan_targets)
     stage_status["nmap"] = nmap_status
 
     live_urls = _live_urls_by_host(httpx_results)
+    _checked_root(target)
+    scan_targets = [h for h in scan_targets if _check_scope(h, target)]
     nuclei_targets = [live_urls.get(t, t) for t in scan_targets]
     nuclei_results, nuclei_status = await nuclei.run(nuclei_targets)
     stage_status["nuclei"] = nuclei_status
@@ -168,9 +218,11 @@ def run_scan(scan_id: str, target: str, audience: str):
                     f_obj.correlation_modifier = ud["correlation_modifier"]
                     f_obj.reasoning_breakdown = ud["reasoning_breakdown"]
 
-        scan.status = "completed"
+        scan.status = "completed" if all(
+            stage.get("status") == "success" for stage in stage_status.values()
+        ) else "failed"
         db.commit()
-        logger.info(f"Scan {scan_id} completed successfully")
+        logger.info("Scan %s finished with status %s", scan_id, scan.status)
 
     except Exception as e:
         logger.exception(f"Scan {scan_id} failed: {e}")

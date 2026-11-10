@@ -4,6 +4,7 @@ from sqlalchemy.future import select
 from typing import List, Optional
 
 from app.database import get_db
+from app.config import settings
 from app.models.scan import Scan
 from app.models.finding import Finding
 from app.schemas.finding import FindingRead
@@ -28,6 +29,8 @@ async def get_scan_findings(
     db: AsyncSession = Depends(get_db)
 ):
     stmt = select(Finding).where(Finding.scan_id == scan_id)
+    if settings.DEMO_MODE:
+        stmt = stmt.join(Scan).where(Scan.is_demo.is_(True))
 
     if severity:
         stmt = stmt.where(Finding.severity == severity)
@@ -45,6 +48,8 @@ async def get_scan_findings(
 @router.get("/{finding_id}", response_model=FindingRead)
 async def get_finding(finding_id: str, db: AsyncSession = Depends(get_db)):
     stmt = select(Finding).where(Finding.id == finding_id)
+    if settings.DEMO_MODE:
+        stmt = stmt.join(Scan).where(Scan.is_demo.is_(True))
     result = await db.execute(stmt)
     finding = result.scalar_one_or_none()
     if not finding:
@@ -55,6 +60,8 @@ async def get_finding(finding_id: str, db: AsyncSession = Depends(get_db)):
 async def get_scan_summary(scan_id: str, db: AsyncSession = Depends(get_db)):
     # Query scan separately
     stmt_scan = select(Scan).where(Scan.id == scan_id)
+    if settings.DEMO_MODE:
+        stmt_scan = stmt_scan.where(Scan.is_demo.is_(True))
     result_scan = await db.execute(stmt_scan)
     scan = result_scan.scalar_one_or_none()
     if not scan:

@@ -31,6 +31,7 @@ async def run(targets: list[str]) -> tuple[list[dict], dict]:
         "-timeout", "15",
         # Skip interactsh — no external callbacks, cleaner and faster
         "-no-interactsh",
+        "-dr",  # templates cannot redirect the worker outside the validated scope
         # Skip update check at runtime
         "-duc",
     ]
