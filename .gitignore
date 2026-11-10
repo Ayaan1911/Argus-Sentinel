@@ -34,3 +34,8 @@ celerybeat-schedule
 
 notes.md
 docker-compose.override.yml
+
+# Test coverage outputs
+.coverage
+coverage.xml
+htmlcov/

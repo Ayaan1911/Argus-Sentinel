@@ -7,9 +7,10 @@ pydantic-settings
 celery[redis]
 redis
 python-dotenv
-psycopg2-binary
+psycopg[binary]
 slowapi
 dnspython
 jsonschema
 
 pytest==8.2.1
+httpx2
