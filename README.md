@@ -5,7 +5,9 @@
 ![React](https://img.shields.io/badge/react-18-61DAFB)
 ![Docker](https://img.shields.io/badge/docker-compose-2496ED)
 
-[![CI](https://github.com/Ayaan1911/Argus-Sentinel/actions/workflows/ci.yml/badge.svg?branch=codex%2Fhardening-1-5)](https://github.com/Ayaan1911/Argus-Sentinel/actions/workflows/ci.yml?query=branch%3Acodex%2Fhardening-1-5)
+[![CI](https://github.com/Ayaan1911/Argus-Sentinel/actions/workflows/ci.yml/badge.svg?branch=codex%2Fstep-5-metrics)](https://github.com/Ayaan1911/Argus-Sentinel/actions/workflows/ci.yml?query=branch%3Acodex%2Fstep-5-metrics)
+
+[Measured project metrics](docs/METRICS.md)
 
 Argus Sentinel is a self-hosted web recon tool: point it at a target and it runs subfinder, httpx, nmap, and nuclei in a real sequential pipeline, then a correlation/reasoning engine turns the raw output into risk-scored findings — each with an explained "why" and guidance tailored to who's reading it. Built for authorized testing of owned/permitted targets, with a bundled OWASP Juice Shop container as the default safe local target.
 
