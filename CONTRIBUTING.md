@@ -35,7 +35,7 @@ If you want to iterate on the backend outside Docker (faster reload than rebuild
 ## Running Tests
 
 ```bash
-cd backend && pytest        # 123 tests
+cd backend && pytest        # 125 tests
 cd frontend && npm test     # vitest, 21 tests
 ```
 

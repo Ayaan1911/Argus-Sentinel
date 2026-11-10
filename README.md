@@ -5,12 +5,7 @@
 ![React](https://img.shields.io/badge/react-18-61DAFB)
 ![Docker](https://img.shields.io/badge/docker-compose-2496ED)
 
-<!--
-  No CI badge: there is no GitHub Actions workflow in this repo yet, so
-  there is nothing honest to point a badge at. See notes.md for this
-  session's note on adding one as a reasonable future improvement, and add
-  the badge here once `.github/workflows/` actually exists.
--->
+[![CI](https://github.com/Ayaan1911/Argus-Sentinel/actions/workflows/ci.yml/badge.svg?branch=codex%2Fstep-3-ci)](https://github.com/Ayaan1911/Argus-Sentinel/actions/workflows/ci.yml?query=branch%3Acodex%2Fstep-3-ci)
 
 Argus Sentinel is a self-hosted web recon tool: point it at a target and it runs subfinder, httpx, nmap, and nuclei in a real sequential pipeline, then a correlation/reasoning engine turns the raw output into risk-scored findings — each with an explained "why" and guidance tailored to who's reading it. Built for authorized testing of owned/permitted targets, with a bundled OWASP Juice Shop container as the default safe local target.
 
@@ -178,7 +173,7 @@ subfinder correctly reports 0 real subdomains for `juice-shop` (it isn't a real 
 ## Testing
 
 ```bash
-cd backend && pytest        # 123 tests
+cd backend && pytest        # 125 tests
 cd frontend && npm test     # vitest, 21 tests
 ```
 

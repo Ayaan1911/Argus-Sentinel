@@ -15,7 +15,7 @@ Argus-Sentinel is an automated web reconnaissance and risk-scoring tool: a user 
 ## 2. Tech Stack
 
 - Backend: Python, FastAPI, Celery (task queue), Redis (broker), PostgreSQL (via SQLAlchemy ORM), pytest
-- Frontend: React, Vite, Tailwind CSS — no test runner configured yet (vitest planned)
+- Frontend: React, Vite, Tailwind CSS — Vitest test runner configured
 - Scanning tools invoked as subprocesses: subfinder, ProjectDiscovery httpx (not Python's httpx library — do not confuse the two), nmap, nuclei
 - Deployment: Docker Compose (services: api, worker, frontend, db, redis, plus a bundled juice-shop target container)
 
