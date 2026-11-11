@@ -1,6 +1,6 @@
 # Argus Sentinel interview notes
 
-Use these notes to explain the code that exists today. The [architecture diagram](../README.md#architecture) shows the service and data flow; [measured metrics](METRICS.md) records how the numbers below were obtained.
+Use these notes to explain the code that exists today. The [architecture diagram](../README.md#architecture-and-scan-flow) shows the service and data flow; [measured metrics](METRICS.md) records how the numbers below were obtained.
 
 ## Thirty-second explanation
 
