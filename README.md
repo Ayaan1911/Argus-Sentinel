@@ -5,7 +5,7 @@
 ![React](https://img.shields.io/badge/react-18-61DAFB)
 ![Docker](https://img.shields.io/badge/docker-compose-2496ED)
 
-[![CI](https://github.com/Ayaan1911/Argus-Sentinel/actions/workflows/ci.yml/badge.svg?branch=codex%2Fstep-5-metrics)](https://github.com/Ayaan1911/Argus-Sentinel/actions/workflows/ci.yml?query=branch%3Acodex%2Fstep-5-metrics)
+[![CI](https://github.com/Ayaan1911/Argus-Sentinel/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Ayaan1911/Argus-Sentinel/actions/workflows/ci.yml?query=branch%3Amain)
 
 [Measured project metrics](docs/METRICS.md)
 
