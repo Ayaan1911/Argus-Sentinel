@@ -81,18 +81,47 @@ A real finding from a real scan of `scanme.nmap.org`: SSH on port 22, OpenSSH 6.
 
 There's no shared "run your scan on our infrastructure" option, and that's deliberate, not a limitation waiting to be lifted. Once you self-host, nothing about what you scan — targets, findings, timing, anything — ever touches infrastructure this project controls, by construction. There's no telemetry phoning home and no shared backend to design access controls for in the first place. If you want to try the tool before self-hosting it, the bundled Juice Shop container gives you a real, safe, fully-featured scan target from the first `docker compose up` — see Quick Start above.
 
-## The Pipeline
+## Architecture and Scan Flow
 
-Scanning is a real sequential pipeline, not four independent tool calls fired in parallel:
+The frontend submits and reads scans through FastAPI. The API creates a scan record in PostgreSQL and queues the work in Redis; a Celery worker runs the tools and saves the results.
 
+```mermaid
+flowchart LR
+    UI["React / Vite frontend"]
+    API["FastAPI API"]
+    REDIS[(Redis task queue)]
+    DB[(PostgreSQL 15: scans and findings)]
+    KB["argus-intelligence JSON library"]
+    TARGET["Authorized scan target (Juice Shop locally)"]
+
+    subgraph WORKER [Celery worker]
+        direction TB
+        TASK["Run scan task"] --> SF["Subfinder: discover names"]
+        SF -->|"target + safe discoveries"| HX["httpx: liveness and technology"]
+        HX -->|"target + live discoveries"| NM["Nmap: ports and services"]
+        NM -->|"same hosts; live URLs when known"| NU["Nuclei: template checks"]
+        SF -.-> RAW["Collect raw findings"]
+        HX -.-> RAW
+        NM -.-> RAW
+        NU --> RAW
+        RAW --> FP["Finding processor: reasoning and confidence"]
+        FP --> CORR["Correlation rules and final scores"]
+    end
+
+    UI -->|"submit scan, poll status, read findings"| API
+    API -->|"JSON responses"| UI
+    API -->|"create scan and query results"| DB
+    API -->|"enqueue scan ID, target, audience"| REDIS
+    REDIS -->|"deliver task"| TASK
+    TASK -->|"running and stage status"| DB
+    HX -->|"HTTP probes"| TARGET
+    NM -->|"port and service probes"| TARGET
+    NU -->|"template requests"| TARGET
+    KB -->|"matching entries and guidance"| FP
+    CORR -->|"persist findings and final status"| DB
 ```
-subfinder(target)
-  → httpx(target + all discovered subdomains)
-    → nmap(target + only the discovered subdomains httpx confirmed live)
-    → nuclei(target + only the discovered subdomains httpx confirmed live)
-```
 
-subfinder's output feeds httpx so every discovered subdomain gets a liveness check; nmap and nuclei then only spend time on the target plus whatever subfinder found that httpx actually confirmed responds — not the full unfiltered subdomain list. Candidates with no DNS record at all (neither A nor CNAME) are discarded before they ever become a finding, since third-party passive sources occasionally fabricate results for domains they have no real data on. Each stage's outcome is tracked independently in `stage_status` (`success` / `failed` / `timeout` / `no_binary` per tool), not collapsed into one overall scan status.
+`httpx` probes the submitted target and discovered names that pass the scope check. Nmap runs next, then Nuclei; both receive the submitted target plus discovered names that `httpx` confirmed live. Findings from all four tools feed the reasoning and confidence engines, followed by cross-finding correlation. The worker stores scored findings in PostgreSQL, and the API serves them to the frontend. Subfinder discards names with no A or CNAME record. Passive in-scope CNAME findings can still be retained without sending an unresolved host to an active scanner. Per-tool outcomes are saved in `stage_status` when the scanner stages finish; a failed stage makes the overall scan `failed` while preserving any partial findings.
 
 ## Scoring: Correlation, Reasoning, and Confidence
 
