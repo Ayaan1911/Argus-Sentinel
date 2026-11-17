@@ -363,7 +363,7 @@ def test_migration_backfills_historical_final_severity(clean_db, monkeypatch):
     scan_id = _insert_pending_scan(engine)
     finding_id = _insert_finding(engine, scan_id)
     config = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
-    monkeypatch.setenv("DATABASE_URL", str(engine.url).replace("postgresql://", "postgresql+asyncpg://"))
+    monkeypatch.setenv("DATABASE_URL", engine.url.render_as_string(hide_password=False).replace("postgresql://", "postgresql+asyncpg://"))
     command.downgrade(config, "-1")
     try:
         with engine.begin() as conn:
