@@ -110,6 +110,7 @@ async def run(targets: list[str]) -> tuple[list[dict], dict]:
 
                 port_num = int(portid) if portid else 0
                 raw_data = {
+                    "host": host_ip,
                     "port": port_num,
                     "protocol": protocol,
                     "state": state,
