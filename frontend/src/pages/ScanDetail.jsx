@@ -9,17 +9,18 @@ import ReasoningBreakdown from '../components/ReasoningBreakdown';
 import AudienceSelector from '../components/AudienceSelector';
 import ScanComparison from '../components/ScanComparison';
 
+const PAGE_SIZE = 50;
 const STAGE_ORDER = ['subfinder', 'httpx', 'nmap', 'nuclei'];
 const STAGE_LABELS = { subfinder: 'Subfinder', httpx: 'Httpx', nmap: 'Nmap', nuclei: 'Nuclei' };
 const STAGE_TYPE = { subfinder: 'subdomain', httpx: 'technology', nmap: 'port', nuclei: 'vulnerability' };
 
-function StageStatusBar({ stageStatus, findings }) {
+function StageStatusBar({ stageStatus, findings, summary }) {
   if (!stageStatus || Object.keys(stageStatus).length === 0) return null;
   return (
     <div className="flex flex-wrap gap-3">
       {STAGE_ORDER.filter(stage => stageStatus[stage]).map(stage => {
         const s = stageStatus[stage];
-        const count = findings.filter(f => f.type === STAGE_TYPE[stage]).length;
+        const count = summary?.by_type?.[STAGE_TYPE[stage]] ?? findings.filter(f => f.type === STAGE_TYPE[stage]).length;
         const isOk = s.status === 'success';
         return (
           <div
@@ -61,13 +62,17 @@ export default function ScanDetail() {
   const [audience, setAudience] = useState('');
   const [rawOpen, setRawOpen] = useState(false);
   const [scanHistory, setScanHistory] = useState([]);
+  const [historyHasMore, setHistoryHasMore] = useState(false);
+  const [historyError, setHistoryError] = useState('');
   const [compareOpen, setCompareOpen] = useState(false);
+  const [loadingMoreFindings, setLoadingMoreFindings] = useState(false);
+  const [findingsError, setFindingsError] = useState('');
 
   const fetchFullScanData = async (target, status) => {
     try {
       const sumRes = await client.get(`/findings/scan/${scan_id}/summary`);
       setSummary(sumRes.data);
-      const findRes = await client.get(`/findings/scan/${scan_id}`);
+      const findRes = await client.get(`/findings/scan/${scan_id}?limit=${PAGE_SIZE}`);
       setFindings(findRes.data);
       if (findRes.data.length > 0 && !selectedFindingId) {
         setSelectedFindingId(findRes.data[0].id);
@@ -78,6 +83,7 @@ export default function ScanDetail() {
       }
     } catch (err) {
       console.error("Failed to fetch full scan data", err);
+      setFindingsError('Could not load findings. Try again.');
     }
 
     // Only meaningful for the "compare to previous scan" section, and only
@@ -86,11 +92,37 @@ export default function ScanDetail() {
     // rest of the scan detail page.
     if (status === 'completed') {
       try {
-        const histRes = await client.get(`/scans/target/${target}/history`);
+        const histRes = await client.get(`/scans/target/${target}/history?limit=${PAGE_SIZE}`);
         setScanHistory(histRes.data);
+        setHistoryHasMore(histRes.data.length === PAGE_SIZE);
       } catch (histErr) {
         console.error("Failed to fetch scan history", histErr);
       }
+    }
+  };
+
+  const loadMoreFindings = async () => {
+    if (loadingMoreFindings) return;
+    setLoadingMoreFindings(true);
+    setFindingsError('');
+    try {
+      const res = await client.get(`/findings/scan/${scan_id}?limit=${PAGE_SIZE}&offset=${findings.length}`);
+      setFindings(prev => [...prev, ...res.data]);
+    } catch (err) {
+      setFindingsError('Could not load findings. Try again.');
+    } finally {
+      setLoadingMoreFindings(false);
+    }
+  };
+
+  const loadOlderHistory = async () => {
+    setHistoryError('');
+    try {
+      const res = await client.get(`/scans/target/${scanMeta.target}/history?limit=${PAGE_SIZE}&offset=${scanHistory.length}`);
+      setScanHistory(prev => [...prev, ...res.data]);
+      setHistoryHasMore(res.data.length === PAGE_SIZE);
+    } catch (err) {
+      setHistoryError('Could not load older comparisons. Try again.');
     }
   };
 
@@ -202,7 +234,7 @@ export default function ScanDetail() {
       </div>
       <div className="h-0.5 w-24 bg-ribbon rounded-full -mt-4" />
 
-      <StageStatusBar stageStatus={stageStatus} findings={findings} />
+      <StageStatusBar stageStatus={stageStatus} findings={findings} summary={summary} />
       {status === 'failed' && findings.length > 0 && (
         <div role="alert" className="rounded-lg border border-sev-critical/40 bg-sev-critical/10 p-4 text-textpri">
           Scan incomplete: one or more scanner stages failed. The findings below are partial and cannot establish that the target is secure.
@@ -223,6 +255,12 @@ export default function ScanDetail() {
           {compareOpen && (
             <div className="px-4 pb-4 border-t border-white/[0.06] pt-4">
               <ScanComparison scanId={scan_id} history={scanHistory} />
+              {historyHasMore && (
+                <button type="button" onClick={loadOlderHistory} className="mt-3 text-sm text-accent hover:underline">
+                  Load older comparisons
+                </button>
+              )}
+              {historyError && <p role="alert" className="mt-2 text-sm text-danger">{historyError}</p>}
             </div>
           )}
         </div>
@@ -258,13 +296,13 @@ export default function ScanDetail() {
       )}
 
       {/* Severity Distribution Bar */}
-      {summary && findings.length > 0 && (
+      {summary && summary.total_findings > 0 && (
         <div className="h-2.5 w-full flex rounded-full overflow-hidden bg-surface ring-1 ring-inset ring-white/[0.05]">
-          <div style={{ width: `${(summary.by_severity.critical / findings.length) * 100}%`, boxShadow: summary.by_severity.critical > 0 ? '0 0 14px #ef4444' : 'none' }} className="bg-sev-critical"></div>
-          <div style={{ width: `${(summary.by_severity.high / findings.length) * 100}%` }} className="bg-sev-high"></div>
-          <div style={{ width: `${(summary.by_severity.medium / findings.length) * 100}%` }} className="bg-sev-medium"></div>
-          <div style={{ width: `${(summary.by_severity.low / findings.length) * 100}%` }} className="bg-sev-low"></div>
-          <div style={{ width: `${(summary.by_severity.info / findings.length) * 100}%` }} className="bg-sev-info"></div>
+          <div style={{ width: `${(summary.by_severity.critical / summary.total_findings) * 100}%`, boxShadow: summary.by_severity.critical > 0 ? '0 0 14px #ef4444' : 'none' }} className="bg-sev-critical"></div>
+          <div style={{ width: `${(summary.by_severity.high / summary.total_findings) * 100}%` }} className="bg-sev-high"></div>
+          <div style={{ width: `${(summary.by_severity.medium / summary.total_findings) * 100}%` }} className="bg-sev-medium"></div>
+          <div style={{ width: `${(summary.by_severity.low / summary.total_findings) * 100}%` }} className="bg-sev-low"></div>
+          <div style={{ width: `${(summary.by_severity.informational / summary.total_findings) * 100}%` }} className="bg-sev-info"></div>
         </div>
       )}
 
@@ -290,11 +328,18 @@ export default function ScanDetail() {
           </div>
         ) : findings.length === 0 ? (
           <div className="bg-card/80 backdrop-blur-md border border-bordercolor rounded-lg p-12 text-center">
-            {status === 'completed' ? (
+            {status === 'completed' && summary?.total_findings === 0 ? (
               <>
                 <div className="text-success mb-4 flex justify-center"><ShieldCheck size={40} /></div>
                 <div className="text-lg font-medium text-textpri">Target Appears Secure</div>
                 <div className="text-textmut mt-2">No vulnerabilities or exposures were detected on this target.</div>
+              </>
+            ) : status === 'completed' ? (
+              <>
+                <div className="text-textmut mb-2">Findings have not loaded yet.</div>
+                <button type="button" onClick={loadMoreFindings} disabled={loadingMoreFindings}
+                  className="text-accent hover:underline disabled:opacity-50">Retry loading findings</button>
+                {findingsError && <p role="alert" className="text-danger mt-2">{findingsError}</p>}
               </>
             ) : status === 'failed' ? (
               <>
@@ -358,6 +403,13 @@ export default function ScanDetail() {
                   </button>
                 );
               })}
+              {summary?.total_findings > findings.length && (
+                <button type="button" onClick={loadMoreFindings} disabled={loadingMoreFindings}
+                  className="p-3 text-sm text-accent hover:underline disabled:opacity-50">
+                  {loadingMoreFindings ? 'Loading…' : 'Load more findings'}
+                </button>
+              )}
+              {findingsError && <p role="alert" className="text-sm text-danger">{findingsError}</p>}
             </div>
 
             {/* RIGHT PANE: Details */}

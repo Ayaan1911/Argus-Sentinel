@@ -164,6 +164,8 @@ React 18 + Vite + Tailwind, talking to the API over axios with the API key wired
 | Finding Detail | `/scan/:scan_id/finding/:finding_id` | Full reasoning breakdown, attack patterns, recommended actions, audience-specific guidance for one finding |
 | Intelligence Library | `/intelligence` | Browse the 51-entry services/technologies/vulnerabilities knowledge base directly |
 
+Scan lists, completed-target history, and finding lists return 50 rows by default. Use `limit` (1–500) and `offset` (starting at 0) on their API endpoints to fetch later pages; the UI offers controls for this. Dashboard totals and scan summaries count all matching rows, not just the first page.
+
 ## Tech Stack
 
 | Layer | Technology |

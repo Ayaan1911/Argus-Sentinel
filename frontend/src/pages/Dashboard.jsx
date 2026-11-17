@@ -67,21 +67,40 @@ const ScansTooltip = ({ active, payload }) => {
 
 export default function Dashboard() {
   const [scans, setScans] = useState([]);
+  const [scansHasMore, setScansHasMore] = useState(false);
+  const [loadingMoreScans, setLoadingMoreScans] = useState(false);
+  const [scansError, setScansError] = useState('');
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
-      client.get('/scans/'),
+      client.get('/scans/?limit=50'),
       client.get('/scans/dashboard-stats')
     ])
       .then(([scansRes, statsRes]) => {
         setScans(scansRes.data);
+        setScansHasMore(scansRes.data.length === 50);
         setStats(statsRes.data);
         setLoading(false);
       })
       .catch(err => setLoading(false));
   }, []);
+
+  const loadMoreScans = async () => {
+    if (loadingMoreScans) return;
+    setLoadingMoreScans(true);
+    setScansError('');
+    try {
+      const res = await client.get(`/scans/?limit=50&offset=${scans.length}`);
+      setScans(prev => [...prev, ...res.data]);
+      setScansHasMore(res.data.length === 50);
+    } catch (err) {
+      setScansError('Could not load older scans. Try again.');
+    } finally {
+      setLoadingMoreScans(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -98,7 +117,7 @@ export default function Dashboard() {
     );
   }
 
-  const totalScans = scans.length;
+  const totalScans = stats?.total_scans ?? scans.length;
   const totalFindings = stats?.total_findings || 0;
   const peak = dominantSeverity(stats?.severity_distribution);
   const peakColor = peak ? COLORS[peak.key] : '#f1f5f9';
@@ -345,6 +364,13 @@ export default function Dashboard() {
               })}
             </tbody>
           </table>
+          {scansHasMore && (
+            <button type="button" onClick={loadMoreScans} disabled={loadingMoreScans}
+              className="w-full p-3 text-sm text-accent hover:bg-surface disabled:opacity-50">
+              {loadingMoreScans ? 'Loading…' : 'Load older scans'}
+            </button>
+          )}
+          {scansError && <p role="alert" className="p-3 text-sm text-danger">{scansError}</p>}
         </div>
       )}
     </div>

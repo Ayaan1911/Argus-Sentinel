@@ -144,6 +144,53 @@ def test_list_scans(client, auth_headers):
     assert targets == {"example.com", "another.com"}
 
 
+def test_scan_list_and_dashboard_counts_across_pages(client, auth_headers, clean_db):
+    engine = clean_db["sync_engine"]
+    ids = [_create_scan_row(engine, f"host-{i}.example.com", "completed") for i in range(51)]
+    _create_finding_row(engine, ids[0])
+
+    first = client.get("/api/v1/scans/?limit=50", headers=auth_headers)
+    second = client.get("/api/v1/scans/?limit=50&offset=50", headers=auth_headers)
+    stats = client.get("/api/v1/scans/dashboard-stats", headers=auth_headers)
+
+    assert first.status_code == second.status_code == stats.status_code == 200
+    assert len(first.json()) == 50
+    assert len(second.json()) == 1
+    assert len({s["id"] for s in first.json() + second.json()}) == 51
+    assert stats.json()["total_scans"] == 51
+    assert stats.json()["total_findings"] == 1
+
+
+def test_findings_pages_and_summary_count_all_rows(client, auth_headers, clean_db):
+    from sqlalchemy import text
+    import uuid
+
+    engine = clean_db["sync_engine"]
+    scan_id = _create_scan_row(engine, "example.com", "completed")
+    rows = [
+        {"id": str(uuid.uuid4()), "scan_id": scan_id, "title": f"Finding {i}"}
+        for i in range(51)
+    ]
+    with engine.begin() as conn:
+        conn.execute(text(
+            "INSERT INTO findings (id, scan_id, type, title, severity, confidence, risk_score, "
+            "final_risk_score, correlation_modifier) "
+            "VALUES (:id, :scan_id, 'port', :title, 'low', 0.9, 3.0, 3.0, 0.0)"
+        ), rows)
+
+    first = client.get(f"/api/v1/findings/scan/{scan_id}?limit=50", headers=auth_headers)
+    second = client.get(f"/api/v1/findings/scan/{scan_id}?limit=50&offset=50", headers=auth_headers)
+    summary = client.get(f"/api/v1/findings/scan/{scan_id}/summary", headers=auth_headers)
+
+    assert first.status_code == second.status_code == summary.status_code == 200
+    assert len(first.json()) == 50
+    assert len(second.json()) == 1
+    assert len({f["id"] for f in first.json() + second.json()}) == 51
+    assert summary.json()["total_findings"] == 51
+    assert summary.json()["by_type"]["port"] == 51
+    assert summary.json()["by_severity"]["low"] == 51
+
+
 def test_get_scan_not_found(client, auth_headers):
     r = client.get("/api/v1/scans/11111111-1111-1111-1111-111111111111", headers=auth_headers)
     assert r.status_code == 404
@@ -255,6 +302,10 @@ def test_scan_history_lists_only_completed_scans_newest_first(client, auth_heade
     assert set(body[0].keys()) == {"id", "created_at", "status", "finding_count"}
     assert body[0]["finding_count"] == 2
     assert body[1]["finding_count"] == 0
+
+    page = client.get("/api/v1/scans/target/example.com/history?limit=1&offset=1", headers=auth_headers)
+    assert page.status_code == 200
+    assert [s["id"] for s in page.json()] == [old_id]
 
 
 def test_scan_history_empty_for_unknown_target(client, auth_headers):
