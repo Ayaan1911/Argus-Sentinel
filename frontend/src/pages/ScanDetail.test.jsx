@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
 vi.mock('../api/client', () => ({
@@ -159,5 +159,32 @@ describe('ScanDetail polling', () => {
       await vi.advanceTimersByTimeAsync(30000);
     });
     expect(client.get.mock.calls.filter(([url]) => url.includes('/status')).length).toBe(1);
+  });
+
+  it('loads the 51st finding while keeping totals based on the whole scan', async () => {
+    const allFindings = Array.from({ length: 51 }, (_, i) => ({
+      id: `finding-${i}`, type: 'port', title: `Port finding ${i}`,
+      severity: 'low', final_risk_score: 3, raw_data: {},
+    }));
+    client.get.mockImplementation((url) => {
+      if (url.includes('/status')) return Promise.resolve(statusResponse('completed'));
+      if (url.includes('/summary')) return Promise.resolve({
+        data: { ...summaryResponse.data, total_findings: 51,
+          by_severity: { ...summaryResponse.data.by_severity, low: 51 }, by_type: { port: 51 } },
+      });
+      if (url.includes('/findings/scan/')) {
+        return Promise.resolve({ data: url.includes('offset=50') ? allFindings.slice(50) : allFindings.slice(0, 50) });
+      }
+      return Promise.resolve({ data: [] });
+    });
+
+    renderScanDetail();
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByText('Port finding 49')).toBeTruthy();
+    expect(screen.queryByText('Port finding 50')).toBeNull();
+
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Load more findings' })); });
+    expect(screen.getByText('Port finding 50')).toBeTruthy();
+    expect(client.get).toHaveBeenCalledWith(`/findings/scan/${SCAN_ID}?limit=50&offset=50`);
   });
 });

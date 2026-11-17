@@ -4,7 +4,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload, noload
 from sqlalchemy import func
 from typing import List, Dict, Any, Optional
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, time
 
 from redis.asyncio import Redis
 
@@ -60,59 +60,59 @@ async def _enforce_demo_scan_ceiling() -> None:
 # fresh enough to hand back instead of launching a new one.
 RESCAN_WINDOW = timedelta(hours=24)
 
+async def _finding_counts(db: AsyncSession, scans: list[Scan]) -> dict:
+    if not scans:
+        return {}
+    stmt = (select(Finding.scan_id, func.count(Finding.id))
+            .where(Finding.scan_id.in_([s.id for s in scans]))
+            .group_by(Finding.scan_id))
+    result = await db.execute(stmt)
+    return dict(result.all())
+
+
 @router.get("/dashboard-stats")
 async def get_dashboard_stats(db: AsyncSession = Depends(get_db)):
-    # Get all findings
-    stmt = select(Finding)
-    if settings.DEMO_MODE:
-        stmt = stmt.join(Scan).where(Scan.is_demo.is_(True))
-    result = await db.execute(stmt)
-    findings = result.scalars().all()
-    
-    # Severity Distribution
     by_severity = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
     by_type = {"vulnerability": 0, "port": 0, "subdomain": 0, "technology": 0}
-    
-    for f in findings:
-        sev = f.severity.lower() if f.severity else "info"
-        if sev == "informational": sev = "info"
-        if sev in by_severity:
-            by_severity[sev] += 1
-            
-        t = f.type.lower() if f.type else "other"
-        if t in by_type:
-            by_type[t] += 1
-        else:
-            by_type[t] = 1
-            
-    # Scans over time (last 14 days)
-    # Must be timezone-aware: Scan.created_at is DateTime(timezone=True), and
-    # asyncpg interprets a *naive* datetime bound as a query parameter using
-    # the server's local system timezone rather than UTC — a naive
-    # datetime.utcnow() here would silently shift this cutoff on any host
-    # whose local timezone isn't UTC.
-    fourteen_days_ago = datetime.now(timezone.utc) - timedelta(days=14)
-    stmt_scans = _visible(select(Scan.created_at).where(Scan.created_at >= fourteen_days_ago))
-    res_scans = await db.execute(stmt_scans)
-    scan_dates = [row[0] for row in res_scans.all()]
-    
-    scans_by_date = {}
-    for i in range(14):
-        d = (datetime.utcnow() - timedelta(days=13-i)).strftime("%Y-%m-%d")
-        scans_by_date[d] = 0
-        
-    for d in scan_dates:
-        date_str = d.strftime("%Y-%m-%d")
-        if date_str in scans_by_date:
-            scans_by_date[date_str] += 1
-            
-    scans_over_time = [{"date": k, "count": v} for k, v in scans_by_date.items()]
-    
+
+    severity_stmt = select(Finding.severity, func.count(Finding.id)).group_by(Finding.severity)
+    type_stmt = select(Finding.type, func.count(Finding.id)).group_by(Finding.type)
+    if settings.DEMO_MODE:
+        severity_stmt = severity_stmt.join(Scan).where(Scan.is_demo.is_(True))
+        type_stmt = type_stmt.join(Scan).where(Scan.is_demo.is_(True))
+
+    severity_rows = (await db.execute(severity_stmt)).all()
+    for severity, count in severity_rows:
+        key = (severity or "info").lower()
+        if key == "informational":
+            key = "info"
+        if key in by_severity:
+            by_severity[key] += count
+
+    for type_, count in (await db.execute(type_stmt)).all():
+        key = (type_ or "other").lower()
+        by_type[key] = by_type.get(key, 0) + count
+
+    today = datetime.now(timezone.utc).date()
+    first_day = today - timedelta(days=13)
+    cutoff = datetime.combine(first_day, time.min, tzinfo=timezone.utc)
+    day = func.date(func.timezone("UTC", Scan.created_at))
+    daily_stmt = _visible(select(day, func.count(Scan.id))
+                          .where(Scan.created_at >= cutoff).group_by(day))
+    daily_counts = dict((await db.execute(daily_stmt)).all())
+    scans_over_time = [
+        {"date": (first_day + timedelta(days=i)).isoformat(),
+         "count": daily_counts.get(first_day + timedelta(days=i), 0)}
+        for i in range(14)
+    ]
+
+    total_scans = (await db.execute(_visible(select(func.count(Scan.id))))).scalar_one()
     return {
         "severity_distribution": by_severity,
         "type_breakdown": by_type,
         "scans_over_time": scans_over_time,
-        "total_findings": len(findings)
+        "total_findings": sum(count for _, count in severity_rows),
+        "total_scans": total_scans,
     }
 
 
@@ -187,59 +187,40 @@ async def create_scan(request: Request, scan_in: ScanCreate, db: AsyncSession = 
     return loaded_scan
 
 @router.get("/", response_model=List[Dict[str, Any]])
-async def list_scans(db: AsyncSession = Depends(get_db)):
-    stmt = _visible(select(Scan).options(selectinload(Scan.findings))).order_by(Scan.created_at.desc())
-    result = await db.execute(stmt)
-    scans = result.scalars().all()
-    
-    out = []
-    for s in scans:
-        out.append({
-            "id": str(s.id),
-            "target": s.target,
-            "status": s.status,
-            "audience": s.audience,
-            "created_at": s.created_at,
-            "finding_count": len(s.findings)
-        })
-    return out
+async def list_scans(
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = _visible(select(Scan))
+    stmt = stmt.order_by(Scan.created_at.desc(), Scan.id.desc()).limit(limit).offset(offset)
+    scans = (await db.execute(stmt)).scalars().all()
+    counts = await _finding_counts(db, scans)
+    return [
+        {"id": str(s.id), "target": s.target, "status": s.status,
+         "audience": s.audience, "created_at": s.created_at,
+         "finding_count": counts.get(s.id, 0)}
+        for s in scans
+    ]
+
 
 @router.get("/target/{normalized_target}/history")
-async def get_scan_history_for_target(normalized_target: str, db: AsyncSession = Depends(get_db)):
-    # Normalize defensively even though callers are expected to already pass
-    # a normalized value — same reasoning as every other target entry point.
+async def get_scan_history_for_target(
+    normalized_target: str,
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db),
+):
     target = normalize_target(normalized_target)
-
-    stmt = (
-        select(Scan)
-        .options(noload(Scan.findings))
-        .where(Scan.target == target, Scan.status == "completed")
-        .order_by(Scan.created_at.desc())
-    )
-    stmt = _visible(stmt)
-    result = await db.execute(stmt)
-    scans = result.scalars().all()
-
-    if not scans:
-        return []
-
-    # One grouped query for all finding counts instead of one query per scan.
-    scan_ids = [s.id for s in scans]
-    count_stmt = (
-        select(Finding.scan_id, func.count(Finding.id))
-        .where(Finding.scan_id.in_(scan_ids))
-        .group_by(Finding.scan_id)
-    )
-    count_result = await db.execute(count_stmt)
-    counts_by_scan_id = {row[0]: row[1] for row in count_result.all()}
-
+    stmt = _visible(select(Scan).where(
+        Scan.target == target, Scan.status == "completed"
+    ))
+    stmt = stmt.order_by(Scan.created_at.desc(), Scan.id.desc()).limit(limit).offset(offset)
+    scans = (await db.execute(stmt)).scalars().all()
+    counts = await _finding_counts(db, scans)
     return [
-        {
-            "id": str(s.id),
-            "created_at": s.created_at,
-            "status": s.status,
-            "finding_count": counts_by_scan_id.get(s.id, 0),
-        }
+        {"id": str(s.id), "created_at": s.created_at, "status": s.status,
+         "finding_count": counts.get(s.id, 0)}
         for s in scans
     ]
 

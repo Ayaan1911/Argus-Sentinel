@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import func, case
 from typing import List, Optional
 
 from app.database import get_db
@@ -39,7 +40,7 @@ async def get_scan_findings(
     if min_risk is not None:
         stmt = stmt.where(Finding.final_risk_score >= min_risk)
 
-    stmt = stmt.order_by(Finding.final_risk_score.desc()).limit(limit).offset(offset)
+    stmt = stmt.order_by(Finding.final_risk_score.desc(), Finding.id.desc()).limit(limit).offset(offset)
 
     result = await db.execute(stmt)
     findings = result.scalars().all()
@@ -67,52 +68,43 @@ async def get_scan_summary(scan_id: str, db: AsyncSession = Depends(get_db)):
     if not scan:
         raise HTTPException(status_code=404, detail="Scan not found")
         
-    # Query findings directly
-    stmt_findings = select(Finding).where(Finding.scan_id == scan_id)
-    result_findings = await db.execute(stmt_findings)
-    findings = result_findings.scalars().all()
-    
     by_severity = {"critical": 0, "high": 0, "medium": 0, "low": 0, "informational": 0}
     by_type = {"port": 0, "subdomain": 0, "vulnerability": 0, "technology": 0, "service": 0}
-    
-    max_risk = 0.0
-    for f in findings:
-        sev = f.severity.lower() if f.severity else "informational"
-        if sev in by_severity:
-            by_severity[sev] += 1
-            
-        t = f.type.lower() if f.type else ""
-        if t in by_type:
-            by_type[t] += 1
-        elif t:
-            by_type[t] = 1
-            
-        if f.final_risk_score > max_risk:
-            max_risk = f.final_risk_score
 
-    # Determine top findings
-    sorted_findings = sorted(findings, key=lambda x: x.final_risk_score, reverse=True)
-    top_findings = []
-    for f in sorted_findings[:5]:
-        top_findings.append({
-            "id": str(f.id),
-            "type": f.type,
-            "title": f.title,
-            "severity": f.severity,
-            "final_risk_score": f.final_risk_score
-        })
-        
-    combined_risk_modifier = 0.0
-    high_sev_count = sum(1 for f in findings if f.risk_score >= 6.1)
-    if high_sev_count >= 3:
-        combined_risk_modifier += 1.5
-    combined_risk = max_risk + combined_risk_modifier
-    combined_risk = max(0.0, min(10.0, combined_risk))
-    
+    severity_stmt = (select(Finding.severity, func.count(Finding.id))
+                     .where(Finding.scan_id == scan_id).group_by(Finding.severity))
+    for severity, count in (await db.execute(severity_stmt)).all():
+        key = (severity or "informational").lower()
+        if key == "info":
+            key = "informational"
+        if key in by_severity:
+            by_severity[key] += count
+
+    type_stmt = (select(Finding.type, func.count(Finding.id))
+                 .where(Finding.scan_id == scan_id).group_by(Finding.type))
+    for type_, count in (await db.execute(type_stmt)).all():
+        key = (type_ or "").lower()
+        if key:
+            by_type[key] = by_type.get(key, 0) + count
+
+    aggregate_stmt = select(
+        func.count(Finding.id), func.max(Finding.final_risk_score),
+        func.sum(case((Finding.risk_score >= 6.1, 1), else_=0)),
+    ).where(Finding.scan_id == scan_id)
+    total, max_risk, high_sev_count = (await db.execute(aggregate_stmt)).one()
+    top_stmt = (select(Finding).where(Finding.scan_id == scan_id)
+                .order_by(Finding.final_risk_score.desc(), Finding.id.desc()).limit(5))
+    top_findings = [
+        {"id": str(f.id), "type": f.type, "title": f.title,
+         "severity": f.severity, "final_risk_score": f.final_risk_score}
+        for f in (await db.execute(top_stmt)).scalars().all()
+    ]
+    combined_risk = min(10.0, (max_risk or 0.0) + (1.5 if (high_sev_count or 0) >= 3 else 0.0))
+
     return {
         "scan_id": str(scan.id),
         "target": scan.target,
-        "total_findings": len(findings),
+        "total_findings": total,
         "by_severity": by_severity,
         "by_type": by_type,
         "top_findings": top_findings,
