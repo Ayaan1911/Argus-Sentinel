@@ -159,3 +159,14 @@ def test_same_title_on_two_hosts_only_amplifies_matching_finding():
     updated = engine.apply_modifiers(findings, result)
     assert result.amplified_findings == ["host-a"]
     assert [f["correlation_modifier"] for f in updated] == [2.5, 0.0]
+
+
+def test_correlation_updates_severity_at_score_threshold():
+    engine = CorrelationEngine()
+    findings = [{"id": "ssh-a", "type": "port", "title": "Port 22/tcp: ssh",
+                 "raw_data": {"port": 22, "internet_facing": True,
+                              "password_auth_enabled": True},
+                 "risk_score": 6.0, "severity": "medium", "reasoning_breakdown": []}]
+    updated = engine.apply_modifiers(findings, engine.correlate(findings))
+    assert updated[0]["final_risk_score"] == 8.5
+    assert updated[0]["severity"] == "critical"

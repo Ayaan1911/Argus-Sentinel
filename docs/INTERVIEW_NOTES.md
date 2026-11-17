@@ -22,7 +22,7 @@ This order avoids sending every unverified passive discovery to the active scann
 - The correlation engine inspects the scan's findings together. Six named rules can amplify a finding when relevant signals occur together; `multiple_high_severity` affects the combined scan risk instead of an individual finding. A rule need not fire on every scan. The same finding data and library rules produce the same scores.
 - Audience guidance changes the explanation and suggested actions, not the scanner evidence. There is no model call, generated exploit, or automatic vulnerability verification.
 
-Current limitation: correlation can increase `final_risk_score` without updating the saved `severity` label. The numeric score and badge/filter can disagree. This is open audit finding 7, not an intentional scoring policy. See `backend/app/scanners/processor.py`, `backend/app/engines/`, and `docs/HARDENING_AUDIT.md`.
+After correlation, the saved severity and business-impact summary follow the final score, so badges, filters, and dashboard counts use the same risk level. A data migration recalculates these fields for existing findings. See `backend/app/scanners/processor.py`, `backend/app/engines/`, and `backend/app/tasks/scan_tasks.py`.
 
 ## How two scans are compared
 

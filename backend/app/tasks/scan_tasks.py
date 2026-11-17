@@ -215,6 +215,12 @@ def run_scan(scan_id: str, target: str, audience: str):
                 f_obj = next((x for x in db_findings if str(x.id) == ud["id"]), None)
                 if f_obj:
                     f_obj.final_risk_score = ud["final_risk_score"]
+                    f_obj.severity = ud["severity"]
+                    f_obj.business_impact = (
+                        "Significant business risk" if ud["severity"] in ("critical", "high")
+                        else "Moderate business risk" if ud["severity"] == "medium"
+                        else "Minimal business risk"
+                    )
                     f_obj.correlation_modifier = ud["correlation_modifier"]
                     f_obj.reasoning_breakdown = ud["reasoning_breakdown"]
 
