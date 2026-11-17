@@ -183,6 +183,7 @@ class CorrelationEngine:
             nf["correlation_modifier"] = nf.get("correlation_modifier", 0.0) + modifier_sum
             final_risk = nf.get("risk_score", 0.0) + nf["correlation_modifier"]
             nf["final_risk_score"] = max(0.0, min(10.0, final_risk))
+            nf["severity"] = self._get_risk_level(nf["final_risk_score"])
             out_findings.append(nf)
             
         return out_findings

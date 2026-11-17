@@ -230,8 +230,8 @@ def test_prune_demo_scans_is_a_noop_with_nothing_expired(clean_db):
 def _fetch_findings(sync_engine, scan_id):
     with sync_engine.begin() as conn:
         rows = conn.execute(
-            text("SELECT title, risk_score, correlation_modifier, final_risk_score, reasoning_breakdown "
-                 "FROM findings WHERE scan_id = :id"),
+            text("SELECT title, risk_score, correlation_modifier, final_risk_score, severity, "
+                 "business_impact, reasoning_breakdown FROM findings WHERE scan_id = :id"),
             {"id": scan_id},
         ).mappings().all()
     return {r["title"]: r for r in rows}
@@ -256,6 +256,8 @@ def test_correlation_modifier_is_persisted(clean_db):
     row = _fetch_findings(clean_db["sync_engine"], scan_id)["Live Host: http://example.com/admin"]
     assert row["correlation_modifier"] == 1.5
     assert row["final_risk_score"] == row["risk_score"] + 1.5
+    assert row["severity"] == "medium"
+    assert row["business_impact"] == "Moderate business risk"
     assert any(b["label"] == "Correlation: admin_panel_exposed" for b in row["reasoning_breakdown"])
 
 
@@ -350,3 +352,28 @@ def test_demo_scanme_dns_must_stay_public(monkeypatch):
     monkeypatch.setattr(settings, "DEMO_MODE", True)
     monkeypatch.setattr(socket, "getaddrinfo", lambda *_args: [(socket.AF_INET, 0, 0, "", ("10.0.0.9", 0))])
     assert not _check_scope("scanme.nmap.org", "scanme.nmap.org")
+
+
+def test_migration_backfills_historical_final_severity(clean_db, monkeypatch):
+    from alembic import command
+    from alembic.config import Config
+    from pathlib import Path
+
+    engine = clean_db["sync_engine"]
+    scan_id = _insert_pending_scan(engine)
+    finding_id = _insert_finding(engine, scan_id)
+    config = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
+    monkeypatch.setenv("DATABASE_URL", engine.url.render_as_string(hide_password=False).replace("postgresql://", "postgresql+asyncpg://"))
+    command.downgrade(config, "-1")
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("UPDATE findings SET final_risk_score = 9.0, "
+                              "severity = 'low', business_impact = 'Minimal business risk' "
+                              "WHERE id = :id"), {"id": finding_id})
+        command.upgrade(config, "head")
+        with engine.begin() as conn:
+            row = conn.execute(text("SELECT severity, business_impact FROM findings "
+                                    "WHERE id = :id"), {"id": finding_id}).one()
+        assert row == ("critical", "Significant business risk")
+    finally:
+        command.upgrade(config, "head")
