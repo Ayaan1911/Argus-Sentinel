@@ -16,6 +16,11 @@ class CorrelationResult:
     combined_risk_level: str = "informational"
     summary: str = ""
 
+# shortcut: id-less test fixtures use titles; require IDs for multi-host production findings.
+def _finding_ref(finding: Dict[str, Any]) -> str:
+    return str(finding.get("id") or finding.get("title", ""))
+
+
 class CorrelationEngine:
     def _get_risk_level(self, score: float) -> str:
         if score <= 2.0: return "informational"
@@ -68,7 +73,7 @@ class CorrelationEngine:
         if db_findings:
             result.correlations_found.append(CorrelationMatch(
                 rule_name="open_database_no_auth",
-                matched_findings=[f["title"] for f in db_findings],
+                matched_findings=[_finding_ref(f) for f in db_findings],
                 modifier=3.0,
                 explanation="An exposed database with no authentication is directly exploitable with zero effort."
             ))
@@ -79,7 +84,7 @@ class CorrelationEngine:
             if raw.get("internet_facing") and (raw.get("password_auth_enabled") or raw.get("no_authentication")):
                 result.correlations_found.append(CorrelationMatch(
                     rule_name="internet_facing_ssh_weak_auth",
-                    matched_findings=[f["title"]],
+                    matched_findings=[_finding_ref(f)],
                     modifier=2.5,
                     explanation="Internet-facing SSH with weak authentication is one of the most common initial access vectors."
                 ))
@@ -99,7 +104,7 @@ class CorrelationEngine:
         if tech_outdated_findings and vuln_findings:
             result.correlations_found.append(CorrelationMatch(
                 rule_name="outdated_stack_with_vuln",
-                matched_findings=[f["title"] for f in vuln_findings],
+                matched_findings=[_finding_ref(f) for f in vuln_findings],
                 modifier=2.0,
                 explanation="Outdated technology with known vulnerabilities significantly increases exploitation likelihood."
             ))
@@ -110,14 +115,14 @@ class CorrelationEngine:
             if raw.get("admin_panel_exposed"):
                 result.correlations_found.append(CorrelationMatch(
                     rule_name="admin_panel_exposed",
-                    matched_findings=[f["title"]],
+                    matched_findings=[_finding_ref(f)],
                     modifier=1.5,
                     explanation="Exposed admin panels are high-value targets for brute force and authentication bypass attacks."
                 ))
             if f.get("type", "").lower() == "subdomain" and raw.get("takeover_possible"):
                 result.correlations_found.append(CorrelationMatch(
                     rule_name="subdomain_takeover_critical",
-                    matched_findings=[f["title"]],
+                    matched_findings=[_finding_ref(f)],
                     modifier=3.0,
                     explanation="Subdomain takeover allows an attacker to serve malicious content under your trusted domain."
                 ))
@@ -167,7 +172,7 @@ class CorrelationEngine:
             for corr in correlation_result.correlations_found:
                 if corr.rule_name == "multiple_high_severity":
                     continue
-                if nf.get("title") in corr.matched_findings:
+                if _finding_ref(nf) in corr.matched_findings:
                     modifier_sum += corr.modifier
                     nf.get("reasoning_breakdown", []).append({
                         "label": "Correlation: " + corr.rule_name,

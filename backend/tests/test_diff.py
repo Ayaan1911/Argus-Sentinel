@@ -116,3 +116,30 @@ def test_duplicate_title_matches_positionally():
 
     # First pairs up (unchanged), second has no previous counterpart (new).
     assert result["summary"] == {"new": 1, "resolved": 0, "changed": 0, "unchanged": 1}
+
+
+def test_ports_on_two_hosts_keep_identity_when_order_changes():
+    def port(host, risk, title="Port 22/tcp: ssh"):
+        return {**_finding(title=title, risk=risk),
+                "raw_data": {"host": host, "port": 22, "protocol": "tcp"}}
+
+    previous = [port("192.0.2.1", 3.0), port("192.0.2.2", 7.0)]
+    current = [port("192.0.2.2", 7.0), port("192.0.2.1", 8.0)]
+
+    result = diff_findings(current, previous)
+    assert result["summary"] == {"new": 0, "resolved": 0, "changed": 1, "unchanged": 1}
+    assert result["changed_findings"][0]["finding"]["raw_data"]["host"] == "192.0.2.1"
+    assert result["changed_findings"][0]["previous_risk_score"] == 3.0
+
+
+def test_port_service_title_changes_on_same_host():
+    raw = {"host": "192.0.2.1", "port": 22, "protocol": "tcp"}
+    current = [{**_finding(title="Port 22/tcp: ssh", risk=3.0), "raw_data": raw}]
+    previous = [{**_finding(title="Port 22/tcp: tcpwrapped", risk=3.0), "raw_data": raw}]
+    assert diff_findings(current, previous)["summary"]["changed"] == 1
+
+
+def test_new_port_compares_with_legacy_row_by_title():
+    current = [{**_finding(), "raw_data": {"host": "192.0.2.1", "port": 22, "protocol": "tcp"}}]
+    previous = [_finding()]
+    assert diff_findings(current, previous)["summary"]["unchanged"] == 1

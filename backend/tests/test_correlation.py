@@ -142,3 +142,20 @@ def test_no_false_correlations():
     result = engine.correlate(findings)
     assert len(result.correlations_found) == 0
     assert result.combined_risk_level == "informational"
+
+
+def test_same_title_on_two_hosts_only_amplifies_matching_finding():
+    findings = [
+        {"id": "host-a", "type": "port", "title": "Port 22/tcp: ssh",
+         "raw_data": {"host": "192.0.2.1", "port": 22, "internet_facing": True,
+                      "password_auth_enabled": True},
+         "risk_score": 4.0, "reasoning_breakdown": []},
+        {"id": "host-b", "type": "port", "title": "Port 22/tcp: ssh",
+         "raw_data": {"host": "192.0.2.2", "port": 22, "internet_facing": True},
+         "risk_score": 4.0, "reasoning_breakdown": []},
+    ]
+    engine = CorrelationEngine()
+    result = engine.correlate(findings)
+    updated = engine.apply_modifiers(findings, result)
+    assert result.amplified_findings == ["host-a"]
+    assert [f["correlation_modifier"] for f in updated] == [2.5, 0.0]

@@ -1,33 +1,30 @@
-"""Compares the findings of two completed scans of the same target.
+"""Compares two completed scans of the same target.
 
-Findings don't have a stable identity across scans — every scan creates
-fresh rows with fresh UUIDs — so matching is done on (type, title) as a
-practical approximation, not a guaranteed-correct identity match. This
-works well in practice because titles are built from stable scanner-
-reported values (e.g. "Port 8080/tcp: tcpwrapped", "Subdomain:
-mail.example.com") that don't change between runs unless the underlying
-thing actually changed, but it's still a heuristic: it can produce a false
-match/miss if a scanner's title format happens to embed a value that
-legitimately varies scan-to-scan for what's really the same finding (e.g. a
-nuclei template whose title embeds a timestamp), or a false "new"+"resolved"
-pair if a title's wording changes between scanner tool versions.
+New port findings match by address, port, and protocol. Historical rows
+without an address keep the former (type, title) matching heuristic.
+Other finding types still match by (type, title).
 """
 
 
-def _match_key(finding: dict) -> tuple:
-    return ((finding.get("type") or "").lower(), finding.get("title") or "")
+def _match_key(finding: dict, host_aware: bool) -> tuple:
+    type_ = (finding.get("type") or "").lower()
+    if type_ == "port" and host_aware:
+        raw = finding["raw_data"]
+        return (type_, raw["host"], raw["port"], raw["protocol"])
+    return (type_, finding.get("title") or "")
 
 
-def _group_by_key(findings: list[dict]) -> dict[tuple, list[dict]]:
+def _group_by_key(findings: list[dict], host_aware: bool) -> dict[tuple, list[dict]]:
     grouped: dict[tuple, list[dict]] = {}
     for f in findings:
-        grouped.setdefault(_match_key(f), []).append(f)
+        grouped.setdefault(_match_key(f, host_aware), []).append(f)
     return grouped
 
 
 def _is_changed(current: dict, previous: dict) -> bool:
     return (
-        current.get("final_risk_score") != previous.get("final_risk_score")
+        current.get("title") != previous.get("title")
+        or current.get("final_risk_score") != previous.get("final_risk_score")
         or current.get("severity") != previous.get("severity")
         or current.get("confidence") != previous.get("confidence")
     )
@@ -37,12 +34,18 @@ def diff_findings(current: list[dict], previous: list[dict]) -> dict:
     """current/previous are lists of finding dicts (FindingRead-shaped) for
     the two scans being compared, current being the newer of the two.
 
-    Findings sharing a (type, title) key are matched positionally within
-    that key's group — the common case is at most one finding per key, so
-    this only matters for scans with duplicate-title findings, where it's a
-    best-effort pairing rather than a guaranteed-correct one."""
-    current_by_key = _group_by_key(current)
-    previous_by_key = _group_by_key(previous)
+    Duplicate keys are paired positionally. Older port findings with no
+    host identity remain a best-effort comparison."""
+    # shortcut: old port rows lack host data; retire title matching after old histories are removed.
+    ports = [f for f in current + previous if (f.get("type") or "").lower() == "port"]
+    host_aware = all(
+        (raw := f.get("raw_data") or {}).get("host")
+        and raw.get("port") is not None
+        and raw.get("protocol")
+        for f in ports
+    )
+    current_by_key = _group_by_key(current, host_aware)
+    previous_by_key = _group_by_key(previous, host_aware)
 
     new_findings, changed_findings, unchanged_findings, resolved_findings = [], [], [], []
 

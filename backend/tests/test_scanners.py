@@ -275,3 +275,20 @@ def test_nuclei_disables_template_redirects():
         asyncio.run(nuclei_mod.run(["example.com"]))
 
     assert "-dr" in captured["command"]
+
+
+def test_nmap_port_findings_include_each_host_address():
+    from app.scanners import nmap
+
+    xml = ("<nmaprun>"
+           "<host><address addr='192.0.2.1'/><ports><port portid='22' protocol='tcp'>"
+           "<state state='open'/><service name='ssh'/></port></ports></host>"
+           "<host><address addr='192.0.2.2'/><ports><port portid='22' protocol='tcp'>"
+           "<state state='open'/><service name='ssh'/></port></ports></host>"
+           "</nmaprun>")
+    with patch.object(nmap, "run_subprocess", new=AsyncMock(return_value=(
+        xml, "", {"status": "success", "detail": None}
+    ))):
+        findings, status = asyncio.run(nmap.run(["example.com", "sub.example.com"]))
+    assert status["status"] == "success"
+    assert [f["raw_data"]["host"] for f in findings] == ["192.0.2.1", "192.0.2.2"]

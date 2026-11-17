@@ -26,9 +26,9 @@ Current limitation: correlation can increase `final_risk_score` without updating
 
 ## How two scans are compared
 
-Each scan creates new finding IDs, so the diff engine cannot match rows by UUID. It groups findings by lowercased type and exact title, pairs duplicates by position, then compares final risk score, severity, and confidence. Unpaired current findings are **new**; unpaired previous findings are **resolved**; paired findings are **changed** or **unchanged**. The API only compares completed scans of the same normalized target. `force_rescan=true` creates a fresh run when a recent completed result would otherwise be reused.
+Each scan creates new finding IDs, so the diff engine cannot match rows by UUID. New port findings match by scanned address, port, and protocol; older port rows without an address and other finding types match by lowercased type and exact title. Duplicate keys pair by position. Matched findings are compared by title, final risk score, severity, and confidence. Unpaired current findings are **new**; unpaired previous findings are **resolved**; paired findings are **changed** or **unchanged**. The API only compares completed scans of the same normalized target. `force_rescan=true` creates a fresh run when a recent completed result would otherwise be reused.
 
-This is a practical heuristic. A renamed scanner title can appear as new plus resolved, and identical port titles on different hosts can be paired incorrectly. The latter is audit finding 6; a future stable identity should include host, port, and protocol. See `backend/app/engines/diff.py` and `backend/app/routers/scans.py`.
+This remains a heuristic for non-port findings and historical port rows: a renamed scanner title can appear as new plus resolved. Current Nmap findings carry an address, port, and protocol, so two hosts with the same port title are distinct. Correlation uses each persisted finding ID to avoid applying a rule to another host with the same title. See `backend/app/engines/diff.py` and `backend/app/routers/scans.py`.
 
 ## Security decisions and their limits
 
