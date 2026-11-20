@@ -22,7 +22,7 @@ Argus Sentinel is a self-hosted web recon tool: point it at a target and it runs
 - **Correlation & reasoning scoring engine** — every finding ships with a `reasoning_breakdown`: a base score plus labeled modifiers (e.g. internet-facing, password auth enabled, outdated version, default port) and any cross-finding correlation rules that fired, so you see *why* a score is what it is, not just a severity label.
 - **Audience-specific guidance** — the same finding reads differently for a Student, Developer, Bug Bounty Hunter, Pentester, or Security Professional; pick who's reading and the guidance adapts.
 - **51-entry intelligence library** — a real, verified JSON knowledge base (25 services, 12 technologies, 14 vulnerability classes) the scoring engines actually read from at scan time, and browsable directly in the UI.
-- **Dashboard** — severity distribution, finding-type breakdown, and scan history across every target you've scanned.
+- **Dashboard** — latest scan status, per-scan severity and top findings, comparison with the prior completed scan of the same target, and paginated scan history. Historical totals are labelled separately so repeated findings across runs are not mistaken for current exposure.
 - **Hardened by default** — API-key auth, SSRF target validation, rate-limited scan creation, restricted CORS, no DB/Redis ports exposed. An optional demo mode scans only bundled Juice Shop on an isolated worker network and prunes demo scans after 24h (see [DEMO_DEPLOYMENT.md](DEMO_DEPLOYMENT.md)).
 
 ## Quick Start
@@ -157,8 +157,8 @@ React 18 + Vite + Tailwind, talking to the API over axios with the API key wired
 
 | Page | Route | Purpose |
 |---|---|---|
-| Landing | `/` | Standalone public marketing page — no scan data, no auth required |
-| Dashboard | `/dashboard` | Scan history, severity distribution, finding-type breakdown |
+| Landing | `/` | Editorial overview with recorded finding and scan-diff examples; no live scan data or auth required |
+| Dashboard | `/dashboard` | Latest scan, per-scan risk summary, scan comparison, and paginated history |
 | New Scan | `/scan/new` | Submit a target + choose an audience persona |
 | Scan Detail | `/scan/:scan_id` | Live per-tool `stage_status`, findings list, combined risk level — polls the scan while running and stops once it reaches a terminal status; for a target with prior completed scans, also offers a diff view showing what's new/resolved/changed/unchanged since a previous run |
 | Finding Detail | `/scan/:scan_id/finding/:finding_id` | Full reasoning breakdown, attack patterns, recommended actions, audience-specific guidance for one finding |
@@ -207,10 +207,10 @@ subfinder correctly reports 0 real subdomains for `juice-shop` (it isn't a real 
 
 ```bash
 cd backend && pytest        # 143 passed on 2026-11-21 with Docker available
-cd frontend && npm test     # 22 passed on 2026-11-21
+cd frontend && npm test     # 24 passed after the editorial UI update
 ```
 
-The backend suite includes pure-Python unit tests for the scoring engines, scanner argv/output-parsing logic, and the intelligence-library schema validator, plus a real Postgres-backed integration suite (`test_routes.py`, `test_scan_tasks.py`) that spins up a throwaway Postgres container via Docker and exercises actual API routes and task orchestration end-to-end — those tests skip automatically if Docker isn't reachable (e.g. running the suite from inside a container itself with no Docker-in-Docker access) rather than silently passing on mocked data. The frontend suite covers `ScanDetail`'s polling logic (`nextPollDelay`), the scan-diff comparison view, the reasoning-breakdown score math, and the New Scan form (demo-mode target lock, persona selection).
+The backend suite includes pure-Python unit tests for the scoring engines, scanner argv/output-parsing logic, and the intelligence-library schema validator, plus a real Postgres-backed integration suite (`test_routes.py`, `test_scan_tasks.py`) that spins up a throwaway Postgres container via Docker and exercises actual API routes and task orchestration end-to-end — those tests skip automatically if Docker isn't reachable (e.g. running the suite from inside a container itself with no Docker-in-Docker access) rather than silently passing on mocked data. The frontend suite covers the dashboard's latest-scan and history distinction, `ScanDetail`'s polling logic (`nextPollDelay`), the scan-diff comparison view, the reasoning-breakdown score math, and the New Scan form (demo-mode target lock, persona selection).
 
 The 2026-11-21 backend run measured 82% statement coverage (1,407 statements; 250 missed). A fresh demo build of the updated frontend passed, and `npm audit` reported zero advisories. For a database created before migration tracking, follow the guarded [legacy upgrade procedure](docs/LEGACY_DB_UPGRADE.md) after making a verified backup. See [measured metrics](docs/METRICS.md) for the historical scan-timing method and current checks.
 

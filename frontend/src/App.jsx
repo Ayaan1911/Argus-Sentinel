@@ -7,17 +7,14 @@ import ScanDetail from './pages/ScanDetail';
 import FindingDetail from './pages/FindingDetail';
 import Intelligence from './pages/Intelligence';
 
-// "/" is the standalone landing page (no sidebar/header chrome — see
-// Landing.jsx). Everything that used to live at "/" moved to "/dashboard";
-// every other app route is unchanged, each still wrapped in <Layout>
-// individually rather than via a nested route, matching how this file
-// already worked before the landing page existed.
+// The landing and overview share the editorial shell. Investigation routes
+// retain the existing dense workspace until they receive the same treatment.
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/scan/new" element={<Layout><NewScan /></Layout>} />
         <Route path="/scan/:scan_id" element={<Layout><ScanDetail /></Layout>} />
         <Route path="/scan/:scan_id/finding/:finding_id" element={<Layout><FindingDetail /></Layout>} />
