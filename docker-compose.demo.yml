@@ -1,24 +1,80 @@
-# Locked-down public demo overlay — layers on top of docker-compose.yml
-# rather than duplicating it. See DEMO_DEPLOYMENT.md for how to actually
-# deploy this.
-#
-# Usage:
-#   docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build -d
-#
-# DEMO_API_KEY is deliberately a real default here, not a secret placeholder
-# — the whole point of a demo key is that it's meant to be public/known, so
-# visitors don't need to generate their own. Override it via a shell export
-# or your own .env if you want a different fixed value; there's nothing to
-# "keep secret" about it either way.
+# Public demo overlay. Requires Compose 2.24.4+ for !override.
+# docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build -d
 services:
+  db:
+    networks: [private]
+
+  redis:
+    networks: [private]
+
+  juice-shop:
+    ports: !override []
+    networks: [private]
+
+  worker:
+    # Only the internal network has no external gateway. This worker can
+    # reach Juice Shop, Redis, and Postgres, but no public or metadata IP.
+    networks: [private]
+    volumes: !override
+      - ./argus-intelligence:/argus-intelligence:ro
+      - nuclei_templates:/root/nuclei-templates
+    environment:
+      DEMO_MODE: "true"
+      ENVIRONMENT: production
+
   api:
+    ports: !override []
+    networks: [private, web]
+    volumes: !override
+      - ./argus-intelligence:/argus-intelligence:ro
+      - nuclei_templates:/root/nuclei-templates
     environment:
       DEMO_MODE: "true"
       DEMO_API_KEY: ${DEMO_API_KEY:-argus-public-demo-2026}
       DEMO_SCAN_DAILY_LIMIT: ${DEMO_SCAN_DAILY_LIMIT:-500}
+      ENVIRONMENT: production
+    # Trust forwarded addresses from Caddy only, even though other services
+    # on the private network can also reach the API.
+    command: ["/bin/sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips 172.31.245.254"]
 
   frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.demo
+      args:
+        VITE_API_URL: /api/v1
+        VITE_DEMO_MODE: "true"
+        VITE_API_KEY: ${DEMO_API_KEY:-argus-public-demo-2026}
+    ports: !override []
+    volumes: !override []
+    env_file: !reset []
+    networks: [web]
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
     environment:
-      VITE_DEMO_MODE: "true"
-      VITE_API_KEY: ${DEMO_API_KEY:-argus-public-demo-2026}
-      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000/api/v1}
+      DEMO_DOMAIN: ${DEMO_DOMAIN:?Set DEMO_DOMAIN to the public demo hostname}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile.demo:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      web:
+        ipv4_address: 172.31.245.254
+    depends_on: [api, frontend]
+
+networks:
+  private:
+    internal: true
+  web:
+    ipam:
+      config:
+        - subnet: 172.31.245.0/24
+
+volumes:
+  caddy_data:
+  caddy_config:

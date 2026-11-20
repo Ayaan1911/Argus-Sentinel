@@ -35,7 +35,7 @@ This remains a heuristic for non-port findings and historical port rows: a renam
 - The API checks `X-API-Key` on scan and finding routes, uses constant-time comparison, and limits browser origins through `ALLOWED_ORIGINS`. The key is shared; there are no user accounts or per-user scan permissions.
 - Normal target validation normalizes names, resolves addresses, and rejects private, loopback, link-local, reserved, multicast, and unspecified destinations. The bundled `juice-shop` hostname is a deliberate internal exception. The worker checks root and discovered names before active scanning and rejects out-of-scope results. DNS can still change after a check and before a scanner connects, so a public host needs outbound network restrictions as well.
 - Scan creation is rate-limited to 5/minute normally and 3/minute in demo mode, with a Redis daily demo scan ceiling. The demo key is intentionally public, so it is not a personal identity or a secret. Behind a proxy, the IP-based limit needs trusted client-address handling; do not assume the current configuration gives each visitor a separate bucket.
-- Demo mode permits only `juice-shop` and `scanme.nmap.org`, hides ordinary scan records, blocks deletion, and prunes demo records after about 24 hours. All demo visitors can still read each other's demo scans. Keep private targets and sensitive findings out of the demo.
+- Demo mode permits only bundled `juice-shop`, isolates the worker from outbound internet, hides ordinary scan records, blocks deletion, and prunes demo records after about 24 hours. All demo visitors can still read each other's demo scans. Keep private targets and sensitive findings out of the demo.
 
 ## What I would improve next
 

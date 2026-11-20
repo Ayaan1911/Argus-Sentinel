@@ -94,6 +94,16 @@ def test_subfinder_argv():
     assert captured["command"] == ["/usr/local/bin/subfinder", "-d", "example.com", "-silent", "-all"]
 
 
+def test_local_juice_shop_does_not_need_internet_for_subfinder():
+    import app.scanners.subfinder as subfinder
+
+    with patch.object(subfinder, "run_subprocess") as subprocess:
+        findings, status = asyncio.run(subfinder.run("juice-shop"))
+    assert findings == []
+    assert status["status"] == "success"
+    subprocess.assert_not_called()
+
+
 def test_httpx_argv_and_stdin():
     import app.scanners.httpx as httpx_mod
 

@@ -14,13 +14,9 @@ from app.scanners.utils import is_internal_ip, normalize_target
 # Docker network address.
 ALLOWED_INTERNAL_HOSTNAMES = {"juice-shop"}
 
-# Targets a public demo deployment (DEMO_MODE=true) is locked to — a
-# different, broader concept than ALLOWED_INTERNAL_HOSTNAMES above, which is
-# specifically about exempting an internal Docker hostname from the
-# private-IP block. scanme.nmap.org is a real public domain (no internal-IP
-# exemption needed) but is the Nmap project's own dedicated, explicitly
-# authorized public scan target, so it's safe to allow here the same way.
-DEMO_ALLOWED_TARGETS = ALLOWED_INTERNAL_HOSTNAMES | {"scanme.nmap.org"}
+# The public demo worker has no outbound route. Only the bundled target can
+# be scanned there; normal self-hosted mode still permits authorized hosts.
+DEMO_ALLOWED_TARGETS = {"juice-shop"}
 
 
 def validate_scan_target(raw_target: str) -> str:

@@ -21,6 +21,10 @@ jobs:
           python -m pip install pytest-cov ruff
       - name: Verify Docker for PostgreSQL tests
         run: docker info
+      - name: Check public demo isolation
+        run: |
+          cp .env.example .env
+          DEMO_DOMAIN=demo.example.com docker compose -f docker-compose.yml -f docker-compose.demo.yml config --format json | python scripts/check_demo_compose.py
       - name: Validate intelligence library
         run: python scripts/validate_intelligence.py
       - name: Check for Python errors

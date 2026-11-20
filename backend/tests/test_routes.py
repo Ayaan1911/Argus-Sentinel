@@ -496,17 +496,14 @@ def test_demo_mode_still_allows_juice_shop(client, auth_headers, monkeypatch):
     mock_run_scan.delay.assert_called_once()
 
 
-def test_demo_mode_allows_scanme_nmap_org_as_second_target(client, auth_headers, monkeypatch):
+def test_demo_mode_rejects_public_target(client, auth_headers, monkeypatch):
     monkeypatch.setattr(settings, "DEMO_MODE", True)
     monkeypatch.setattr(settings, "DEMO_API_KEY", auth_headers["x-api-key"])
 
-    with patch("app.routers.scans.run_scan") as mock_run_scan, \
-         patch("app.routers.scans.Redis", _fake_redis_class()):
+    with patch("app.routers.scans.Redis", _fake_redis_class()):
         r = client.post("/api/v1/scans/", json={"target": "scanme.nmap.org"}, headers=auth_headers)
 
-    assert r.status_code == 200
-    assert r.json()["target"] == "scanme.nmap.org"
-    mock_run_scan.delay.assert_called_once()
+    assert r.status_code == 422
 
 
 def test_demo_mode_scans_are_flagged_is_demo(client, clean_db, auth_headers, monkeypatch):

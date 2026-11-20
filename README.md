@@ -23,7 +23,7 @@ Argus Sentinel is a self-hosted web recon tool: point it at a target and it runs
 - **Audience-specific guidance** — the same finding reads differently for a Student, Developer, Bug Bounty Hunter, Pentester, or Security Professional; pick who's reading and the guidance adapts.
 - **51-entry intelligence library** — a real, verified JSON knowledge base (25 services, 12 technologies, 14 vulnerability classes) the scoring engines actually read from at scan time, and browsable directly in the UI.
 - **Dashboard** — severity distribution, finding-type breakdown, and scan history across every target you've scanned.
-- **Hardened by default** — API-key auth, SSRF target validation, rate-limited scan creation, restricted CORS, no DB/Redis ports exposed. An optional demo mode locks scanning to two authorized targets and prunes demo scans after 24h (see [DEMO_DEPLOYMENT.md](DEMO_DEPLOYMENT.md)).
+- **Hardened by default** — API-key auth, SSRF target validation, rate-limited scan creation, restricted CORS, no DB/Redis ports exposed. An optional demo mode scans only bundled Juice Shop on an isolated worker network and prunes demo scans after 24h (see [DEMO_DEPLOYMENT.md](DEMO_DEPLOYMENT.md)).
 
 ## Quick Start
 

@@ -56,6 +56,9 @@ def _is_takeover_candidate(cname: str | None) -> bool:
 
 async def run(target: str) -> tuple[list[dict], dict]:
     target = normalize_target(target)
+    if target == "juice-shop":
+        # A single Docker service name has no public DNS tree to enumerate.
+        return [], {"status": "success", "detail": "local target has no public subdomains"}
     logger.info(f"Starting subfinder scan for {target}")
     command = ["/usr/local/bin/subfinder", "-d", target, "-silent", "-all"]
 

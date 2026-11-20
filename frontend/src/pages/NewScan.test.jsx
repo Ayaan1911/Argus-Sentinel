@@ -31,22 +31,21 @@ describe('NewScan in demo mode', () => {
     vi.stubEnv('VITE_DEMO_MODE', 'true');
   });
 
-  it('offers a locked choice between the two authorized demo targets, no free-text input', async () => {
+  it('shows only the bundled demo target, with no free-text input', async () => {
     await renderNewScan();
 
-    expect(screen.getByRole('tab', { name: /juice-shop/i })).not.toBeNull();
-    expect(screen.getByRole('tab', { name: /scanme\.nmap\.org/i })).not.toBeNull();
+    expect(screen.getByText(/juice-shop \(bundled\)/i)).not.toBeNull();
+    expect(screen.queryByText(/scanme\.nmap\.org/i)).toBeNull();
     expect(screen.queryByPlaceholderText(/example\.com/i)).toBeNull();
   });
 
-  it('defaults to juice-shop and submits whichever demo target is selected', async () => {
+  it('submits juice-shop', async () => {
     await renderNewScan();
 
-    fireEvent.click(screen.getByRole('tab', { name: /scanme\.nmap\.org/i }));
     fireEvent.click(screen.getByRole('button', { name: /run demo scan/i }));
 
     await waitFor(() => {
-      expect(client.post).toHaveBeenCalledWith('/scans/', { target: 'scanme.nmap.org', audience: 'student' });
+      expect(client.post).toHaveBeenCalledWith('/scans/', { target: 'juice-shop', audience: 'student' });
     });
   });
 });

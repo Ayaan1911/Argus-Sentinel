@@ -60,8 +60,7 @@ def _check_scope(host: str, root: str) -> bool:
     try:
         if validate_scan_target(host) != host:
             return False
-        # Demo allowlisting does not DNS-check scanme.nmap.org at submission.
-        # Check every A/AAAA destination at the worker handoff too.
+        # Defense in depth if a public demo target is ever added again.
         if settings.DEMO_MODE:
             addresses = socket.getaddrinfo(host, None)
             return bool(addresses) and all(not is_internal_ip(info[4][0]) for info in addresses)
