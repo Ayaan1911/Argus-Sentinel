@@ -2,6 +2,14 @@
 
 Measured on `codex/step-5-metrics` from the local Windows 11 checkout, with Docker Desktop running the six-service Compose stack and its bundled Juice Shop target. Commands below run from the repository root unless a different directory is shown. These are observations from this checkout, not performance promises for other machines or targets.
 
+## Current checks — 2026-11-21
+
+On the `codex/step-5-maintenance-verification` branch, the full PostgreSQL-backed backend suite passed **143 tests** with **82% statement coverage** (1,407 statements, 250 missed). The frontend passed **22 tests** in 4 files, `npm ci` and the production build succeeded locally and in the demo image, and `npm audit --audit-level=low` reported **0 advisories** after updating Vite and React Router. A known manually created table layout with no Alembic version marker was stamped and upgraded in a disposable database without losing its scan or finding row; [the recovery procedure](LEGACY_DB_UPGRADE.md) requires a backup and exact schema match.
+
+Two fresh Juice Shop scans in the isolated demo completed with 15 and 3 findings. The authenticated API diff and the rendered comparison UI showed **1 new, 13 resolved, 0 changed, 2 unchanged**. Scanner output can vary between runs; these categories are observations, not proof that the target's security posture changed. The original 2026-11-11 timing sample below remains historical and was not remeasured here.
+
+## Original 2026-11-11 measurements
+
 | Metric | Measured value |
 | --- | ---: |
 | Backend tests | 131 passed |

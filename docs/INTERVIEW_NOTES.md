@@ -34,16 +34,16 @@ This remains a heuristic for non-port findings and historical port rows: a renam
 
 - The API checks `X-API-Key` on scan and finding routes, uses constant-time comparison, and limits browser origins through `ALLOWED_ORIGINS`. The key is shared; there are no user accounts or per-user scan permissions.
 - Normal target validation normalizes names, resolves addresses, and rejects private, loopback, link-local, reserved, multicast, and unspecified destinations. The bundled `juice-shop` hostname is a deliberate internal exception. The worker checks root and discovered names before active scanning and rejects out-of-scope results. DNS can still change after a check and before a scanner connects, so a public host needs outbound network restrictions as well.
-- Scan creation is rate-limited to 5/minute normally and 3/minute in demo mode, with a Redis daily demo scan ceiling. The demo key is intentionally public, so it is not a personal identity or a secret. Behind a proxy, the IP-based limit needs trusted client-address handling; do not assume the current configuration gives each visitor a separate bucket.
+- Scan creation is rate-limited to 5/minute normally and 3/minute in demo mode, with a Redis daily demo scan ceiling. The demo key is intentionally public, so it is not a personal identity or a secret. The demo Compose stack puts Caddy in front of the API and trusts forwarded addresses only from its fixed internal address; per-visitor behavior still needs verification on the actual public host.
 - Demo mode permits only bundled `juice-shop`, isolates the worker from outbound internet, hides ordinary scan records, blocks deletion, and prunes demo records after about 24 hours. All demo visitors can still read each other's demo scans. Keep private targets and sensitive findings out of the demo.
 
-## What I would improve next
+## Hardening completed since the original review
 
-1. Carry a stable host-aware finding identity through parsing, correlation, and diffing (audit finding 6).
-2. Recompute stored severity from the final correlated score (finding 7).
-3. Page through findings and scan history, and aggregate dashboard counts in SQL (finding 8).
-4. Add network-level egress isolation and verified client-IP handling before a public demo. Triage frontend dependency advisories and test migrations against any existing production database before upgrading it.
+1. Port findings now carry host addresses through parsing, correlation, and diffing (audit finding 6); legacy rows without an address retain best-effort title matching.
+2. Stored severity and business impact follow the final correlated score, including a historical backfill (finding 7).
+3. Findings and scan history load in pages, while dashboard and summary counts use SQL aggregates (finding 8).
+4. The public demo worker is isolated from outbound internet and scans only Juice Shop. The local proxy, ports, and rate limit were checked. Frontend advisories were cleared and a known legacy database upgrade was rehearsed. An unknown production schema or public host still needs its own verification.
 
 ## Evidence and honest scope
 
-The measured local checkout had 131 backend tests, 21 frontend tests, 80% backend statement coverage, and a 132.79-second median across three completed local Juice Shop scans. These are measurements, not guarantees for other targets or hosts. A real Juice Shop run has shown all four stages and saved findings; some correlation rules were exercised in pipeline tests because that target does not naturally trigger them. The project does not include screenshot capture, JavaScript extraction, secret detection, endpoint mining, takeover verification, LLM summaries, or PDF export.
+The 2026-11-21 checkout passed 143 backend tests and 22 frontend tests with 82% backend statement coverage and zero npm advisories. The earlier 132.79-second median across three local Juice Shop scans remains a historical measurement, not a guarantee for other targets or hosts. Fresh demo scans produced a visible UI diff of 1 new, 13 resolved, 0 changed, and 2 unchanged findings. Some correlation rules were exercised in pipeline tests because Juice Shop does not naturally trigger them. The project does not include screenshot capture, JavaScript extraction, secret detection, endpoint mining, takeover verification, LLM summaries, or PDF export.

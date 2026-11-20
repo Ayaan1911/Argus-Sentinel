@@ -206,18 +206,20 @@ subfinder correctly reports 0 real subdomains for `juice-shop` (it isn't a real 
 ## Testing
 
 ```bash
-cd backend && pytest        # 125 tests
-cd frontend && npm test     # vitest, 21 tests
+cd backend && pytest        # 143 passed on 2026-11-21 with Docker available
+cd frontend && npm test     # 22 passed on 2026-11-21
 ```
 
 The backend suite includes pure-Python unit tests for the scoring engines, scanner argv/output-parsing logic, and the intelligence-library schema validator, plus a real Postgres-backed integration suite (`test_routes.py`, `test_scan_tasks.py`) that spins up a throwaway Postgres container via Docker and exercises actual API routes and task orchestration end-to-end — those tests skip automatically if Docker isn't reachable (e.g. running the suite from inside a container itself with no Docker-in-Docker access) rather than silently passing on mocked data. The frontend suite covers `ScanDetail`'s polling logic (`nextPollDelay`), the scan-diff comparison view, the reasoning-breakdown score math, and the New Scan form (demo-mode target lock, persona selection).
+
+The 2026-11-21 backend run measured 82% statement coverage (1,407 statements; 250 missed). A fresh demo build of the updated frontend passed, and `npm audit` reported zero advisories. For a database created before migration tracking, follow the guarded [legacy upgrade procedure](docs/LEGACY_DB_UPGRADE.md) after making a verified backup. See [measured metrics](docs/METRICS.md) for the historical scan-timing method and current checks.
 
 ## Known Limitations
 
 - **Intelligence library coverage**: 51 entries across services/technologies/vulnerabilities. A finding whose scanner-reported name/product doesn't match an entry still gets a base reasoning score, just without library-sourced guidance.
 - **nmap's outdated-version detection** only covers products it has a matching intelligence-library entry for (openssh, apache, nginx, mysql, postgresql, redis, mongodb) — an unlisted stack won't trigger "outdated version" modifiers even if nmap fingerprints it correctly.
 - **httpx/nuclei port coverage**: beyond 80/443, only a fixed list of common alternate web ports (3000, 8000, 8080, 8888) is probed — a target on an uncommon port outside that list won't be found.
-- **External target scanning** requires the `worker` container to have outbound internet access; passive sources like subfinder's will reach out to third-party APIs over the network for any target, including ones you don't expect to need it.
+- **External target scanning** in normal self-hosted mode requires the `worker` container to have outbound internet access; passive sources like subfinder's reach third-party APIs. The public demo worker has no outbound route and scans only bundled Juice Shop.
 
 ---
 

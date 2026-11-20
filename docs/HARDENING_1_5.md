@@ -1,5 +1,7 @@
 # Hardening findings 1–5
 
+This records the 2026-11-11 implementation and measurements. For the current demo isolation, database upgrade rehearsal, dependency audit, and test counts, see [DEMO_DEPLOYMENT.md](../DEMO_DEPLOYMENT.md), [LEGACY_DB_UPGRADE.md](LEGACY_DB_UPGRADE.md), and [METRICS.md](METRICS.md).
+
 Implemented on `codex/hardening-1-5` after the audit in `HARDENING_AUDIT.md`.
 
 1. Linux startup scripts are checked out with LF on Windows. The API entrypoint stops if migrations fail.
