@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
 import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
@@ -7,11 +8,19 @@ import ScanDetail from './pages/ScanDetail';
 import FindingDetail from './pages/FindingDetail';
 import Intelligence from './pages/Intelligence';
 
-// The landing and overview share the editorial shell. Investigation routes
-// retain the existing dense workspace until they receive the same treatment.
+export function ScrollToRoute() {
+  const { pathname, hash } = useLocation();
+  useEffect(() => {
+    if (hash) document.getElementById(hash.slice(1))?.scrollIntoView();
+    else window.scrollTo(0, 0);
+  }, [pathname, hash]);
+  return null;
+}
+
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToRoute />
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/dashboard" element={<Dashboard />} />

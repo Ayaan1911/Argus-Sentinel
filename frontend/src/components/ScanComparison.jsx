@@ -3,20 +3,12 @@ import { ChevronDown, ChevronUp, ArrowUpRight, ArrowDownRight, Minus, Plus, Chec
 import client from '../api/client';
 import SeverityBadge from './SeverityBadge';
 
-// Diff states are a different axis of meaning than finding severity, so they
-// deliberately borrow neither the sev-* palette nor pure success/danger:
-// violet = "new" (attention, not itself a verdict), accent = "changed"
-// (something to look at), muted gray = "resolved" (done, fading out).
-// "This scan caught something new" is the one frame that sells the diffing
-// feature with no surrounding context, so NEW is the only state that gets the
-// full glass + glow + pulse treatment. CHANGED is a steady accent glow and
-// RESOLVED is deliberately the dimmest thing on the page — the contrast
-// between the three is what makes the state readable in a screenshot.
+// Diff states describe change since a prior scan, separately from severity.
 const DIFF_STYLE = {
   new: {
     border: 'border-l-violet-400',
-    row: 'glass shadow-glow-new animate-glow-pulse-new',
-    badge: 'bg-violet-400/20 text-violet-200 border-violet-400/60 shadow-glow-new',
+    row: 'bg-card border-bordercolor',
+    badge: 'bg-violet-400/20 text-violet-200 border-violet-400/60',
     icon: Plus,
   },
   changed: {
@@ -156,12 +148,12 @@ export default function ScanComparison({ scanId, history }) {
       <div className="flex flex-wrap items-center gap-3 text-base font-mono">
         <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border font-black tracking-tight ${
           summary.new > 0
-            ? 'bg-violet-400/15 border-violet-400/50 text-violet-200 shadow-glow-new animate-glow-pulse-new'
+            ? 'bg-violet-400/15 border-violet-400/50 text-violet-200'
             : 'bg-surface border-bordercolor text-textmut'
         }`}><Plus size={16} strokeWidth={3} /> {summary.new} new</span>
         <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-surface border border-bordercolor text-textmut font-bold"><CheckCheck size={16} /> {summary.resolved} resolved</span>
         <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border font-bold ${
-          summary.changed > 0 ? 'bg-accent/15 border-accent/50 text-accent shadow-glow-accent' : 'bg-surface border-bordercolor text-textmut'
+          summary.changed > 0 ? 'bg-accent/15 border-accent/50 text-accent' : 'bg-surface border-bordercolor text-textmut'
         }`}><RefreshCw size={16} /> {summary.changed} changed</span>
         <span className="text-textmut text-sm">{summary.unchanged} unchanged</span>
       </div>

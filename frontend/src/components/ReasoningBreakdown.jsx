@@ -58,10 +58,6 @@ export default function ReasoningBreakdown({ breakdown }) {
             const isPos = mod > 0;
             const isNeg = mod < 0;
             const barPct = (Math.abs(mod) / maxMagnitude) * 100;
-            // The single largest contributor is the one line of the
-            // explanation a user actually needs — give only it the glow, so
-            // the eye lands there instead of scanning every row equally.
-            const isDominant = Math.abs(mod) === maxMagnitude && mod !== 0;
             const barColor = isPos ? 'bg-danger' : isNeg ? 'bg-success' : 'bg-bordercolor';
             const textColor = isPos ? 'text-danger' : isNeg ? 'text-success' : 'text-textmut';
 
@@ -81,9 +77,7 @@ export default function ReasoningBreakdown({ breakdown }) {
                       className={`h-full rounded-full ${barColor} transition-[width] duration-500`}
                       style={{
                         width: `${barPct}%`,
-                        boxShadow: isDominant
-                          ? `0 0 12px ${isPos ? 'rgba(239,68,68,0.75)' : 'rgba(34,197,94,0.75)'}`
-                          : 'none',
+                        boxShadow: 'none',
                       }}
                     />
                   </div>
@@ -99,10 +93,7 @@ export default function ReasoningBreakdown({ breakdown }) {
         </div>
       )}
 
-      {/* The payoff line. Everything above is the argument; this is the
-          verdict, so it gets the only heavyweight type and glow in the panel.
-          It glows only when context actually moved the score — a net-zero
-          modifier stays deliberately flat. */}
+      {/* Sum the modifiers separately from the base score. */}
       <div
         className={`px-4 py-4 border-t flex items-center gap-4 ${
           totalPos ? 'border-danger/30 bg-danger/[0.07]'
@@ -114,11 +105,6 @@ export default function ReasoningBreakdown({ breakdown }) {
           className={`w-16 shrink-0 font-mono font-black text-3xl tabular-nums tracking-tighter ${
             totalPos ? 'text-danger' : totalNeg ? 'text-success' : 'text-textmut'
           }`}
-          style={{
-            textShadow: totalPos ? '0 0 22px rgba(239,68,68,0.55)'
-              : totalNeg ? '0 0 22px rgba(34,197,94,0.45)'
-              : 'none',
-          }}
         >
           {totalPos ? '+' : totalNeg ? '−' : ''}{Math.abs(total).toFixed(1)}
         </div>

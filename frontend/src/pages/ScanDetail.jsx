@@ -17,7 +17,7 @@ const STAGE_TYPE = { subfinder: 'subdomain', httpx: 'technology', nmap: 'port', 
 function StageStatusBar({ stageStatus, findings, summary }) {
   if (!stageStatus || Object.keys(stageStatus).length === 0) return null;
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className="editorial-stages-status">
       {STAGE_ORDER.filter(stage => stageStatus[stage]).map(stage => {
         const s = stageStatus[stage];
         const count = summary?.by_type?.[STAGE_TYPE[stage]] ?? findings.filter(f => f.type === STAGE_TYPE[stage]).length;
@@ -25,7 +25,7 @@ function StageStatusBar({ stageStatus, findings, summary }) {
         return (
           <div
             key={stage}
-            className="px-3 py-2 rounded-md border border-bordercolor bg-card text-xs font-mono flex items-center gap-2"
+            className="editorial-stage-status"
             title={s.detail || ''}
           >
             <span className="font-bold uppercase text-textpri">{STAGE_LABELS[stage]}</span>
@@ -60,7 +60,6 @@ export default function ScanDetail() {
   const [notFound, setNotFound] = useState(false);
   const [selectedFindingId, setSelectedFindingId] = useState(null);
   const [audience, setAudience] = useState('');
-  const [rawOpen, setRawOpen] = useState(false);
   const [scanHistory, setScanHistory] = useState([]);
   const [historyHasMore, setHistoryHasMore] = useState(false);
   const [historyError, setHistoryError] = useState('');
@@ -219,20 +218,18 @@ export default function ScanDetail() {
   const selectedFinding = findings.find(f => f.id === selectedFindingId);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center gap-4 border-b border-bordercolor pb-4">
-        <Link to="/dashboard" className="p-2 hover:bg-card rounded-md text-textmut hover:text-textpri transition-colors">
-          <ArrowLeft size={20} />
-        </Link>
+    <div className="editorial-investigation">
+      <div className="editorial-page-head">
+        <Link to="/dashboard" className="editorial-back"><ArrowLeft size={16} /> Scan ledger</Link>
+        <div className="editorial-kicker">Investigation / scan report</div>
         <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-3xl sm:text-4xl font-black text-textpri font-mono tracking-tighter">{scanMeta.target}</h2>
+          <div className="editorial-page-title-row">
+            <h1>{scanMeta.target}</h1>
             <StatusPill status={status} />
           </div>
-          <p className="text-sm text-textmut mt-1">Audience profile: <span className="text-textpri capitalize">{(scanMeta.audience || '').replace('_', ' ')}</span></p>
+          <p>Audience profile: <span className="capitalize">{(scanMeta.audience || '').replace('_', ' ')}</span></p>
         </div>
       </div>
-      <div className="h-0.5 w-24 bg-ribbon rounded-full -mt-4" />
 
       <StageStatusBar stageStatus={stageStatus} findings={findings} summary={summary} />
       {status === 'failed' && findings.length > 0 && (
@@ -269,36 +266,26 @@ export default function ScanDetail() {
       {/* Combined risk / severity stats only exist once the scan is terminal
           and the full findings payload has been fetched — see fetchFullScanData. */}
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-          <div className="col-span-2 glass rounded-xl p-4 flex flex-col justify-between">
-            <div className="text-textmut text-[10px] uppercase font-bold tracking-[0.2em] mb-2">Combined Risk</div>
-            <div className="flex items-center gap-2">
+        <div className="editorial-summary">
+          <div className="editorial-summary-cell editorial-summary-risk">
+            <div className="editorial-kicker">Combined risk</div>
+            <div>
               <SeverityBadge severity={summary.combined_risk_level} />
             </div>
           </div>
-          <div className={`glass border-sev-critical/30 rounded-xl p-4 ${summary.by_severity.critical > 0 ? 'shadow-glow-critical animate-glow-pulse' : ''}`}>
-            <div className="text-sev-critical text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Critical</div>
-            <div className="text-4xl font-black font-mono tabular-nums tracking-tighter" style={{ color: summary.by_severity.critical > 0 ? '#ef4444' : '#475569' }}>{summary.by_severity.critical}</div>
-          </div>
-          <div className={`glass border-sev-high/30 rounded-xl p-4 ${summary.by_severity.high > 0 ? 'shadow-glow-high' : ''}`}>
-            <div className="text-sev-high text-[10px] uppercase font-bold tracking-[0.2em] mb-1">High</div>
-            <div className="text-4xl font-black font-mono tabular-nums tracking-tighter" style={{ color: summary.by_severity.high > 0 ? '#f97316' : '#475569' }}>{summary.by_severity.high}</div>
-          </div>
-          <div className="glass border-sev-medium/30 rounded-xl p-4">
-            <div className="text-sev-medium text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Medium</div>
-            <div className="text-4xl font-black font-mono tabular-nums tracking-tighter" style={{ color: summary.by_severity.medium > 0 ? '#eab308' : '#475569' }}>{summary.by_severity.medium}</div>
-          </div>
-          <div className="glass border-sev-low/30 rounded-xl p-4">
-            <div className="text-sev-low text-[10px] uppercase font-bold tracking-[0.2em] mb-1">Low</div>
-            <div className="text-4xl font-black font-mono tabular-nums tracking-tighter" style={{ color: summary.by_severity.low > 0 ? '#3b82f6' : '#475569' }}>{summary.by_severity.low}</div>
-          </div>
+          {['critical', 'high', 'medium', 'low'].map(severity => (
+            <div className="editorial-summary-cell" key={severity}>
+              <div className="editorial-kicker">{severity}</div>
+              <strong>{summary.by_severity[severity] || 0}</strong>
+            </div>
+          ))}
         </div>
       )}
 
       {/* Severity Distribution Bar */}
       {summary && summary.total_findings > 0 && (
-        <div className="h-2.5 w-full flex rounded-full overflow-hidden bg-surface ring-1 ring-inset ring-white/[0.05]">
-          <div style={{ width: `${(summary.by_severity.critical / summary.total_findings) * 100}%`, boxShadow: summary.by_severity.critical > 0 ? '0 0 14px #ef4444' : 'none' }} className="bg-sev-critical"></div>
+        <div className="editorial-severity-bar">
+          <div style={{ width: `${(summary.by_severity.critical / summary.total_findings) * 100}%` }} className="bg-sev-critical"></div>
           <div style={{ width: `${(summary.by_severity.high / summary.total_findings) * 100}%` }} className="bg-sev-high"></div>
           <div style={{ width: `${(summary.by_severity.medium / summary.total_findings) * 100}%` }} className="bg-sev-medium"></div>
           <div style={{ width: `${(summary.by_severity.low / summary.total_findings) * 100}%` }} className="bg-sev-low"></div>
@@ -307,7 +294,7 @@ export default function ScanDetail() {
       )}
 
       <div>
-        <h3 className="text-2xl font-serif italic font-normal text-textpri tracking-tight mb-4">Findings</h3>
+        <div className="editorial-section-line"><h2>Findings</h2><span>{summary?.total_findings ?? findings.length} recorded</span></div>
         
         {isRunning && findings.length === 0 ? (
           <div className="bg-card/80 backdrop-blur-md border border-bordercolor rounded-lg p-12 text-center flex flex-col items-center">
@@ -352,34 +339,11 @@ export default function ScanDetail() {
             )}
           </div>
         ) : (
-          <div className="flex flex-col lg:flex-row gap-6">
+          <div className="editorial-finding-grid">
             {/* LEFT PANE: List */}
-            <div className="w-full lg:w-1/3 flex flex-col gap-2 max-h-[800px] overflow-y-auto pr-2">
+            <div className="editorial-finding-list">
               {findings.map(f => {
                 const isSelected = selectedFindingId === f.id;
-                const sevKey = (f.severity || 'informational').toLowerCase();
-                const sevBorderColor = {
-                  critical: 'border-l-sev-critical',
-                  high: 'border-l-sev-high',
-                  medium: 'border-l-sev-medium',
-                  low: 'border-l-sev-low',
-                }[sevKey] || 'border-l-sev-info';
-                const sevShadow = {
-                  critical: 'shadow-sev-critical/10',
-                  high: 'shadow-sev-high/10',
-                  medium: 'shadow-sev-medium/10',
-                  low: 'shadow-sev-low/10',
-                }[sevKey] || '';
-                // Static, not pulsing: several rows can be critical at once
-                // and a list of synchronised pulses is noise, not signal.
-                const sevGlow = sevKey === 'critical' ? 'shadow-glow-critical' : '';
-                const sevTextColor = {
-                  critical: 'text-sev-critical',
-                  high: 'text-sev-high',
-                  medium: 'text-sev-medium',
-                  low: 'text-sev-low',
-                }[sevKey] || 'text-sev-info';
-
                 return (
                   <button
                     key={f.id}
@@ -390,16 +354,15 @@ export default function ScanDetail() {
                         if (keys.length > 0 && !keys.includes(audience)) setAudience(keys[0]);
                       }
                     }}
-                    className={`text-left p-4 rounded-r-lg border-y border-r border-l-4 transition-all hover:-translate-y-0.5 hover:shadow-lg focus:outline-none ${sevBorderColor} ${sevGlow}
-                      ${isSelected ? `bg-surface/80 border-y-bordercolor border-r-bordercolor shadow-md ${sevShadow}` : 'bg-card border-bordercolor hover:bg-surface/50'}
-                    `}
+                    className={`editorial-finding-row ${isSelected ? 'is-selected' : ''}`}
+                    aria-pressed={isSelected}
                   >
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="editorial-finding-row-meta">
                       <SeverityBadge severity={f.severity} />
-                      <span className={`font-mono text-base font-black tabular-nums tracking-tight ${sevTextColor}`}>{f.final_risk_score.toFixed(1)}</span>
+                      <span className="editorial-finding-score">{f.final_risk_score.toFixed(1)}</span>
                     </div>
-                    <div className="font-semibold text-textpri mb-1 line-clamp-1">{f.title}</div>
-                    <div className="text-[10px] text-textmut uppercase tracking-[0.18em] font-bold">{f.type}</div>
+                    <div className="editorial-finding-row-title">{f.title}</div>
+                    <div className="editorial-kicker">{f.type}</div>
                   </button>
                 );
               })}
@@ -414,22 +377,19 @@ export default function ScanDetail() {
 
             {/* RIGHT PANE: Details */}
             {selectedFinding && (
-              <div className="w-full lg:w-2/3 glass rounded-xl p-6 space-y-6 overflow-y-auto max-h-[800px]">
+              <div className="editorial-finding-detail">
                 <div className="flex flex-col md:flex-row gap-8 items-start border-b border-bordercolor pb-6">
                   <div className="flex-1 space-y-4">
                     <div className="flex items-center gap-3">
                       <SeverityBadge severity={selectedFinding.severity} />
                       <span className="text-textmut uppercase tracking-wider text-xs font-bold border border-bordercolor px-2 py-0.5 rounded bg-surface">{selectedFinding.type}</span>
                     </div>
-                    <h2 className="text-3xl font-black text-textpri tracking-tighter leading-tight">{selectedFinding.title}</h2>
+                    <h2>{selectedFinding.title}</h2>
                     <p className="text-textmut text-sm leading-relaxed">{selectedFinding.technical_impact}</p>
                   </div>
-                  <div className={`shrink-0 bg-surface/70 border border-white/[0.07] rounded-2xl p-5 flex flex-col items-center gap-2 ${
-                    (selectedFinding.severity || '').toLowerCase() === 'critical' ? 'shadow-glow-critical'
-                      : (selectedFinding.severity || '').toLowerCase() === 'high' ? 'shadow-glow-high' : ''
-                  }`}>
+                  <div className="editorial-score-panel">
                     <div className="text-[10px] uppercase font-bold text-textmut tracking-[0.25em]">Risk Score</div>
-                    <RiskScore score={selectedFinding.final_risk_score} size={132} />
+                    <RiskScore score={selectedFinding.final_risk_score} />
                     <div className="text-[10px] text-textmut mt-1 font-mono uppercase tracking-wider">Conf: {(selectedFinding.confidence * 100).toFixed(0)}%</div>
                   </div>
                 </div>

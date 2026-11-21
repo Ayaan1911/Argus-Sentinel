@@ -6,21 +6,6 @@ import SeverityBadge from '../components/SeverityBadge';
 import RiskScore from '../components/RiskScore';
 import ReasoningBreakdown from '../components/ReasoningBreakdown';
 import AudienceSelector from '../components/AudienceSelector';
-import GlowOrb from '../components/GlowOrb';
-import { severityColor } from '../theme';
-
-// The gauge panel is the single most visually weighted element in the app —
-// the explained risk score is the product's actual differentiator. Its glow
-// is keyed to the finding's own severity, and only critical pulses, so the
-// treatment itself communicates "drop what you're doing" vs "read later".
-const PANEL_GLOW = {
-  critical: 'shadow-glow-critical animate-glow-pulse',
-  high: 'shadow-glow-high',
-  medium: '',
-  low: '',
-  informational: '',
-  info: '',
-};
 
 function FindingDetailSkeleton() {
   return (
@@ -68,49 +53,33 @@ export default function FindingDetail() {
   if (loading) return <FindingDetailSkeleton />;
   if (!finding) return <div className="text-danger">Finding not found</div>;
 
-  const severityGlow = PANEL_GLOW[(finding.severity || 'informational').toLowerCase()] || '';
-
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-12">
-      <div className="flex items-center gap-4 pb-2 border-b border-bordercolor">
-        <Link to={`/scan/${scan_id}`} className="p-2 hover:bg-card rounded-md text-textmut hover:text-textpri transition-colors">
-          <ArrowLeft size={20} />
-        </Link>
-        <div className="text-textmut font-mono text-sm uppercase tracking-wider font-semibold">
-          Finding Detail
-        </div>
+    <div className="editorial-finding-page">
+      <div className="editorial-page-head">
+        <Link to={`/scan/${scan_id}`} className="editorial-back"><ArrowLeft size={16} /> Back to scan</Link>
+        <div className="editorial-kicker">Investigation / finding detail</div>
       </div>
-      <div className="h-0.5 w-24 bg-ribbon rounded-full -mt-4" />
 
-      <div className="flex flex-col md:flex-row gap-8 items-start">
+      <div className="editorial-finding-hero">
         <div className="flex-1 space-y-4 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
             <SeverityBadge severity={finding.severity} />
             <span className="text-textmut uppercase tracking-[0.18em] text-[10px] font-bold border border-bordercolor px-2 py-1 rounded bg-surface">{finding.type}</span>
           </div>
-          <h1 className="text-4xl sm:text-5xl font-black text-textpri tracking-tighter leading-[1.05]">{finding.title}</h1>
+          <h1>{finding.title}</h1>
           <p className="text-textmut text-lg leading-relaxed">{finding.technical_impact}</p>
         </div>
-        <div className="relative shrink-0">
-          {/* Risk aura — restrained, single-tone, severity-colored. Only
-              critical/high get one at all (matching PANEL_GLOW above);
-              medium/low/info stay plain, same "absence carries hierarchy"
-              rule as every other glow in this app. */}
-          {severityGlow && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <GlowOrb size={260} severity={severityColor(finding.severity)} />
-            </div>
-          )}
-          <div className={`relative glass rounded-2xl p-7 flex flex-col items-center gap-3 ${severityGlow}`}>
+        <div className="editorial-score-panel editorial-score-large">
+          <div className="flex flex-col items-center gap-3">
             <div className="text-[10px] uppercase font-bold text-textmut tracking-[0.25em]">Final Risk Score</div>
-            <RiskScore score={finding.final_risk_score} size={176} />
-            <div className="w-full pt-3 border-t border-white/[0.06]">
+            <RiskScore score={finding.final_risk_score} />
+            <div className="w-full pt-3 border-t border-bordercolor">
               <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.15em] font-bold text-textmut mb-1.5">
                 <span>Confidence</span>
                 <span className="font-mono text-textpri">{(finding.confidence * 100).toFixed(0)}%</span>
               </div>
-              <div className="h-1.5 w-full bg-background/80 rounded-full overflow-hidden">
-                <div className="h-full bg-accent rounded-full" style={{ width: `${finding.confidence * 100}%` }} />
+              <div className="editorial-confidence-track">
+                <div style={{ width: `${finding.confidence * 100}%` }} />
               </div>
             </div>
           </div>
@@ -173,7 +142,7 @@ export default function FindingDetail() {
         </div>
       )}
 
-      <div className="bg-surface border border-bordercolor rounded-lg overflow-hidden">
+      <div className="editorial-raw">
         <button 
           onClick={() => setRawOpen(!rawOpen)}
           className="w-full px-4 py-3 flex justify-between items-center font-semibold text-textmut hover:text-textpri transition-colors"
@@ -182,8 +151,8 @@ export default function FindingDetail() {
           {rawOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
         </button>
         {rawOpen && (
-          <div className="p-4 border-t border-bordercolor bg-[#0a0f1a] overflow-x-auto">
-            <pre className="text-xs text-textmut font-mono">
+          <div className="editorial-raw-body">
+            <pre>
               {JSON.stringify(finding.raw_data, null, 2)}
             </pre>
           </div>

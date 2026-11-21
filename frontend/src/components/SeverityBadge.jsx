@@ -1,16 +1,6 @@
 import React from 'react';
 
-// The five severity tokens (sev-critical/high/medium/low/info) are the one
-// place saturated color carries meaning in this app — every severity
-// indicator anywhere (badges, gauges, charts, list borders) must resolve to
-// exactly these five, never a one-off hex, so a "critical" reads the same
-// color everywhere a user sees it.
-// Deliberately NOT glowing, even for critical. This badge is the single
-// most-repeated element in the app (every list row, every card, every diff
-// row) — glowing it would stack with the container-level glow on critical
-// rows and turn a hierarchy signal into ambient noise. The glow lives on the
-// container (list item, gauge panel, stat card); the badge just gets more
-// fill/border contrast than the calmer three.
+// Severity keeps its own color scale across the report and comparison views.
 const STYLES = {
   critical: 'bg-sev-critical/20 text-sev-critical border-sev-critical/60',
   high: 'bg-sev-high/20 text-sev-high border-sev-high/50',

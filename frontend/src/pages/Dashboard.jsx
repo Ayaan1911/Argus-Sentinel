@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import EditorialNav from '../components/EditorialNav';
 import client from '../api/client';
 import '../editorial.css';
@@ -12,6 +12,7 @@ function formatDate(value) {
 }
 
 export default function Dashboard() {
+  const { hash } = useLocation();
   const [scans, setScans] = useState([]);
   const [stats, setStats] = useState(null);
   const [summary, setSummary] = useState(null);
@@ -83,6 +84,10 @@ export default function Dashboard() {
 
   const latest = scans[0];
   const diff = comparison?.summary;
+
+  useEffect(() => {
+    if (!loading && hash === '#history') document.getElementById('history')?.scrollIntoView();
+  }, [loading, hash]);
 
   return (
     <div className="editorial editorial-workspace">

@@ -62,7 +62,7 @@ function EntryDetail({ entry, resultType }) {
   const activeAudience = guidanceKeys.includes(audience) ? audience : guidanceKeys[0];
 
   return (
-    <div className="space-y-6">
+    <div className="editorial-entry-detail">
       <div className="pb-5 border-b border-bordercolor space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
           {resultType && (
@@ -77,7 +77,7 @@ function EntryDetail({ entry, resultType }) {
             <span className="text-xs font-mono bg-surface border border-bordercolor px-2 py-0.5 rounded text-textmut">Secure from v{entry.min_secure_version}</span>
           )}
         </div>
-        <h2 className="text-3xl font-black text-textpri tracking-tighter leading-tight">{name}</h2>
+        <h2>{name}</h2>
         <p className="text-textmut text-sm leading-relaxed">{entry.description}</p>
       </div>
 
@@ -146,9 +146,8 @@ function ListRow({ entry, resultType, selected, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left p-3 rounded-lg border transition-colors ${
-        selected ? 'bg-surface border-accent/50' : 'bg-card border-bordercolor hover:bg-surface/50'
-      }`}
+      className={`editorial-entry-row ${selected ? 'is-selected' : ''}`}
+      aria-pressed={selected}
     >
       <div className="flex items-center justify-between gap-2 mb-1">
         <span className="font-semibold text-textpri text-sm truncate">{name}</span>
@@ -222,15 +221,18 @@ export default function Intelligence() {
   const selected = currentList.find(item => item.key === selectedKey);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-12">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="editorial-library">
+      <div className="editorial-page-head editorial-library-head">
         <div>
-          <h2 className="text-4xl sm:text-5xl font-black text-textpri tracking-tighter leading-none">Intelligence Library</h2>
-          <p className="text-textmut text-sm mt-1">The core knowledge base powering Argus Sentinel's deterministic reasoning.</p>
+          <div className="editorial-kicker">Reference / knowledge base</div>
+          <h1>Intelligence library.</h1>
+          <p>The core knowledge base powering Argus Sentinel's deterministic reasoning.</p>
         </div>
 
-        <form onSubmit={handleSearch} className="relative w-full md:w-72">
+        <form onSubmit={handleSearch} className="editorial-search" role="search">
+          <label htmlFor="intelligence-search">Search the library</label>
           <input
+            id="intelligence-search"
             type="text"
             value={search}
             onChange={e => {
@@ -238,21 +240,21 @@ export default function Intelligence() {
               if (!e.target.value) setSearchResults(null);
             }}
             placeholder="Search the knowledge base..."
-            className="w-full bg-card border border-bordercolor rounded-md pl-10 pr-4 py-2 text-sm text-textpri focus:outline-none focus:border-accent transition-colors"
           />
-          <Search size={16} className="absolute left-3 top-2.5 text-textmut" />
+          <button type="submit" aria-label="Search"><Search size={17} /></button>
         </form>
       </div>
 
       {!searchResults && (
-        <div className="flex border-b border-bordercolor space-x-6">
+        <div className="editorial-library-tabs" role="tablist" aria-label="Intelligence categories">
           {TABS.map(({ id, label, Icon }) => (
             <button
               key={id}
+              type="button"
+              role="tab"
+              aria-selected={tab === id}
               onClick={() => setTab(id)}
-              className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-colors ${
-                tab === id ? 'border-accent text-accent' : 'border-transparent text-textmut hover:text-textpri'
-              }`}
+              className={tab === id ? 'is-active' : ''}
             >
               <Icon size={16} /> {label}
               <span className="text-xs font-mono text-textmut/70">{Object.keys(data[id] || {}).length}</span>
@@ -269,12 +271,12 @@ export default function Intelligence() {
       )}
 
       {currentList.length === 0 ? (
-        <div className="text-center p-12 text-textmut bg-card border border-bordercolor rounded-lg">
+        <div className="editorial-state">
           {searching ? 'Searching…' : 'No entries found.'}
         </div>
       ) : (
-        <div className="flex flex-col lg:flex-row gap-6">
-          <div className="w-full lg:w-1/3 flex flex-col gap-2 max-h-[70vh] overflow-y-auto pr-1">
+        <div className="editorial-library-grid">
+          <div className="editorial-entry-list">
             {currentList.map(item => (
               <ListRow
                 key={item.key}
@@ -287,7 +289,7 @@ export default function Intelligence() {
           </div>
 
           {selected && (
-            <div className="w-full lg:w-2/3 glass rounded-xl p-6 max-h-[70vh] overflow-y-auto">
+            <div className="editorial-entry-panel">
               <EntryDetail entry={selected.entry} resultType={selected.resultType} />
             </div>
           )}

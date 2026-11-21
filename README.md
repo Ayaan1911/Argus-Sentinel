@@ -11,9 +11,7 @@
 
 Argus Sentinel is a self-hosted web recon tool: point it at a target and it runs subfinder, httpx, nmap, and nuclei in a real sequential pipeline, then a correlation/reasoning engine turns the raw output into risk-scored findings — each with an explained "why" and guidance tailored to who's reading it. Built for authorized testing of owned/permitted targets, with a bundled OWASP Juice Shop container as the default safe local target.
 
-![Scan Detail view of a real, completed Juice Shop scan showing severity cards, findings list, and the risk-score gauge](docs/screenshots/scan-detail.jpg)
-
-*Scan Detail view of a real, completed scan against the bundled Juice Shop target — real findings, real risk scores, not staged data.*
+The landing page, scan workspace, finding details, and intelligence library share a paper, ink, and rust editorial interface. The completed scan views show real findings and explained risk scores from the bundled Juice Shop target.
 
 ## What It Does
 
@@ -59,6 +57,8 @@ The two commands above (`scripts/setup.sh`, then `docker compose up`) are how yo
 ## See It Run
 
 A real scan, recorded end to end: target submitted, the pipeline runs, and the finished Scan Detail page comes back with per-tool results and scored findings. (Per-tool `stage_status` is written when the pipeline finishes, so the stage pills appear on completion rather than ticking over one by one.)
+
+The recordings below document real scanner output and interactions. They show the earlier visual theme; the current interface uses the editorial design across every route.
 
 ![Recording of submitting a juice-shop scan, the in-progress view, and the completed Scan Detail page](docs/screenshots/scan-flow.gif)
 
@@ -210,7 +210,7 @@ cd backend && pytest        # 143 passed on 2026-11-21 with Docker available
 cd frontend && npm test     # 24 passed after the editorial UI update
 ```
 
-The backend suite includes pure-Python unit tests for the scoring engines, scanner argv/output-parsing logic, and the intelligence-library schema validator, plus a real Postgres-backed integration suite (`test_routes.py`, `test_scan_tasks.py`) that spins up a throwaway Postgres container via Docker and exercises actual API routes and task orchestration end-to-end — those tests skip automatically if Docker isn't reachable (e.g. running the suite from inside a container itself with no Docker-in-Docker access) rather than silently passing on mocked data. The frontend suite covers the dashboard's latest-scan and history distinction, `ScanDetail`'s polling logic (`nextPollDelay`), the scan-diff comparison view, the reasoning-breakdown score math, and the New Scan form (demo-mode target lock, persona selection).
+The backend suite includes pure-Python unit tests for the scoring engines, scanner argv/output-parsing logic, and the intelligence-library schema validator, plus a real Postgres-backed integration suite (`test_routes.py`, `test_scan_tasks.py`) that spins up a throwaway Postgres container via Docker and exercises actual API routes and task orchestration end-to-end — those tests skip automatically if Docker isn't reachable (e.g. running the suite from inside a container itself with no Docker-in-Docker access) rather than silently passing on mocked data. The frontend suite covers the dashboard's latest-scan and history distinction, route scrolling, `ScanDetail`'s polling logic (`nextPollDelay`), the scan-diff comparison view, the reasoning-breakdown score math, and the New Scan form (demo-mode target lock, persona selection).
 
 The 2026-11-21 backend run measured 82% statement coverage (1,407 statements; 250 missed). A fresh demo build of the updated frontend passed, and `npm audit` reported zero advisories. For a database created before migration tracking, follow the guarded [legacy upgrade procedure](docs/LEGACY_DB_UPGRADE.md) after making a verified backup. See [measured metrics](docs/METRICS.md) for the historical scan-timing method and current checks.
 
